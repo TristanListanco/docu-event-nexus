@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,25 +7,31 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-export default function LoginForm() {
+export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate("/events");
-    } catch (error) {
-      console.error("Login error:", error);
-      // Error toast is now handled in the login function
+      await register(email, password, name);
+      toast({
+        title: "Registration Successful",
+        description: "Please check your email to confirm your account.",
+      });
+      navigate("/login");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      // Error toast is handled in the register function
     } finally {
       setLoading(false);
     }
@@ -35,13 +40,25 @@ export default function LoginForm() {
   return (
     <Card className="w-full">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">CCS DOCU</CardTitle>
+        <CardTitle className="text-2xl text-center">Create an Account</CardTitle>
         <CardDescription className="text-center">
-          Event Scheduling System
+          Enter your details to register
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleLogin}>
+      <form onSubmit={handleRegister}>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="Enter your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -55,12 +72,7 @@ export default function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Button variant="link" className="p-0 h-auto" type="button">
-                Forgot password?
-              </Button>
-            </div>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
@@ -68,6 +80,8 @@ export default function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
               required
+              placeholder="Create a password"
+              minLength={6}
             />
           </div>
         </CardContent>
@@ -80,21 +94,21 @@ export default function LoginForm() {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Logging in...
+                Registering...
               </>
             ) : (
-              "Sign In"
+              "Sign Up"
             )}
           </Button>
           <p className="text-center text-sm text-gray-500 mt-2">
-            Don't have an account?{" "}
-            <Button 
-              variant="link" 
-              className="p-0 h-auto" 
+            Already have an account?{" "}
+            <Button
+              variant="link"
+              className="p-0 h-auto"
               type="button"
-              onClick={() => navigate("/register")}
+              onClick={() => navigate("/login")}
             >
-              Sign up
+              Sign in
             </Button>
           </p>
         </CardFooter>

@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -135,6 +136,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const register = async (email: string, password: string, name?: string) => {
+    try {
+      console.log("Attempting registration with:", email);
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
+      
+      if (error) {
+        console.error("Registration error details:", error);
+        let errorMessage = error.message;
+        
+        // Provide more user-friendly error messages
+        if (error.message.includes("User already registered")) {
+          errorMessage = "This email is already registered. Please try logging in instead.";
+        }
+        
+        toast({
+          title: "Registration Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      console.log("Registration successful:", data);
+      toast({
+        title: "Registration Successful",
+        description: "Please check your email to verify your account.",
+      });
+      
+      return Promise.resolve();
+      
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -157,7 +203,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, session, login, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
