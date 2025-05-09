@@ -136,6 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Fixed the register function to properly handle Promise and return it
   const register = async (email: string, password: string, name?: string) => {
     try {
       console.log("Attempting registration with:", email);
@@ -173,6 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account.",
       });
       
+      // Return a resolved Promise to ensure TypeScript compatibility
       return Promise.resolve();
       
     } catch (error: any) {
