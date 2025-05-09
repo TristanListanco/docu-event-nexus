@@ -1,15 +1,13 @@
-
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StaffFormDialog from "@/components/staff/staff-form-dialog";
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddStaffModal, setShowAddStaffModal] = useState(false);
 
   return (
     <div className="flex flex-col h-full">
@@ -19,9 +17,7 @@ export default function StaffPage() {
             <h1 className="text-2xl font-bold tracking-tight">Staff</h1>
             <p className="text-muted-foreground">Manage your team members</p>
           </div>
-          <Button onClick={() => setShowAddStaffModal(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Staff Member
-          </Button>
+          <StaffFormDialog />
         </div>
       </div>
       

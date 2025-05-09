@@ -9,6 +9,7 @@ import MainLayout from "@/components/layout/main-layout";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import EventsPage from "@/pages/EventsPage";
+import AddEventPage from "@/pages/AddEventPage";
 import StaffPage from "@/pages/StaffPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "@/components/auth/protected-route";
@@ -29,6 +30,7 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/events" element={<EventsPage />} />
+                <Route path="/events/new" element={<AddEventPage />} />
                 <Route path="/staff" element={<StaffPage />} />
               </Route>
             </Route>

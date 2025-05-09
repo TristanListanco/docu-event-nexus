@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -136,8 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Fixed the register function to properly handle Promise and return it
-  const register = async (email: string, password: string, name?: string) => {
+  const register = async (email: string, password: string, name?: string): Promise<void> => {
     try {
       console.log("Attempting registration with:", email);
       
