@@ -9,7 +9,214 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      big_events: {
+        Row: {
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          big_event_id: string | null
+          created_at: string
+          date: string
+          end_time: string
+          id: string
+          ignore_schedule_conflicts: boolean
+          is_big_event: boolean
+          location: string
+          log_id: string
+          name: string
+          start_time: string
+          status: Database["public"]["Enums"]["event_status"]
+          type: Database["public"]["Enums"]["event_type"]
+          user_id: string
+        }
+        Insert: {
+          big_event_id?: string | null
+          created_at?: string
+          date: string
+          end_time: string
+          id?: string
+          ignore_schedule_conflicts?: boolean
+          is_big_event?: boolean
+          location: string
+          log_id: string
+          name: string
+          start_time: string
+          status?: Database["public"]["Enums"]["event_status"]
+          type: Database["public"]["Enums"]["event_type"]
+          user_id: string
+        }
+        Update: {
+          big_event_id?: string | null
+          created_at?: string
+          date?: string
+          end_time?: string
+          id?: string
+          ignore_schedule_conflicts?: boolean
+          is_big_event?: boolean
+          location?: string
+          log_id?: string
+          name?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["event_status"]
+          type?: Database["public"]["Enums"]["event_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_big_event_id_fkey"
+            columns: ["big_event_id"]
+            isOneToOne: false
+            referencedRelation: "big_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      schedules: {
+        Row: {
+          day_of_week: number
+          end_time: string
+          id: string
+          staff_id: string
+          start_time: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          day_of_week: number
+          end_time: string
+          id?: string
+          staff_id: string
+          start_time: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          staff_id?: string
+          start_time?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_assignments: {
+        Row: {
+          attendance_status: Database["public"]["Enums"]["attendance_status"]
+          event_id: string
+          id: string
+          staff_id: string
+          user_id: string
+        }
+        Insert: {
+          attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          event_id: string
+          id?: string
+          staff_id: string
+          user_id: string
+        }
+        Update: {
+          attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          event_id?: string
+          id?: string
+          staff_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_members: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          photo_url: string | null
+          role: Database["public"]["Enums"]["staff_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          role: Database["public"]["Enums"]["staff_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          role?: Database["public"]["Enums"]["staff_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +225,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      attendance_status: "Pending" | "Completed" | "Absent" | "Excused"
+      event_status: "Upcoming" | "Ongoing" | "Completed"
+      event_type: "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General"
+      staff_role: "Videographer" | "Photographer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +343,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      attendance_status: ["Pending", "Completed", "Absent", "Excused"],
+      event_status: ["Upcoming", "Ongoing", "Completed"],
+      event_type: ["SPECOM", "LITCOM", "CUACOM", "SPODACOM", "General"],
+      staff_role: ["Videographer", "Photographer"],
+    },
   },
 } as const

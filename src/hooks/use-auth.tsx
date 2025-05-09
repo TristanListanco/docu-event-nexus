@@ -1,5 +1,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface User {
   id: string;
@@ -16,45 +18,110 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Temporary auth provider until Supabase is integrated
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for authentication data
-    const storedUser = localStorage.getItem("auth_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Check for existing session
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error checking authentication session:", error);
+        setLoading(false);
+        return;
+      }
+      
+      if (data.session) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        setUser({
+          id: data.session.user.id,
+          email: data.session.user.email!,
+          name: profileData?.name
+        });
+      }
+      
+      setLoading(false);
+    };
+    
+    checkSession();
+    
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+          
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: profileData?.name
+        });
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+    });
+    
+    // Cleanup
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    // This is a mock authentication function until Supabase is integrated
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        // Demo credentials
-        if (email === "admin@example.com" && password === "password") {
-          const user = {
-            id: "1",
-            email: email,
-            name: "Demo Admin"
-          };
-          setUser(user);
-          localStorage.setItem("auth_user", JSON.stringify(user));
-          resolve();
-        } else {
-          reject(new Error("Invalid credentials"));
-        }
-      }, 1000);
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      // User session is handled by the auth state listener
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Please check your credentials and try again",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   const logout = async () => {
-    localStorage.removeItem("auth_user");
-    setUser(null);
-    return Promise.resolve();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout Failed",
+        description: error.message || "An error occurred during logout",
+        variant: "destructive",
+      });
+      throw error;
+    }
   };
 
   return (
