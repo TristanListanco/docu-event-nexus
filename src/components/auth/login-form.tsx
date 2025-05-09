@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { Loader2 } from "lucide-react";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,20 +22,11 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      // This is a placeholder for Supabase authentication
       await login(email, password);
-      toast({
-        title: "Success",
-        description: "You've been logged in successfully!",
-      });
       navigate("/events");
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      // Error toast is now handled in the login function
     } finally {
       setLoading(false);
     }
@@ -55,9 +47,10 @@ export default function LoginForm() {
             <Input
               id="email"
               type="email"
-              placeholder="admin@example.com"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
               required
             />
           </div>
@@ -73,18 +66,40 @@ export default function LoginForm() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
               required
             />
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col space-y-2">
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Sign In"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Logging in...
+              </>
+            ) : (
+              "Sign In"
+            )}
           </Button>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            Don't have an account?{" "}
+            <Button 
+              variant="link" 
+              className="p-0 h-auto" 
+              type="button"
+              onClick={() => toast({
+                title: "Coming Soon",
+                description: "User registration will be available soon.",
+              })}
+            >
+              Sign up
+            </Button>
+          </p>
         </CardFooter>
       </form>
     </Card>
