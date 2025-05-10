@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEvents } from "@/hooks/use-events";
-import { Event, EventType, EventStatus } from "@/types/models";
+import { useStaff } from "@/hooks/use-staff";
+import { Event, EventStatus, EventAssignment } from "@/types/models";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  User,
+  Camera
+} from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -50,10 +55,17 @@ export default function EventEditDialog({
   const [startTime, setStartTime] = useState(event.startTime);
   const [endTime, setEndTime] = useState(event.endTime);
   const [location, setLocation] = useState(event.location);
-  const [type, setType] = useState<EventType>(event.type);
   const [status, setStatus] = useState<EventStatus>(event.status);
+  
+  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
+  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
+  
   const [loading, setLoading] = useState(false);
   const { updateEvent } = useEvents();
+  const { staff, getAvailableStaff } = useStaff();
+  
+  const [availableVideographers, setAvailableVideographers] = useState<any[]>([]);
+  const [availablePhotographers, setAvailablePhotographers] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -62,14 +74,87 @@ export default function EventEditDialog({
       setStartTime(event.startTime);
       setEndTime(event.endTime);
       setLocation(event.location);
-      setType(event.type);
       setStatus(event.status);
+      
+      // Set selected staff from event
+      if (event.videographers) {
+        setSelectedVideographers(event.videographers.map(v => v.staffId));
+      } else {
+        setSelectedVideographers([]);
+      }
+      
+      if (event.photographers) {
+        setSelectedPhotographers(event.photographers.map(p => p.staffId));
+      } else {
+        setSelectedPhotographers([]);
+      }
+      
+      // Update available staff when dialog opens
+      updateAvailableStaff();
     }
   }, [open, event]);
+  
+  // Update available staff when date/time changes
+  useEffect(() => {
+    if (date && startTime && endTime) {
+      updateAvailableStaff();
+    }
+  }, [date, startTime, endTime]);
+  
+  const updateAvailableStaff = () => {
+    if (!date) return;
+    
+    // Get available staff based on date and time
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    const { videographers, photographers } = getAvailableStaff(
+      formattedDate,
+      startTime,
+      endTime
+    );
+    
+    // Add currently assigned staff who might not be available now
+    const allVideographers = [...videographers];
+    const allPhotographers = [...photographers];
+    
+    // Add currently assigned videographers who might not be in the available list
+    if (event.videographers) {
+      event.videographers.forEach(assignment => {
+        const staffMember = staff.find(s => s.id === assignment.staffId);
+        if (staffMember && !allVideographers.some(v => v.id === staffMember.id)) {
+          allVideographers.push(staffMember);
+        }
+      });
+    }
+    
+    // Add currently assigned photographers who might not be in the available list
+    if (event.photographers) {
+      event.photographers.forEach(assignment => {
+        const staffMember = staff.find(s => s.id === assignment.staffId);
+        if (staffMember && !allPhotographers.some(p => p.id === staffMember.id)) {
+          allPhotographers.push(staffMember);
+        }
+      });
+    }
+    
+    setAvailableVideographers(allVideographers);
+    setAvailablePhotographers(allPhotographers);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Create videographer assignments
+    const videographers: EventAssignment[] = selectedVideographers.map(staffId => ({
+      staffId,
+      status: 'Assigned'
+    }));
+    
+    // Create photographer assignments
+    const photographers: EventAssignment[] = selectedPhotographers.map(staffId => ({
+      staffId,
+      status: 'Assigned'
+    }));
 
     const updatedEvent: Partial<Event> = {
       name,
@@ -77,8 +162,9 @@ export default function EventEditDialog({
       startTime,
       endTime,
       location,
-      type,
       status,
+      videographers,
+      photographers
     };
 
     const success = await updateEvent(event.id, updatedEvent);
@@ -91,6 +177,22 @@ export default function EventEditDialog({
     setLoading(false);
   };
 
+  const handleVideographerChange = (staffId: string) => {
+    if (selectedVideographers.includes(staffId)) {
+      setSelectedVideographers(prev => prev.filter(id => id !== staffId));
+    } else {
+      setSelectedVideographers(prev => [...prev, staffId]);
+    }
+  };
+  
+  const handlePhotographerChange = (staffId: string) => {
+    if (selectedPhotographers.includes(staffId)) {
+      setSelectedPhotographers(prev => prev.filter(id => id !== staffId));
+    } else {
+      setSelectedPhotographers(prev => [...prev, staffId]);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -98,7 +200,7 @@ export default function EventEditDialog({
           <DialogHeader>
             <DialogTitle>Edit Event</DialogTitle>
             <DialogDescription>
-              Update the details for this event. Click save when you're done.
+              Update the details and staff assignments for this event.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -147,6 +249,7 @@ export default function EventEditDialog({
               </Label>
               <Input
                 id="startTime"
+                type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className="col-span-3"
@@ -159,6 +262,7 @@ export default function EventEditDialog({
               </Label>
               <Input
                 id="endTime"
+                type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className="col-span-3"
@@ -178,27 +282,6 @@ export default function EventEditDialog({
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="eventType" className="text-right">
-                Event Type
-              </Label>
-              <Select
-                value={type}
-                onValueChange={(value) => setType(value as EventType)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Conference">Conference</SelectItem>
-                  <SelectItem value="Workshop">Workshop</SelectItem>
-                  <SelectItem value="Webinar">Webinar</SelectItem>
-                  <SelectItem value="Meeting">Meeting</SelectItem>
-                  <SelectItem value="Social">Social</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="eventStatus" className="text-right">
                 Event Status
               </Label>
@@ -216,6 +299,70 @@ export default function EventEditDialog({
                   <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Videographer Assignment */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">
+                Videographers
+              </Label>
+              <div className="col-span-3 space-y-2">
+                {availableVideographers.length > 0 ? (
+                  availableVideographers.map(videographer => (
+                    <div key={videographer.id} className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id={`video-${videographer.id}`} 
+                        checked={selectedVideographers.includes(videographer.id)} 
+                        onChange={() => handleVideographerChange(videographer.id)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`video-${videographer.id}`} className="flex items-center">
+                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
+                          {videographer.name.split(' ').map((n: string) => n[0]).join('')}
+                        </span>
+                        {videographer.name}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground text-sm italic">
+                    No videographers available for this time slot
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Photographer Assignment */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">
+                Photographers
+              </Label>
+              <div className="col-span-3 space-y-2">
+                {availablePhotographers.length > 0 ? (
+                  availablePhotographers.map(photographer => (
+                    <div key={photographer.id} className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id={`photo-${photographer.id}`} 
+                        checked={selectedPhotographers.includes(photographer.id)} 
+                        onChange={() => handlePhotographerChange(photographer.id)}
+                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`photo-${photographer.id}`} className="flex items-center">
+                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
+                          {photographer.name.split(' ').map((n: string) => n[0]).join('')}
+                        </span>
+                        {photographer.name}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted-foreground text-sm italic">
+                    No photographers available for this time slot
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>

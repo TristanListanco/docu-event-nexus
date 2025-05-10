@@ -26,7 +26,7 @@ export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
   const { events, loading, loadEvents } = useEvents();
-  const { staff } = useStaff();
+  const { staff, loading: staffLoading } = useStaff();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
   const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
@@ -46,17 +46,21 @@ export default function EventDetailsPage() {
       if (foundEvent) {
         setEvent(foundEvent);
         
-        // Find assigned staff
-        const videographers = staff.filter(s => 
-          foundEvent.videographers && foundEvent.videographers.some(v => v.staffId === s.id)
-        );
-        
-        const photographers = staff.filter(s => 
-          foundEvent.photographers && foundEvent.photographers.some(p => p.staffId === s.id)
-        );
-        
-        setAssignedVideographers(videographers);
-        setAssignedPhotographers(photographers);
+        // Find assigned staff when both event and staff data are available
+        if (staff.length > 0) {
+          // Find assigned videographers
+          const videographers = staff.filter(s => 
+            foundEvent.videographers && foundEvent.videographers.some(v => v.staffId === s.id)
+          );
+          
+          // Find assigned photographers
+          const photographers = staff.filter(s => 
+            foundEvent.photographers && foundEvent.photographers.some(p => p.staffId === s.id)
+          );
+          
+          setAssignedVideographers(videographers);
+          setAssignedPhotographers(photographers);
+        }
       }
     }
   }, [events, eventId, staff]);
@@ -69,7 +73,7 @@ export default function EventDetailsPage() {
     navigate("/events");
   };
 
-  if (loading) {
+  if (loading || staffLoading) {
     return (
       <div className="flex items-center justify-center p-12 h-screen">
         <div className="text-center">

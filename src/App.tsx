@@ -32,14 +32,14 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/events" element={<EventsPage />} />
-                <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="/events/new" element={<AddEventPage />} />
+                <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="/staff" element={<StaffPage />} />
                 <Route path="/about" element={<AboutPage />} />
               </Route>
             </Route>
             
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/events" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

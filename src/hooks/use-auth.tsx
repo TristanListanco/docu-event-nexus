@@ -1,214 +1,160 @@
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Session } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
-
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
-  session: Session | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
-  logout: () => Promise<void>;
   loading: boolean;
-}
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log("Auth state changed:", event, currentSession?.user?.email);
-        setSession(currentSession);
+    // Check active sessions and set user
+    const getSession = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase.auth.getSession();
         
-        if (currentSession?.user) {
-          // Use setTimeout to avoid potential deadlock with Supabase SDK
-          setTimeout(async () => {
-            try {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentSession.user.id)
-                .maybeSingle();
-                
-              setUser({
-                id: currentSession.user.id,
-                email: currentSession.user.email!,
-                name: profileData?.name
-              });
-            } catch (error) {
-              console.error("Error fetching user profile:", error);
-            }
-          }, 0);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+        if (error) {
+          throw error;
         }
-      }
-    );
-    
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      console.log("Initial session check:", initialSession?.user?.email);
-      setSession(initialSession);
-      
-      if (initialSession?.user) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', initialSession.user.id)
-          .maybeSingle()
-          .then(({ data: profileData }) => {
-            if (profileData) {
-              setUser({
-                id: initialSession.user.id,
-                email: initialSession.user.email!,
-                name: profileData?.name
-              });
-            }
-            setLoading(false);
-          })
-          .catch(error => {
-            console.error("Error fetching initial profile:", error);
-            setLoading(false);
-          });
-      } else {
+        
+        if (data.session) {
+          setUser(data.session.user);
+        }
+      } catch (error: any) {
+        console.error("Error getting session:", error.message);
+      } finally {
         setLoading(false);
       }
-    }).catch(error => {
-      console.error("Error checking session:", error);
+    };
+    
+    getSession();
+    
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
-    
-    // Cleanup
+
     return () => {
-      subscription.unsubscribe();
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      console.log("Attempting login with:", email);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        console.error("Login error details:", error);
-        let errorMessage = error.message;
-        
-        // Provide more user-friendly error messages
-        if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Please verify your email address before logging in.";
-        } else if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "Invalid email or password. Please check your credentials and try again.";
-        }
-        
-        toast({
-          title: "Login Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
         throw error;
       }
       
-      console.log("Login successful:", data);
+      navigate("/events");
       toast({
-        title: "Login Successful",
+        title: "Signed in successfully",
         description: "Welcome back!",
       });
-      
     } catch (error: any) {
-      console.error("Login error:", error);
-      throw error;
+      console.error("Error signing in:", error.message);
+      toast({
+        title: "Error signing in",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+      throw error; // Re-throw error to handle in component
+    } finally {
+      setLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, name?: string): Promise<void> => {
+  const signUp = async (email: string, password: string, name: string) => {
+    setLoading(true);
     try {
-      console.log("Attempting registration with:", email);
-      
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name
-          }
-        }
+            name,
+          },
+        },
       });
       
       if (error) {
-        console.error("Registration error details:", error);
-        let errorMessage = error.message;
-        
-        // Provide more user-friendly error messages
-        if (error.message.includes("User already registered")) {
-          errorMessage = "This email is already registered. Please try logging in instead.";
-        }
-        
-        toast({
-          title: "Registration Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
         throw error;
       }
       
-      console.log("Registration successful:", data);
       toast({
-        title: "Registration Successful",
-        description: "Please check your email to verify your account.",
+        title: "Account created",
+        description: "Check your email to verify your account.",
       });
-      
-      // Fix: Return a Promise<void> instead of a PromiseLike<void> to enable .catch()
-      return Promise.resolve();
-      
+      navigate("/login");
     } catch (error: any) {
-      console.error("Registration error:", error);
-      throw error;
+      console.error("Error signing up:", error.message);
+      toast({
+        title: "Error signing up",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+      // Now updated to properly handle the promise chain
+      throw error; // Re-throw error to be properly caught by consumer
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = async () => {
+  const signOut = async () => {
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       
+      if (error) {
+        throw error;
+      }
+      
+      navigate("/login");
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
+        title: "Signed out",
+        description: "You have been signed out successfully.",
       });
-      
     } catch (error: any) {
-      console.error("Logout error:", error);
+      console.error("Error signing out:", error.message);
       toast({
-        title: "Logout Failed",
-        description: error.message || "An error occurred during logout",
+        title: "Error signing out",
+        description: error.message || "Please try again",
         variant: "destructive",
       });
-      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

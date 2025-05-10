@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Clock, Plus } from "lucide-react";
+import { X, Clock, Plus, Edit } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffRole, Schedule, StaffMember } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
@@ -38,6 +38,10 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     endTime: "11:00",
     subject: ""
   });
+
+  // For editing an existing schedule
+  const [editingScheduleIndex, setEditingScheduleIndex] = useState<number | null>(null);
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
   // Load staff schedules when the dialog opens
   useEffect(() => {
@@ -76,7 +80,19 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
       return;
     }
     
-    setSchedules([...schedules, { ...currentSchedule }]);
+    if (isEditingSchedule && editingScheduleIndex !== null) {
+      // Update existing schedule
+      const updatedSchedules = [...schedules];
+      updatedSchedules[editingScheduleIndex] = { ...currentSchedule };
+      setSchedules(updatedSchedules);
+      setIsEditingSchedule(false);
+      setEditingScheduleIndex(null);
+    } else {
+      // Add new schedule
+      setSchedules([...schedules, { ...currentSchedule }]);
+    }
+    
+    // Reset form
     setCurrentSchedule({
       dayOfWeek: currentSchedule.dayOfWeek,
       startTime: "09:00",
@@ -85,8 +101,36 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     });
   };
   
+  const editSchedule = (index: number) => {
+    const scheduleToEdit = schedules[index];
+    setCurrentSchedule({
+      dayOfWeek: scheduleToEdit.dayOfWeek,
+      startTime: scheduleToEdit.startTime,
+      endTime: scheduleToEdit.endTime,
+      subject: scheduleToEdit.subject
+    });
+    setEditingScheduleIndex(index);
+    setIsEditingSchedule(true);
+  };
+  
+  const cancelEdit = () => {
+    setCurrentSchedule({
+      dayOfWeek: 1,
+      startTime: "09:00",
+      endTime: "11:00",
+      subject: ""
+    });
+    setIsEditingSchedule(false);
+    setEditingScheduleIndex(null);
+  };
+  
   const removeSchedule = (index: number) => {
     setSchedules(schedules.filter((_, i) => i !== index));
+    
+    // If currently editing this schedule, cancel the edit
+    if (isEditingSchedule && editingScheduleIndex === index) {
+      cancelEdit();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -166,14 +210,24 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
                           {dayNames[schedule.dayOfWeek]} • {schedule.startTime} - {schedule.endTime}
                         </p>
                       </div>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeSchedule(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      <div className="flex space-x-1">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => editSchedule(index)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeSchedule(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -241,7 +295,17 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
                   </div>
                 </div>
                 
-                <div className="flex justify-end">
+                <div className="flex justify-end space-x-2">
+                  {isEditingSchedule && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={cancelEdit}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -249,7 +313,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
                     onClick={addSchedule}
                     disabled={!currentSchedule.subject.trim()}
                   >
-                    <Plus className="h-3 w-3 mr-1" /> Add Schedule
+                    <Plus className="h-3 w-3 mr-1" /> 
+                    {isEditingSchedule ? "Update Schedule" : "Add Schedule"}
                   </Button>
                 </div>
               </div>

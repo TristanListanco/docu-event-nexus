@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Event, EventType, EventStatus } from "@/types/models";
+import { Event, EventType, EventStatus, EventAssignment } from "@/types/models";
 
 export const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -18,7 +18,10 @@ export const useEvents = () => {
       
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          staff_assignments(*)
+        `)
         .eq('user_id', user.id)
         .order('date', { ascending: false });
         
@@ -27,22 +30,53 @@ export const useEvents = () => {
       }
       
       // Map database results to Event type
-      const mappedEvents: Event[] = data.map(event => ({
-        id: event.id,
-        logId: event.log_id,
-        name: event.name,
-        date: event.date,
-        startTime: event.start_time,
-        endTime: event.end_time,
-        location: event.location,
-        type: event.type as EventType,
-        status: event.status as EventStatus,
-        videographers: [],
-        photographers: [],
-        ignoreScheduleConflicts: event.ignore_schedule_conflicts,
-        isBigEvent: event.is_big_event,
-        bigEventId: event.big_event_id || undefined
-      }));
+      const mappedEvents: Event[] = data.map(event => {
+        // Process staff assignments
+        let videographers: EventAssignment[] = [];
+        let photographers: EventAssignment[] = [];
+        
+        if (event.staff_assignments && event.staff_assignments.length > 0) {
+          // Get all staff assignments for this event
+          const staffAssignments = event.staff_assignments;
+          
+          // Process videographer assignments
+          const videoAssignments = staffAssignments.filter((assignment: any) => 
+            assignment.role === 'Videographer'
+          );
+          
+          // Process photographer assignments
+          const photoAssignments = staffAssignments.filter((assignment: any) => 
+            assignment.role === 'Photographer'
+          );
+          
+          videographers = videoAssignments.map((assignment: any) => ({
+            staffId: assignment.staff_id,
+            status: assignment.attendance_status
+          }));
+          
+          photographers = photoAssignments.map((assignment: any) => ({
+            staffId: assignment.staff_id,
+            status: assignment.attendance_status
+          }));
+        }
+        
+        return {
+          id: event.id,
+          logId: event.log_id,
+          name: event.name,
+          date: event.date,
+          startTime: event.start_time,
+          endTime: event.end_time,
+          location: event.location,
+          type: event.type as EventType,
+          status: event.status as EventStatus,
+          videographers,
+          photographers,
+          ignoreScheduleConflicts: event.ignore_schedule_conflicts,
+          isBigEvent: event.is_big_event,
+          bigEventId: event.big_event_id || undefined
+        };
+      });
       
       setEvents(mappedEvents);
     } catch (error: any) {
@@ -57,7 +91,10 @@ export const useEvents = () => {
     }
   };
   
-  const createEvent = async (eventData: Omit<Event, "id" | "logId" | "videographers" | "photographers">) => {
+  const createEvent = async (eventData: Omit<Event, "id" | "logId" | "videographers" | "photographers"> & {
+    videographers?: string[];
+    photographers?: string[];
+  }) => {
     if (!user) return null;
     
     try {
@@ -87,6 +124,43 @@ export const useEvents = () => {
         
       if (error) {
         throw error;
+      }
+      
+      // Add staff assignments if provided
+      if (eventData.videographers && eventData.videographers.length > 0) {
+        const videographerAssignments = eventData.videographers.map(staffId => ({
+          user_id: user.id,
+          event_id: data.id,
+          staff_id: staffId,
+          role: 'Videographer',
+          attendance_status: 'Pending'
+        }));
+        
+        const { error: assignError } = await supabase
+          .from('staff_assignments')
+          .insert(videographerAssignments);
+          
+        if (assignError) {
+          console.error("Error assigning videographers:", assignError);
+        }
+      }
+      
+      if (eventData.photographers && eventData.photographers.length > 0) {
+        const photographerAssignments = eventData.photographers.map(staffId => ({
+          user_id: user.id,
+          event_id: data.id,
+          staff_id: staffId,
+          role: 'Photographer',
+          attendance_status: 'Pending'
+        }));
+        
+        const { error: assignError } = await supabase
+          .from('staff_assignments')
+          .insert(photographerAssignments);
+          
+        if (assignError) {
+          console.error("Error assigning photographers:", assignError);
+        }
       }
       
       const newEvent: Event = {
@@ -163,6 +237,59 @@ export const useEvents = () => {
         throw error;
       }
       
+      // Update staff assignments if provided
+      if (eventData.videographers !== undefined || eventData.photographers !== undefined) {
+        // First delete all existing assignments for this event
+        const { error: deleteError } = await supabase
+          .from('staff_assignments')
+          .delete()
+          .eq('event_id', eventId)
+          .eq('user_id', user.id);
+          
+        if (deleteError) {
+          throw deleteError;
+        }
+        
+        const assignments = [];
+        
+        // Add videographer assignments
+        if (eventData.videographers && eventData.videographers.length > 0) {
+          eventData.videographers.forEach(assignment => {
+            assignments.push({
+              user_id: user.id,
+              event_id: eventId,
+              staff_id: assignment.staffId,
+              role: 'Videographer',
+              attendance_status: assignment.status || 'Pending'
+            });
+          });
+        }
+        
+        // Add photographer assignments
+        if (eventData.photographers && eventData.photographers.length > 0) {
+          eventData.photographers.forEach(assignment => {
+            assignments.push({
+              user_id: user.id,
+              event_id: eventId,
+              staff_id: assignment.staffId,
+              role: 'Photographer',
+              attendance_status: assignment.status || 'Pending'
+            });
+          });
+        }
+        
+        // Insert new assignments if any
+        if (assignments.length > 0) {
+          const { error: insertError } = await supabase
+            .from('staff_assignments')
+            .insert(assignments);
+            
+          if (insertError) {
+            throw insertError;
+          }
+        }
+      }
+      
       // Reload events instead of updating local state to ensure everything is fresh
       await loadEvents();
       
@@ -191,6 +318,18 @@ export const useEvents = () => {
     try {
       setLoading(true);
       
+      // First delete all staff assignments for this event
+      const { error: assignmentsError } = await supabase
+        .from('staff_assignments')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('user_id', user.id);
+        
+      if (assignmentsError) {
+        throw assignmentsError;
+      }
+      
+      // Then delete the event
       const { error } = await supabase
         .from('events')
         .delete()
