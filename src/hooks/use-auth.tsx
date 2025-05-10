@@ -116,7 +116,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Please try again",
         variant: "destructive",
       });
-      // Now updated to properly handle the promise chain
       throw error; // Re-throw error to be properly caught by consumer
     } finally {
       setLoading(false);

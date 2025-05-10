@@ -33,7 +33,13 @@ export const useStaff = () => {
         name: s.name,
         role: s.role as StaffRole,
         photoUrl: s.photo_url || undefined,
-        schedules: [] as Schedule[]
+        email: s.email || undefined,
+        schedules: [] as Schedule[],
+        statistics: {
+          completed: 0,
+          absent: 0,
+          excused: 0
+        }
       }));
       
       // Load schedules for all staff members
@@ -82,7 +88,8 @@ export const useStaff = () => {
   const createStaffMember = async (staffData: { 
     name: string; 
     role: StaffRole; 
-    schedules: Omit<Schedule, "id">[] 
+    schedules: Omit<Schedule, "id">[];
+    email?: string;
   }) => {
     if (!user) return null;
     
@@ -96,6 +103,7 @@ export const useStaff = () => {
           user_id: user.id,
           name: staffData.name,
           role: staffData.role,
+          email: staffData.email
         })
         .select()
         .single();

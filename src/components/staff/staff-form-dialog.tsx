@@ -79,8 +79,8 @@ export default function StaffFormDialog() {
       await createStaffMember({
         name: formData.name,
         role: formData.role,
-        email: formData.email || undefined,
-        schedules
+        schedules,
+        email: formData.email || undefined
       });
       
       setOpen(false);

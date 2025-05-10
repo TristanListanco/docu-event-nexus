@@ -13,7 +13,7 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -22,7 +22,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await signIn(email, password);
       navigate("/events");
     } catch (error) {
       console.error("Login error:", error);
