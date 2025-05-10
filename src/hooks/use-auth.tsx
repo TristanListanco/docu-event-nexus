@@ -173,13 +173,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account.",
       });
       
-      // Fix: Return a Promise<void> explicitly instead of a PromiseLike<void>
+      // Fix: Return a proper Promise<void> instead of a PromiseLike<void>
       return Promise.resolve();
       
     } catch (error: any) {
       console.error("Registration error:", error);
-      // Fix: Return Promise.reject() instead of directly returning a rejected promise
-      return Promise.reject(error);
+      // Fix: Explicitly throw the error instead of returning a rejected promise
+      throw error;
     }
   };
 
