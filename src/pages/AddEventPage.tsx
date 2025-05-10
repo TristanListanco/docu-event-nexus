@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -7,7 +8,8 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage 
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,14 +17,15 @@ import * as z from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Users } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EventType } from "@/types/models";
+import { EventType, StaffMember } from "@/types/models";
 import { useEvents } from "@/hooks/use-events";
+import { useStaff } from "@/hooks/use-staff";
 
 const formSchema = z.object({
   title: z.string().min(2, {
@@ -34,20 +37,17 @@ const formSchema = z.object({
   startTime: z.string().min(1, {
     message: "Start time is required.",
   }),
-  // Fix: Use refine with single argument and proper context checking
   endTime: z.string().min(1, {
     message: "End time is required.",
-  }).refine((endTime) => {
-    return true; // Initial validation to ensure field is filled
-  }, {
-    message: "End time must be after start time."
   }),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
   }),
   eventType: z.string().min(1, {
     message: "Please select an event type.",
-  })
+  }),
+  videographers: z.array(z.string()).optional(),
+  photographers: z.array(z.string()).optional(),
 }).refine((data) => {
   return data.startTime < data.endTime;
 }, {
@@ -59,6 +59,10 @@ export default function AddEventPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const { createEvent } = useEvents();
+  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
+  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
+  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,9 +71,51 @@ export default function AddEventPage() {
       location: "",
       startTime: "09:00",
       endTime: "11:00",
-      eventType: ""
+      eventType: "",
+      videographers: [],
+      photographers: []
     },
   });
+
+  // Watch for changes to date, start time and end time to update available staff
+  const watchDate = form.watch("date");
+  const watchStartTime = form.watch("startTime");
+  const watchEndTime = form.watch("endTime");
+
+  // Update available staff whenever date or time changes
+  useEffect(() => {
+    const checkAvailableStaff = async () => {
+      if (!watchDate || !watchStartTime || !watchEndTime) return;
+      
+      setIsCheckingAvailability(true);
+      
+      const formattedDate = format(watchDate, 'yyyy-MM-dd');
+      
+      // Check available videographers
+      const videographers = await getAvailableStaff(
+        formattedDate,
+        watchStartTime,
+        watchEndTime,
+        "Videographer"
+      );
+      
+      // Check available photographers
+      const photographers = await getAvailableStaff(
+        formattedDate,
+        watchStartTime,
+        watchEndTime,
+        "Photographer"
+      );
+      
+      setAvailableVideographers(videographers);
+      setAvailablePhotographers(photographers);
+      setIsCheckingAvailability(false);
+    };
+    
+    if (watchDate && watchStartTime && watchEndTime) {
+      checkAvailableStaff();
+    }
+  }, [watchDate, watchStartTime, watchEndTime]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
@@ -252,6 +298,96 @@ export default function AddEventPage() {
                           <SelectItem value="General">General</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Videographers */}
+                <FormField
+                  control={form.control}
+                  name="videographers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Videographers</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange([value])}
+                        value={field.value?.[0]}
+                        disabled={isCheckingAvailability || !watchDate}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a videographer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isCheckingAvailability ? (
+                            <div className="p-2 text-center">
+                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
+                              <p>Checking availability...</p>
+                            </div>
+                          ) : availableVideographers.length > 0 ? (
+                            availableVideographers.map((videographer) => (
+                              <SelectItem key={videographer.id} value={videographer.id}>
+                                {videographer.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">
+                              <Users className="h-4 w-4 mx-auto mb-2" />
+                              <p>No available videographers for this time</p>
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {!watchDate ? "Select a date and time first" : "Available videographers for the selected time"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Photographers */}
+                <FormField
+                  control={form.control}
+                  name="photographers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Photographers</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange([value])}
+                        value={field.value?.[0]}
+                        disabled={isCheckingAvailability || !watchDate}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a photographer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isCheckingAvailability ? (
+                            <div className="p-2 text-center">
+                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
+                              <p>Checking availability...</p>
+                            </div>
+                          ) : availablePhotographers.length > 0 ? (
+                            availablePhotographers.map((photographer) => (
+                              <SelectItem key={photographer.id} value={photographer.id}>
+                                {photographer.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">
+                              <Users className="h-4 w-4 mx-auto mb-2" />
+                              <p>No available photographers for this time</p>
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {!watchDate ? "Select a date and time first" : "Available photographers for the selected time"}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -3,16 +3,27 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, RefreshCw, Plus } from "lucide-react";
+import { Users, RefreshCw, Plus, Edit, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
+import StaffEditDialog from "@/components/staff/staff-edit-dialog"; 
+import StaffDeleteDialog from "@/components/staff/staff-delete-dialog"; 
 import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember } from "@/types/models"; // Add missing import
+import { StaffMember } from "@/types/models";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { staff, loading, loadStaff } = useStaff();
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Filter staff based on search query and role
   const filteredStaff = staff.filter(member => 
@@ -21,6 +32,16 @@ export default function StaffPage() {
   
   const videographers = filteredStaff.filter(member => member.role === "Videographer");
   const photographers = filteredStaff.filter(member => member.role === "Photographer");
+
+  const handleEditStaff = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteStaff = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setDeleteDialogOpen(true);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -68,7 +89,12 @@ export default function StaffPage() {
               {filteredStaff.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {filteredStaff.map(member => (
-                    <StaffCard key={member.id} staff={member} />
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -79,7 +105,12 @@ export default function StaffPage() {
               {videographers.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {videographers.map(member => (
-                    <StaffCard key={member.id} staff={member} />
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -90,7 +121,12 @@ export default function StaffPage() {
               {photographers.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {photographers.map(member => (
-                    <StaffCard key={member.id} staff={member} />
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -102,31 +138,75 @@ export default function StaffPage() {
           <EmptyStateMessage searchQuery={searchQuery} />
         )}
       </div>
+
+      {/* Edit Staff Dialog */}
+      {selectedStaff && (
+        <StaffEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          staff={selectedStaff}
+        />
+      )}
+
+      {/* Delete Staff Dialog */}
+      {selectedStaff && (
+        <StaffDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          staff={selectedStaff}
+        />
+      )}
     </div>
   );
 }
 
 interface StaffCardProps {
   staff: StaffMember;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
-function StaffCard({ staff }: StaffCardProps) {
+function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
   const { name, role, photoUrl, statistics, schedules } = staff;
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
-        <div className="flex items-center space-x-4">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={photoUrl} alt={name} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {name.split(" ").map(n => n[0]).join("")}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-lg">{name}</CardTitle>
-            <p className="text-sm text-muted-foreground">{role}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={photoUrl} alt={name} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {name.split(" ").map(n => n[0]).join("")}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-lg">{name}</CardTitle>
+              <p className="text-sm text-muted-foreground">{role}</p>
+            </div>
           </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={onDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {schedules.length > 0 && (

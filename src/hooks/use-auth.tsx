@@ -173,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account.",
       });
       
-      // Fix: Return a void Promise that properly resolves
+      // Fix: Return a Promise<void> instead of a PromiseLike<void> to enable .catch()
       return Promise.resolve();
       
     } catch (error: any) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -52,7 +51,7 @@ export const useStaff = () => {
         // Fix: Use a correctly typed parameter object for the RPC function
         const { data: assignmentsData } = await supabase.rpc(
           'count_staff_assignments', 
-          { staff_id_param: member.id }
+          { staff_id_param: member.id } as { staff_id_param: string }
         );
         
         // Fix: Check if assignmentsData is null
@@ -212,6 +211,226 @@ export const useStaff = () => {
     }
   };
   
+  // Add delete staff member function
+  const deleteStaffMember = async (staffId: string, password: string) => {
+    if (!user) return false;
+    
+    try {
+      setLoading(true);
+      
+      // Verify user password first
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password
+      });
+      
+      if (authError) {
+        throw new Error("Incorrect password. Please try again.");
+      }
+      
+      // Delete schedules first due to foreign key constraints
+      const { error: scheduleError } = await supabase
+        .from('schedules')
+        .delete()
+        .eq('staff_id', staffId)
+        .eq('user_id', user.id);
+        
+      if (scheduleError) {
+        throw scheduleError;
+      }
+      
+      // Then delete the staff member
+      const { error: deleteError } = await supabase
+        .from('staff_members')
+        .delete()
+        .eq('id', staffId)
+        .eq('user_id', user.id);
+        
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      setStaff(prevStaff => prevStaff.filter(member => member.id !== staffId));
+      
+      toast({
+        title: "Staff Member Deleted",
+        description: "Staff member has been successfully deleted.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting staff member:", error);
+      toast({
+        title: "Failed to delete staff member",
+        description: error.message || "An error occurred while deleting the staff member",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Add update staff member function
+  const updateStaffMember = async (
+    staffId: string,
+    staffData: {
+      name?: string;
+      role?: StaffRole;
+      photoUrl?: string;
+      schedules?: Omit<Schedule, "id">[];
+    }
+  ) => {
+    if (!user) return false;
+    
+    try {
+      setLoading(true);
+      
+      const updateData: any = {};
+      if (staffData.name) updateData.name = staffData.name;
+      if (staffData.role) updateData.role = staffData.role;
+      if (staffData.photoUrl !== undefined) updateData.photo_url = staffData.photoUrl;
+      
+      // Update staff member first
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabase
+          .from('staff_members')
+          .update(updateData)
+          .eq('id', staffId)
+          .eq('user_id', user.id);
+          
+        if (updateError) {
+          throw updateError;
+        }
+      }
+      
+      // If schedules are provided, update them
+      if (staffData.schedules) {
+        // Delete existing schedules
+        const { error: deleteError } = await supabase
+          .from('schedules')
+          .delete()
+          .eq('staff_id', staffId)
+          .eq('user_id', user.id);
+          
+        if (deleteError) {
+          throw deleteError;
+        }
+        
+        // Add new schedules
+        const schedulesToInsert = staffData.schedules.map(schedule => ({
+          staff_id: staffId,
+          user_id: user.id,
+          day_of_week: schedule.dayOfWeek,
+          start_time: schedule.startTime,
+          end_time: schedule.endTime,
+          subject: schedule.subject
+        }));
+        
+        if (schedulesToInsert.length > 0) {
+          const { data: newSchedules, error: scheduleError } = await supabase
+            .from('schedules')
+            .insert(schedulesToInsert)
+            .select();
+            
+          if (scheduleError) {
+            throw scheduleError;
+          }
+        }
+      }
+      
+      // Update local state
+      loadStaff();
+      
+      toast({
+        title: "Staff Member Updated",
+        description: "Staff member has been successfully updated.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error updating staff member:", error);
+      toast({
+        title: "Failed to update staff member",
+        description: error.message || "An error occurred while updating the staff member",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Check if a staff member is available at a given time
+  const checkStaffAvailability = async (
+    staffId: string,
+    date: string,
+    startTime: string,
+    endTime: string
+  ) => {
+    if (!user) return false;
+    
+    try {
+      // Get day of week from date (0 = Sunday, 1 = Monday, etc.)
+      const dayOfWeek = new Date(date).getDay();
+      
+      // Get staff schedules
+      const { data: schedules, error: scheduleError } = await supabase
+        .from('schedules')
+        .select('*')
+        .eq('staff_id', staffId)
+        .eq('day_of_week', dayOfWeek);
+        
+      if (scheduleError) {
+        throw scheduleError;
+      }
+      
+      // Check if any schedule conflicts with the given time
+      const hasConflict = schedules.some(schedule => {
+        return (
+          (startTime >= schedule.start_time && startTime < schedule.end_time) ||
+          (endTime > schedule.start_time && endTime <= schedule.end_time) ||
+          (startTime <= schedule.start_time && endTime >= schedule.end_time)
+        );
+      });
+      
+      return !hasConflict;
+    } catch (error) {
+      console.error("Error checking staff availability:", error);
+      return false;
+    }
+  };
+  
+  // Get all available staff for a given time
+  const getAvailableStaff = async (
+    date: string,
+    startTime: string,
+    endTime: string,
+    role?: StaffRole
+  ) => {
+    if (!user) return [];
+    
+    const availableStaff: StaffMember[] = [];
+    
+    for (const member of staff) {
+      // If role is specified and doesn't match, skip
+      if (role && member.role !== role) continue;
+      
+      const isAvailable = await checkStaffAvailability(
+        member.id,
+        date,
+        startTime,
+        endTime
+      );
+      
+      if (isAvailable) {
+        availableStaff.push(member);
+      }
+    }
+    
+    return availableStaff;
+  };
+  
   // Load staff on component mount and when user changes
   useEffect(() => {
     if (user) {
@@ -221,5 +440,14 @@ export const useStaff = () => {
     }
   }, [user]);
   
-  return { staff, loading, loadStaff, createStaffMember };
+  return { 
+    staff, 
+    loading, 
+    loadStaff, 
+    createStaffMember,
+    updateStaffMember,
+    deleteStaffMember,
+    checkStaffAvailability,
+    getAvailableStaff
+  };
 };
