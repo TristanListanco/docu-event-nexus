@@ -22,6 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EventType } from "@/types/models";
+import { useEvents } from "@/hooks/use-events";
 
 const formSchema = z.object({
   title: z.string().min(2, {
@@ -35,18 +37,27 @@ const formSchema = z.object({
   }),
   endTime: z.string().min(1, {
     message: "End time is required.",
-  }),
+  }).refine(
+    (endTime, data) => {
+      if (!data.startTime) return true;
+      return endTime > data.startTime;
+    },
+    {
+      message: "End time must be after start time.",
+    }
+  ),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
   }),
-  committeeName: z.string().min(1, {
-    message: "Please select a committee.",
+  eventType: z.string().min(1, {
+    message: "Please select an event type.",
   })
 });
 
 export default function AddEventPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { createEvent } = useEvents();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -55,25 +66,28 @@ export default function AddEventPage() {
       location: "",
       startTime: "09:00",
       endTime: "11:00",
-      committeeName: ""
+      eventType: ""
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
-      // Here you would normally submit to a database
-      console.log("Form values:", values);
-
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Event Created",
-        description: "The event has been successfully created.",
+      const result = await createEvent({
+        name: values.title,
+        date: format(values.date, 'yyyy-MM-dd'),
+        startTime: values.startTime,
+        endTime: values.endTime,
+        location: values.location,
+        type: values.eventType as EventType,
+        status: 'Upcoming',
+        ignoreScheduleConflicts: false,
+        isBigEvent: false
       });
       
-      navigate("/events");
+      if (result) {
+        navigate("/events");
+      }
     } catch (error) {
       console.error("Error creating event:", error);
       toast({
@@ -219,21 +233,22 @@ export default function AddEventPage() {
                 
                 <FormField
                   control={form.control}
-                  name="committeeName"
+                  name="eventType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Committee</FormLabel>
+                      <FormLabel>Event Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a committee" />
+                            <SelectValue placeholder="Select event type" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="SPECOM">SPECOM</SelectItem>
                           <SelectItem value="LITCOM">LITCOM</SelectItem>
-                          <SelectItem value="PUBCOM">PUBCOM</SelectItem>
-                          <SelectItem value="DOCCOM">DOCCOM</SelectItem>
+                          <SelectItem value="CUACOM">CUACOM</SelectItem>
+                          <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                          <SelectItem value="General">General</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

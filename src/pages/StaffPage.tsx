@@ -1,13 +1,25 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users } from "lucide-react";
+import { Users, RefreshCw, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
+import { Button } from "@/components/ui/button";
+import { useStaff } from "@/hooks/use-staff";
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { staff, loading, loadStaff } = useStaff();
+
+  // Filter staff based on search query and role
+  const filteredStaff = staff.filter(member => 
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const videographers = filteredStaff.filter(member => member.role === "Videographer");
+  const photographers = filteredStaff.filter(member => member.role === "Photographer");
 
   return (
     <div className="flex flex-col h-full">
@@ -17,7 +29,13 @@ export default function StaffPage() {
             <h1 className="text-2xl font-bold tracking-tight">Staff</h1>
             <p className="text-muted-foreground">Manage your team members</p>
           </div>
-          <StaffFormDialog />
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => loadStaff()} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <StaffFormDialog />
+          </div>
         </div>
       </div>
       
@@ -31,78 +49,75 @@ export default function StaffPage() {
           />
         </div>
 
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList>
-            <TabsTrigger value="all">All Staff</TabsTrigger>
-            <TabsTrigger value="videographers">Videographers</TabsTrigger>
-            <TabsTrigger value="photographers">Photographers</TabsTrigger>
-          </TabsList>
-          <TabsContent value="all" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <StaffCard 
-                name="John Doe"
-                role="Videographer"
-                statistics={{ completed: 12, absent: 1, excused: 2 }}
-              />
-              <StaffCard 
-                name="Jane Smith"
-                role="Photographer"
-                statistics={{ completed: 15, absent: 0, excused: 1 }}
-              />
-              <StaffCard 
-                name="Mark Johnson"
-                role="Videographer"
-                statistics={{ completed: 8, absent: 2, excused: 0 }}
-              />
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="mt-2 text-lg">Loading staff members...</p>
             </div>
-          </TabsContent>
-          <TabsContent value="videographers" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <StaffCard 
-                name="John Doe"
-                role="Videographer"
-                statistics={{ completed: 12, absent: 1, excused: 2 }}
-              />
-              <StaffCard 
-                name="Mark Johnson"
-                role="Videographer"
-                statistics={{ completed: 8, absent: 2, excused: 0 }}
-              />
-            </div>
-          </TabsContent>
-          <TabsContent value="photographers" className="mt-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <StaffCard 
-                name="Jane Smith"
-                role="Photographer"
-                statistics={{ completed: 15, absent: 0, excused: 1 }}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        ) : staff.length > 0 ? (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">All Staff ({filteredStaff.length})</TabsTrigger>
+              <TabsTrigger value="videographers">Videographers ({videographers.length})</TabsTrigger>
+              <TabsTrigger value="photographers">Photographers ({photographers.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="mt-4">
+              {filteredStaff.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredStaff.map(member => (
+                    <StaffCard key={member.id} staff={member} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} />
+              )}
+            </TabsContent>
+            <TabsContent value="videographers" className="mt-4">
+              {videographers.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {videographers.map(member => (
+                    <StaffCard key={member.id} staff={member} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} role="Videographers" />
+              )}
+            </TabsContent>
+            <TabsContent value="photographers" className="mt-4">
+              {photographers.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {photographers.map(member => (
+                    <StaffCard key={member.id} staff={member} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} role="Photographers" />
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <EmptyStateMessage searchQuery={searchQuery} />
+        )}
       </div>
     </div>
   );
 }
 
 interface StaffCardProps {
-  name: string;
-  role: "Videographer" | "Photographer";
-  imageUrl?: string;
-  statistics: {
-    completed: number;
-    absent: number;
-    excused: number;
-  };
+  staff: StaffMember;
 }
 
-function StaffCard({ name, role, imageUrl, statistics }: StaffCardProps) {
+function StaffCard({ staff }: StaffCardProps) {
+  const { name, role, photoUrl, statistics, schedules } = staff;
+  
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-center space-x-4">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={imageUrl} alt={name} />
+            <AvatarImage src={photoUrl} alt={name} />
             <AvatarFallback className="bg-primary/10 text-primary">
               {name.split(" ").map(n => n[0]).join("")}
             </AvatarFallback>
@@ -112,6 +127,28 @@ function StaffCard({ name, role, imageUrl, statistics }: StaffCardProps) {
             <p className="text-sm text-muted-foreground">{role}</p>
           </div>
         </div>
+        
+        {schedules.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">CLASS SCHEDULES</p>
+            <div className="space-y-1">
+              {schedules.map((schedule, index) => {
+                const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                return (
+                  <div key={index} className="text-xs bg-muted p-1.5 rounded">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{schedule.subject}</span>
+                      <span>{dayNames[schedule.dayOfWeek]}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {schedule.startTime} - {schedule.endTime}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-2 mt-2 text-center">
@@ -130,5 +167,21 @@ function StaffCard({ name, role, imageUrl, statistics }: StaffCardProps) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function EmptyStateMessage({ searchQuery, role }: { searchQuery: string; role?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
+      <Users className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-medium">No staff members found</h3>
+      <p className="text-muted-foreground text-center mt-2">
+        {searchQuery ? 
+          `No staff members match your search criteria. Try a different search term.` : 
+          role ? 
+          `You haven't added any ${role.toLowerCase()} yet.` :
+          "You haven't added any staff members yet. Click the 'Add Staff Member' button to get started."}
+      </p>
+    </div>
   );
 }

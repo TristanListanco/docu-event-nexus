@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -172,12 +173,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Please check your email to verify your account.",
       });
       
-      // Return a resolved Promise to ensure TypeScript compatibility
       return Promise.resolve();
       
     } catch (error: any) {
       console.error("Registration error:", error);
-      throw error;
+      return Promise.reject(error);
     }
   };
 
