@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
+import { StaffMember } from "@/types/models"; // Add missing import
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");

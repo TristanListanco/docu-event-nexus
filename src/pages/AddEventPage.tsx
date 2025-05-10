@@ -35,17 +35,20 @@ const formSchema = z.object({
   startTime: z.string().min(1, {
     message: "Start time is required.",
   }),
+  // Fix: Change the refine method to pass a single argument function
   endTime: z.string().min(1, {
     message: "End time is required.",
-  }).refine(
-    (endTime, data) => {
-      if (!data.startTime) return true;
-      return endTime > data.startTime;
-    },
-    {
-      message: "End time must be after start time.",
+  }).superRefine((endTime, ctx) => {
+    // We use superRefine instead which gives us access to the context
+    // This allows us to check against other fields
+    const data = ctx.parent;
+    if (data.startTime && endTime <= data.startTime) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time must be after start time.",
+      });
     }
-  ),
+  }),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
   }),

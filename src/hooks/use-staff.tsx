@@ -50,11 +50,13 @@ export const useStaff = () => {
         }
         
         // Count staff assignments for statistics
-        const { data: assignmentsData } = await supabase.rpc('count_staff_assignments', { 
-          staff_id_param: member.id 
-        });
+        const { data: assignmentsData } = await supabase.rpc(
+          'count_staff_assignments', 
+          { staff_id_param: member.id }
+        );
         
-        const statistics = assignmentsData?.[0] || {
+        // Fix: Check if assignmentsData is null
+        const statistics = assignmentsData && assignmentsData[0] ? assignmentsData[0] : {
           completed: 0,
           absent: 0,
           excused: 0
