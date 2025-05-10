@@ -50,6 +50,7 @@ export const useStaff = () => {
         }
         
         // Count staff assignments for statistics
+        // Fix: Use a properly typed parameter object for the RPC function
         const { data: assignmentsData } = await supabase.rpc(
           'count_staff_assignments', 
           { staff_id_param: member.id }

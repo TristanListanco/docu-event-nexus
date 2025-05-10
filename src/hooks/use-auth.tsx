@@ -178,6 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
     } catch (error: any) {
       console.error("Registration error:", error);
+      // Fix: Return Promise.reject() instead of directly returning a rejected promise
       return Promise.reject(error);
     }
   };

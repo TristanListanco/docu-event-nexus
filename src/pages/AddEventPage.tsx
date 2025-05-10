@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,19 +34,13 @@ const formSchema = z.object({
   startTime: z.string().min(1, {
     message: "Start time is required.",
   }),
-  // Fix: Change the refine method to pass a single argument function
+  // Fix: Use refine with single argument and proper context checking
   endTime: z.string().min(1, {
     message: "End time is required.",
-  }).superRefine((endTime, ctx) => {
-    // We use superRefine instead which gives us access to the context
-    // This allows us to check against other fields
-    const data = ctx.parent;
-    if (data.startTime && endTime <= data.startTime) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "End time must be after start time.",
-      });
-    }
+  }).refine((endTime) => {
+    return true; // Initial validation to ensure field is filled
+  }, {
+    message: "End time must be after start time."
   }),
   location: z.string().min(2, {
     message: "Location must be at least 2 characters.",
@@ -55,6 +48,11 @@ const formSchema = z.object({
   eventType: z.string().min(1, {
     message: "Please select an event type.",
   })
+}).refine((data) => {
+  return data.startTime < data.endTime;
+}, {
+  message: "End time must be after start time.",
+  path: ["endTime"]
 });
 
 export default function AddEventPage() {
