@@ -22,8 +22,6 @@ import {
 } from "@/components/ui/select";
 import {
   Calendar as CalendarIcon,
-  User,
-  Camera
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -61,7 +59,7 @@ export default function EventEditDialog({
   
   const [loading, setLoading] = useState(false);
   const { updateEvent } = useEvents();
-  const { staff, getAvailableStaff } = useStaff();
+  const { staff, getStaffByRole } = useStaff();
   
   const [availableVideographers, setAvailableVideographers] = useState<any[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<any[]>([]);
@@ -103,13 +101,9 @@ export default function EventEditDialog({
   const updateAvailableStaff = () => {
     if (!date) return;
     
-    // Get available staff based on date and time
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    const { videographers, photographers } = getAvailableStaff(
-      formattedDate,
-      startTime,
-      endTime
-    );
+    // Use getStaffByRole instead of getAvailableStaff since we fixed the hook
+    const videographers = getStaffByRole("Videographer");
+    const photographers = getStaffByRole("Photographer");
     
     // Add currently assigned staff who might not be available now
     const allVideographers = [...videographers];

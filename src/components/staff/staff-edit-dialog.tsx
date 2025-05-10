@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,10 +137,22 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     setLoading(true);
     
     try {
+      // Create the proper structure for schedules
+      const staffSchedules = staff.schedules || [];
+      const currentIds = staffSchedules.map(s => s.id);
+      const schedulesToUpdate: { toAdd: Omit<Schedule, "id">[]; toUpdate: Schedule[]; toDelete: string[]; } = {
+        // New schedules to add (don't have IDs)
+        toAdd: schedules.filter(s => !('id' in s)),
+        // We don't have any schedules to update in this implementation
+        toUpdate: [],
+        // Any schedule IDs that were in the staff but are no longer in our current schedules list
+        toDelete: currentIds.filter(id => !schedules.some(s => 'id' in s && s.id === id))
+      };
+      
       await updateStaffMember(staff.id, {
         name: formData.name,
         role: formData.role,
-        schedules
+        schedules: schedulesToUpdate
       });
       
       onOpenChange(false);

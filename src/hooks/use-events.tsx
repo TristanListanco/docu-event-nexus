@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
@@ -27,7 +26,7 @@ export function useEvents() {
       }
 
       // We need to fetch staff assignments separately 
-      const events = await Promise.all(
+      const events: Event[] = await Promise.all(
         data.map(async (event) => {
           const { data: videographers, error: videographersError } = await supabase
             .from("staff_assignments")
@@ -47,7 +46,15 @@ export function useEvents() {
           }
 
           return {
-            ...event,
+            id: event.id,
+            logId: event.log_id,
+            name: event.name,
+            date: event.date,
+            startTime: event.start_time,
+            endTime: event.end_time,
+            location: event.location,
+            type: event.type as EventType,
+            status: event.status as EventStatus,
             videographers: videographers?.map(v => ({ 
               staffId: v.staff_id,
               attendanceStatus: v.attendance_status
@@ -56,7 +63,10 @@ export function useEvents() {
               staffId: p.staff_id,
               attendanceStatus: p.attendance_status
             })) || [],
-          } as Event;
+            ignoreScheduleConflicts: event.ignore_schedule_conflicts,
+            isBigEvent: event.is_big_event,
+            bigEventId: event.big_event_id
+          };
         })
       );
 
@@ -87,7 +97,6 @@ export function useEvents() {
       const { data: eventData_, error: eventError } = await supabase
         .from("events")
         .insert({
-          user_id: user.id,
           name: eventData.name,
           log_id: eventData.logId,
           date: eventData.date,
@@ -98,7 +107,8 @@ export function useEvents() {
           status: eventData.status as string,
           ignore_schedule_conflicts: eventData.ignoreScheduleConflicts,
           is_big_event: eventData.isBigEvent,
-          big_event_id: eventData.bigEventId
+          big_event_id: eventData.bigEventId,
+          user_id: user.id
         })
         .select()
         .single();
@@ -261,8 +271,16 @@ export function useEvents() {
           videographersError || photographersError);
       }
 
-      return {
-        ...data,
+      const event: Event = {
+        id: data.id,
+        logId: data.log_id,
+        name: data.name,
+        date: data.date,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        location: data.location,
+        type: data.type as EventType,
+        status: data.status as EventStatus,
         videographers: videographers?.map(v => ({ 
           staffId: v.staff_id,
           attendanceStatus: v.attendance_status
@@ -271,7 +289,12 @@ export function useEvents() {
           staffId: p.staff_id,
           attendanceStatus: p.attendance_status
         })) || [],
-      } as Event;
+        ignoreScheduleConflicts: data.ignore_schedule_conflicts,
+        isBigEvent: data.is_big_event,
+        bigEventId: data.big_event_id
+      };
+      
+      return event;
     } catch (error: any) {
       console.error("Error getting event:", error.message);
       toast({

@@ -312,6 +312,21 @@ export function useStaff() {
     return staff.find((member) => member.id === id) || null;
   };
 
+  // New function to get available staff based on date and time
+  const getAvailableStaff = (date: string, startTime: string, endTime: string) => {
+    // Filter staff members based on their schedules
+    // This is a simple implementation that doesn't check for conflicts yet
+    const videographers = getStaffByRole("Videographer");
+    const photographers = getStaffByRole("Photographer");
+    
+    // In a real implementation, we would check for conflicts with the given date and time
+    // For now, we just return all staff members of each role
+    return {
+      videographers,
+      photographers
+    };
+  };
+
   // Load staff on initialization
   useEffect(() => {
     if (user) {
@@ -328,5 +343,6 @@ export function useStaff() {
     deleteStaffMember,
     getStaffByRole,
     getStaffById,
+    getAvailableStaff
   };
 }

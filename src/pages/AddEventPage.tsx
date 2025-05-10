@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -17,7 +18,6 @@ import { StaffMember, EventType, EventStatus } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { Listbox } from '@headlessui/react'
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -63,6 +63,24 @@ export default function AddEventPage() {
     const randomId = Math.random().toString(36).substring(2, 9).toUpperCase();
     const newLogId = `${prefix}-${randomId}`;
     setLogId(newLogId);
+  };
+
+  // Toggle selection of videographer
+  const toggleVideographer = (videographer: StaffMember) => {
+    if (selectedVideographers.some(v => v.id === videographer.id)) {
+      setSelectedVideographers(prev => prev.filter(v => v.id !== videographer.id));
+    } else {
+      setSelectedVideographers(prev => [...prev, videographer]);
+    }
+  };
+
+  // Toggle selection of photographer
+  const togglePhotographer = (photographer: StaffMember) => {
+    if (selectedPhotographers.some(p => p.id === photographer.id)) {
+      setSelectedPhotographers(prev => prev.filter(p => p.id !== photographer.id));
+    } else {
+      setSelectedPhotographers(prev => [...prev, photographer]);
+    }
   };
 
   // Handle form submission
@@ -145,6 +163,7 @@ export default function AddEventPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid md:grid-cols-2 gap-4">
+              {/* Name and Log ID fields */}
               <div>
                 <Label htmlFor="name">Event Name</Label>
                 <Input
@@ -173,6 +192,8 @@ export default function AddEventPage() {
                 </div>
               </div>
             </div>
+            
+            {/* Date and Time fields */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label>Event Date</Label>
@@ -198,6 +219,7 @@ export default function AddEventPage() {
                         date < new Date()
                       }
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -225,6 +247,8 @@ export default function AddEventPage() {
                 </div>
               </div>
             </div>
+            
+            {/* Location field */}
             <div>
               <Label htmlFor="location">Event Location</Label>
               <Input
@@ -236,6 +260,8 @@ export default function AddEventPage() {
                 required
               />
             </div>
+            
+            {/* Event type and status */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="type">Event Type</Label>
@@ -267,6 +293,8 @@ export default function AddEventPage() {
                 </Select>
               </div>
             </div>
+            
+            {/* Checkboxes */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="ignoreConflicts"
@@ -283,6 +311,8 @@ export default function AddEventPage() {
               />
               <Label htmlFor="isBigEvent">Is Big Event</Label>
             </div>
+            
+            {/* Big Event ID (conditional) */}
             {isBigEvent && (
               <div>
                 <Label htmlFor="bigEventId">Big Event ID</Label>
@@ -295,90 +325,66 @@ export default function AddEventPage() {
                 />
               </div>
             )}
+            
+            {/* Videographers selection */}
             <div>
-              <Label>Videographers</Label>
-              <Listbox value={selectedVideographers} onChange={setSelectedVideographers} multiple>
-                <div className="relative mt-1">
-                  <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                    <span className="block truncate">
-                      {selectedVideographers.length > 0
-                        ? selectedVideographers.map((person) => person.name).join(', ')
-                        : 'Select Videographers'}
-                    </span>
-                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    </span>
-                  </Listbox.Button>
-                  <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                    {videographers.map((person) => (
-                      <Listbox.Option
-                        key={person.id}
-                        className={({ active }) =>
-                          cn(
-                            'relative cursor-default select-none py-2 pl-10 pr-4',
-                            active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
-                          )
-                        }
-                        value={person}
+              <Label className="block mb-2">Videographers</Label>
+              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
+                {videographers.length > 0 ? (
+                  videographers.map((person) => (
+                    <div key={person.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`video-${person.id}`} 
+                        checked={selectedVideographers.some(v => v.id === person.id)} 
+                        onCheckedChange={() => toggleVideographer(person)}
+                      />
+                      <label 
+                        htmlFor={`video-${person.id}`} 
+                        className="flex items-center cursor-pointer text-sm"
                       >
-                        {({ selected }) => (
-                          <>
-                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                              {person.name}
-                            </span>
-                            {selected ? (
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
-                              </span>
-                            ) : null}
-                          </>
-                        )}
-                      </Listbox.Option>
-                    ))}
-                  </Listbox.Options>
-                </div>
-              </Listbox>
+                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
+                          {person.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                        {person.name}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">No videographers available</p>
+                )}
+              </div>
             </div>
+            
+            {/* Photographers selection */}
             <div>
-              <Label>Photographers</Label>
-              <Listbox value={selectedPhotographers} onChange={setSelectedPhotographers} multiple>
-                <div className="relative mt-1">
-                  <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                    <span className="block truncate">
-                      {selectedPhotographers.length > 0
-                        ? selectedPhotographers.map((person) => person.name).join(', ')
-                        : 'Select Photographers'}
-                    </span>
-                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                    </span>
-                  </Listbox.Button>
-                  <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                    {photographers.map((person) => (
-                      <Listbox.Option
-                        key={person.id}
-                        className={({ active }) =>
-                          cn(
-                            'relative cursor-default select-none py-2 pl-10 pr-4',
-                            active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
-                          )
-                        }
-                        value={person}
+              <Label className="block mb-2">Photographers</Label>
+              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
+                {photographers.length > 0 ? (
+                  photographers.map((person) => (
+                    <div key={person.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`photo-${person.id}`} 
+                        checked={selectedPhotographers.some(p => p.id === person.id)} 
+                        onCheckedChange={() => togglePhotographer(person)}
+                      />
+                      <label 
+                        htmlFor={`photo-${person.id}`} 
+                        className="flex items-center cursor-pointer text-sm"
                       >
-                        {({ selected }) => (
-                          <>
-                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                              {person.name}
-                            </span>
-                            {selected ? (
-                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
-                              </span>
-                            ) : null}
-                          </>
-                        )}
-                      </Listbox.Option>
-                    ))}
-                  </Listbox.Options>
-                </div>
-              </Listbox>
+                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
+                          {person.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                        {person.name}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">No photographers available</p>
+                )}
+              </div>
             </div>
+            
+            {/* Submit button */}
             <Button type="submit" disabled={submitting}>
               {submitting ? "Submitting..." : "Add Event"}
             </Button>
