@@ -33,7 +33,12 @@ export const useStaff = () => {
         name: s.name,
         role: s.role as StaffRole,
         photoUrl: s.photo_url || undefined,
-        schedules: [] as Schedule[]
+        schedules: [] as Schedule[],
+        statistics: {
+          completed: 0,
+          absent: 0,
+          excused: 0
+        }
       }));
       
       // Load schedules for all staff members

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Event, EventType, EventStatus, EventAssignment } from "@/types/models";
+import { Event, EventType, EventStatus, StaffAssignment } from "@/types/models";
 
 export const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -32,8 +32,8 @@ export const useEvents = () => {
       // Map database results to Event type
       const mappedEvents: Event[] = data.map(event => {
         // Process staff assignments
-        let videographers: EventAssignment[] = [];
-        let photographers: EventAssignment[] = [];
+        const videographers: StaffAssignment[] = [];
+        const photographers: StaffAssignment[] = [];
         
         if (event.staff_assignments && event.staff_assignments.length > 0) {
           // Get all staff assignments for this event
@@ -49,15 +49,19 @@ export const useEvents = () => {
             assignment.role === 'Photographer'
           );
           
-          videographers = videoAssignments.map((assignment: any) => ({
-            staffId: assignment.staff_id,
-            status: assignment.attendance_status
-          }));
+          videoAssignments.forEach((assignment: any) => {
+            videographers.push({
+              staffId: assignment.staff_id,
+              attendanceStatus: assignment.attendance_status
+            });
+          });
           
-          photographers = photoAssignments.map((assignment: any) => ({
-            staffId: assignment.staff_id,
-            status: assignment.attendance_status
-          }));
+          photoAssignments.forEach((assignment: any) => {
+            photographers.push({
+              staffId: assignment.staff_id,
+              attendanceStatus: assignment.attendance_status
+            });
+          });
         }
         
         return {
@@ -103,22 +107,25 @@ export const useEvents = () => {
       // Generate a log ID
       const logId = `EV-${new Date().getFullYear()}-${String(events.length + 1).padStart(3, '0')}`;
       
+      // Prepare the event data for insertion
+      const eventInsertData = {
+        user_id: user.id,
+        log_id: logId,
+        name: eventData.name,
+        date: eventData.date,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        location: eventData.location,
+        type: eventData.type,
+        status: eventData.status || 'Upcoming',
+        ignore_schedule_conflicts: eventData.ignoreScheduleConflicts || false,
+        is_big_event: eventData.isBigEvent || false,
+        big_event_id: eventData.bigEventId || null
+      };
+      
       const { data, error } = await supabase
         .from('events')
-        .insert({
-          user_id: user.id,
-          name: eventData.name,
-          log_id: logId,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          location: eventData.location,
-          type: eventData.type,
-          status: eventData.status || 'Upcoming',
-          ignore_schedule_conflicts: eventData.ignoreScheduleConflicts || false,
-          is_big_event: eventData.isBigEvent || false,
-          big_event_id: eventData.bigEventId || null
-        })
+        .insert(eventInsertData)
         .select()
         .single();
         
@@ -260,7 +267,7 @@ export const useEvents = () => {
               event_id: eventId,
               staff_id: assignment.staffId,
               role: 'Videographer',
-              attendance_status: assignment.status || 'Pending'
+              attendance_status: assignment.attendanceStatus || 'Pending'
             });
           });
         }
@@ -273,7 +280,7 @@ export const useEvents = () => {
               event_id: eventId,
               staff_id: assignment.staffId,
               role: 'Photographer',
-              attendance_status: assignment.status || 'Pending'
+              attendance_status: assignment.attendanceStatus || 'Pending'
             });
           });
         }
