@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import MainLayout from "@/components/layout/main-layout";
 import LoginPage from "@/pages/LoginPage";
@@ -24,23 +24,25 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          
-          <Route element={<ProtectedRoute />}>
-            <Route element={<MainLayout />}>
-              <Route path="/events" element={<EventsPage />} />
-              <Route path="/events/new" element={<AddEventPage />} />
-              <Route path="/events/:eventId" element={<EventDetailsPage />} />
-              <Route path="/staff" element={<StaffPage />} />
-              <Route path="/about" element={<AboutPage />} />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            <Route element={<ProtectedRoute />}>
+              <Route element={<MainLayout />}>
+                <Route path="/events" element={<EventsPage />} />
+                <Route path="/events/new" element={<AddEventPage />} />
+                <Route path="/events/:eventId" element={<EventDetailsPage />} />
+                <Route path="/staff" element={<StaffPage />} />
+                <Route path="/about" element={<AboutPage />} />
+              </Route>
             </Route>
-          </Route>
-          
-          <Route path="/" element={<Navigate to="/events" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            
+            <Route path="/" element={<Navigate to="/events" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

@@ -5,21 +5,15 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Calendar, Users, Info, Menu, X, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { Calendar, Users, Info, Menu, X } from "lucide-react";
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const { signOut } = useAuth();
   
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
   };
 
   return (
@@ -67,14 +61,6 @@ export default function MainLayout() {
                 >
                   <Info size={20} />
                   <span>About</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex items-center justify-start gap-2 w-full mt-auto"
-                  onClick={handleSignOut}
-                >
-                  <LogOut size={20} />
-                  <span>Sign Out</span>
                 </Button>
               </div>
               
@@ -133,16 +119,6 @@ export default function MainLayout() {
           >
             <Info size={20} />
             {!collapsed && <span>About</span>}
-          </Button>
-          
-          <div className="mt-auto"></div>
-          <Button
-            variant="ghost"
-            className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-2 w-full mt-4`}
-            onClick={handleSignOut}
-          >
-            <LogOut size={20} />
-            {!collapsed && <span>Sign Out</span>}
           </Button>
         </div>
 

@@ -1,396 +1,406 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { Calendar as CalendarIcon, Clock, Users } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
-import { useEvents } from "@/hooks/use-events";
-import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, EventType, EventStatus } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EventType, StaffMember } from "@/types/models";
+import { useEvents } from "@/hooks/use-events";
+import { useStaff } from "@/hooks/use-staff";
+
+const formSchema = z.object({
+  title: z.string().min(2, {
+    message: "Event title must be at least 2 characters.",
+  }),
+  date: z.date({
+    required_error: "A date is required.",
+  }),
+  startTime: z.string().min(1, {
+    message: "Start time is required.",
+  }),
+  endTime: z.string().min(1, {
+    message: "End time is required.",
+  }),
+  location: z.string().min(2, {
+    message: "Location must be at least 2 characters.",
+  }),
+  eventType: z.string().min(1, {
+    message: "Please select an event type.",
+  }),
+  videographers: z.array(z.string()).optional(),
+  photographers: z.array(z.string()).optional(),
+}).refine((data) => {
+  return data.startTime < data.endTime;
+}, {
+  message: "End time must be after start time.",
+  path: ["endTime"]
+});
 
 export default function AddEventPage() {
-  const [name, setName] = useState("");
-  const [logId, setLogId] = useState("");
-  const [date, setDate] = useState<Date | undefined>(undefined);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [type, setType] = useState<EventType>("General");
-  const [status, setStatus] = useState<EventStatus>("Upcoming");
-  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
-  const [isBigEvent, setIsBigEvent] = useState(false);
-  const [bigEventId, setBigEventId] = useState("");
-  const [selectedVideographers, setSelectedVideographers] = useState<StaffMember[]>([]);
-  const [selectedPhotographers, setSelectedPhotographers] = useState<StaffMember[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const { addEvent } = useEvents();
-  const { staff, getStaffByRole } = useStaff();
-  const { toast } = useToast();
   const navigate = useNavigate();
-
-  const videographers = getStaffByRole("Videographer");
-  const photographers = getStaffByRole("Photographer");
-
-  const [selectedStaff, setSelectedStaff] = useState<{
-    videographers: StaffMember[];
-    photographers: StaffMember[];
-  }>({
-    videographers: [],
-    photographers: [],
+  const [loading, setLoading] = useState(false);
+  const { createEvent } = useEvents();
+  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
+  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
+  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+  
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      location: "",
+      startTime: "09:00",
+      endTime: "11:00",
+      eventType: "",
+      videographers: [],
+      photographers: []
+    },
   });
 
+  // Watch for changes to date, start time and end time to update available staff
+  const watchDate = form.watch("date");
+  const watchStartTime = form.watch("startTime");
+  const watchEndTime = form.watch("endTime");
+
+  // Update available staff whenever date or time changes
   useEffect(() => {
-    setSelectedStaff({
-      videographers: selectedVideographers,
-      photographers: selectedPhotographers,
-    });
-  }, [selectedVideographers, selectedPhotographers]);
-  
-  // Function to generate a unique log ID
-  const generateLogId = () => {
-    const prefix = "EVNT";
-    const randomId = Math.random().toString(36).substring(2, 9).toUpperCase();
-    const newLogId = `${prefix}-${randomId}`;
-    setLogId(newLogId);
-  };
-
-  // Toggle selection of videographer
-  const toggleVideographer = (videographer: StaffMember) => {
-    if (selectedVideographers.some(v => v.id === videographer.id)) {
-      setSelectedVideographers(prev => prev.filter(v => v.id !== videographer.id));
-    } else {
-      setSelectedVideographers(prev => [...prev, videographer]);
-    }
-  };
-
-  // Toggle selection of photographer
-  const togglePhotographer = (photographer: StaffMember) => {
-    if (selectedPhotographers.some(p => p.id === photographer.id)) {
-      setSelectedPhotographers(prev => prev.filter(p => p.id !== photographer.id));
-    } else {
-      setSelectedPhotographers(prev => [...prev, photographer]);
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmitting(true);
-
-    try {
-      if (!name || !logId || !date || !startTime || !endTime || !location) {
-        toast({
-          title: "Missing Fields",
-          description: "Please fill in all required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
+    const checkAvailableStaff = async () => {
+      if (!watchDate || !watchStartTime || !watchEndTime) return;
       
-      if (new Date(`${date.toISOString().split('T')[0]}T${endTime}`) <= new Date(`${date.toISOString().split('T')[0]}T${startTime}`)) {
-        toast({
-          title: "Invalid Time",
-          description: "End time must be later than start time.",
-          variant: "destructive",
-        });
-        return;
-      }
+      setIsCheckingAvailability(true);
       
-      // Create arrays of just the IDs
-      const videographerIds = selectedVideographers.map(v => v.id);
-      const photographerIds = selectedPhotographers.map(p => p.id);
-
-      // Save the event
-      const eventId = await addEvent(
-        {
-          name,
-          logId,
-          date: date.toISOString().split('T')[0],
-          startTime,
-          endTime,
-          location,
-          type,
-          status,
-          ignoreScheduleConflicts,
-          isBigEvent,
-          bigEventId
-        },
-        videographerIds,
-        photographerIds
+      const formattedDate = format(watchDate, 'yyyy-MM-dd');
+      
+      // Check available videographers
+      const videographers = await getAvailableStaff(
+        formattedDate,
+        watchStartTime,
+        watchEndTime,
+        "Videographer"
       );
+      
+      // Check available photographers
+      const photographers = await getAvailableStaff(
+        formattedDate,
+        watchStartTime,
+        watchEndTime,
+        "Photographer"
+      );
+      
+      setAvailableVideographers(videographers);
+      setAvailablePhotographers(photographers);
+      setIsCheckingAvailability(false);
+    };
+    
+    if (watchDate && watchStartTime && watchEndTime) {
+      checkAvailableStaff();
+    }
+  }, [watchDate, watchStartTime, watchEndTime]);
 
-      // If successful, redirect to the event details page
-      if (eventId) {
-        navigate(`/events/${eventId}`);
-        
-        // Update selected staff
-        setSelectedStaff({
-          videographers: selectedVideographers,
-          photographers: selectedPhotographers
-        });
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setLoading(true);
+    try {
+      const result = await createEvent({
+        name: values.title,
+        date: format(values.date, 'yyyy-MM-dd'),
+        startTime: values.startTime,
+        endTime: values.endTime,
+        location: values.location,
+        type: values.eventType as EventType,
+        status: 'Upcoming',
+        ignoreScheduleConflicts: false,
+        isBigEvent: false
+      });
+      
+      if (result) {
+        navigate("/events");
       }
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Error creating event:", error);
+      toast({
+        title: "Error",
+        description: "There was a problem creating the event.",
+        variant: "destructive",
+      });
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Add Event</h1>
-        <Button onClick={() => navigate("/events")} variant="outline">
-          Cancel
-        </Button>
+    <div className="flex flex-col h-full">
+      <div className="border-b">
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Add New Event</h1>
+            <p className="text-muted-foreground">Create a new event for your schedule</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/events")}
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
-      <Separator className="my-4" />
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Name and Log ID fields */}
-              <div>
-                <Label htmlFor="name">Event Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Event Name"
-                  required
+      
+      <div className="p-4 flex justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Event Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter event title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              <div>
-                <Label htmlFor="logId">Event Log ID</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="logId"
-                    type="text"
-                    value={logId}
-                    onChange={(e) => setLogId(e.target.value)}
-                    placeholder="Event Log ID"
-                    required
-                  />
-                  <Button type="button" variant="outline" onClick={generateLogId}>
-                    Generate
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Date and Time fields */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Event Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(date) =>
-                        date < new Date()
-                      }
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="endTime">End Time</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-            
-            {/* Location field */}
-            <div>
-              <Label htmlFor="location">Event Location</Label>
-              <Input
-                id="location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Event Location"
-                required
-              />
-            </div>
-            
-            {/* Event type and status */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type">Event Type</Label>
-                <Select value={type} onValueChange={(value) => setType(value as EventType)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SPECOM">SPECOM</SelectItem>
-                    <SelectItem value="LITCOM">LITCOM</SelectItem>
-                    <SelectItem value="CUACOM">CUACOM</SelectItem>
-                    <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                    <SelectItem value="General">General</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="status">Event Status</Label>
-                <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select event status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Upcoming">Upcoming</SelectItem>
-                    <SelectItem value="Ongoing">Ongoing</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {/* Checkboxes */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="ignoreConflicts"
-                checked={ignoreScheduleConflicts}
-                onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
-              />
-              <Label htmlFor="ignoreConflicts">Ignore Schedule Conflicts</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isBigEvent"
-                checked={isBigEvent}
-                onCheckedChange={(checked) => setIsBigEvent(!!checked)}
-              />
-              <Label htmlFor="isBigEvent">Is Big Event</Label>
-            </div>
-            
-            {/* Big Event ID (conditional) */}
-            {isBigEvent && (
-              <div>
-                <Label htmlFor="bigEventId">Big Event ID</Label>
-                <Input
-                  id="bigEventId"
-                  type="text"
-                  value={bigEventId}
-                  onChange={(e) => setBigEventId(e.target.value)}
-                  placeholder="Big Event ID"
+                
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Event Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Select a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            )}
-            
-            {/* Videographers selection */}
-            <div>
-              <Label className="block mb-2">Videographers</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
-                {videographers.length > 0 ? (
-                  videographers.map((person) => (
-                    <div key={person.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`video-${person.id}`} 
-                        checked={selectedVideographers.some(v => v.id === person.id)} 
-                        onCheckedChange={() => toggleVideographer(person)}
-                      />
-                      <label 
-                        htmlFor={`video-${person.id}`} 
-                        className="flex items-center cursor-pointer text-sm"
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Time</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <Input type="time" {...field} />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="endTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Time</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <Input type="time" {...field} />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter event location" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="eventType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select event type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="SPECOM">SPECOM</SelectItem>
+                          <SelectItem value="LITCOM">LITCOM</SelectItem>
+                          <SelectItem value="CUACOM">CUACOM</SelectItem>
+                          <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                          <SelectItem value="General">General</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Videographers */}
+                <FormField
+                  control={form.control}
+                  name="videographers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Videographers</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange([value])}
+                        value={field.value?.[0]}
+                        disabled={isCheckingAvailability || !watchDate}
                       >
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {person.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                        {person.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-sm">No videographers available</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Photographers selection */}
-            <div>
-              <Label className="block mb-2">Photographers</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
-                {photographers.length > 0 ? (
-                  photographers.map((person) => (
-                    <div key={person.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`photo-${person.id}`} 
-                        checked={selectedPhotographers.some(p => p.id === person.id)} 
-                        onCheckedChange={() => togglePhotographer(person)}
-                      />
-                      <label 
-                        htmlFor={`photo-${person.id}`} 
-                        className="flex items-center cursor-pointer text-sm"
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a videographer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isCheckingAvailability ? (
+                            <div className="p-2 text-center">
+                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
+                              <p>Checking availability...</p>
+                            </div>
+                          ) : availableVideographers.length > 0 ? (
+                            availableVideographers.map((videographer) => (
+                              <SelectItem key={videographer.id} value={videographer.id}>
+                                {videographer.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">
+                              <Users className="h-4 w-4 mx-auto mb-2" />
+                              <p>No available videographers for this time</p>
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {!watchDate ? "Select a date and time first" : "Available videographers for the selected time"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Photographers */}
+                <FormField
+                  control={form.control}
+                  name="photographers"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Photographers</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange([value])}
+                        value={field.value?.[0]}
+                        disabled={isCheckingAvailability || !watchDate}
                       >
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {person.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                        {person.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-sm">No photographers available</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Submit button */}
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Add Event"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a photographer" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isCheckingAvailability ? (
+                            <div className="p-2 text-center">
+                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
+                              <p>Checking availability...</p>
+                            </div>
+                          ) : availablePhotographers.length > 0 ? (
+                            availablePhotographers.map((photographer) => (
+                              <SelectItem key={photographer.id} value={photographer.id}>
+                                {photographer.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="p-2 text-center text-muted-foreground">
+                              <Users className="h-4 w-4 mx-auto mb-2" />
+                              <p>No available photographers for this time</p>
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {!watchDate ? "Select a date and time first" : "Available photographers for the selected time"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Creating..." : "Create Event"}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

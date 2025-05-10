@@ -14,7 +14,7 @@ export default function RegisterForm() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -23,7 +23,7 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      await signUp(email, password, name);
+      await register(email, password, name);
       toast({
         title: "Registration Successful",
         description: "Please check your email to confirm your account.",

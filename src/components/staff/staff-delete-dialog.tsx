@@ -42,7 +42,7 @@ export default function StaffDeleteDialog({
     setError(null);
 
     try {
-      const success = await deleteStaffMember(staff.id);
+      const success = await deleteStaffMember(staff.id, password);
       if (success) {
         toast({
           title: "Staff Deleted",

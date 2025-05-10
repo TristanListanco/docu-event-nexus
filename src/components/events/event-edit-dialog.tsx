@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { Event, EventStatus, StaffAssignment } from "@/types/models";
+import { Event, EventStatus, EventAssignment } from "@/types/models";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import {
   Calendar as CalendarIcon,
+  User,
+  Camera
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -59,7 +62,7 @@ export default function EventEditDialog({
   
   const [loading, setLoading] = useState(false);
   const { updateEvent } = useEvents();
-  const { staff, getStaffByRole } = useStaff();
+  const { staff, getAvailableStaff } = useStaff();
   
   const [availableVideographers, setAvailableVideographers] = useState<any[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<any[]>([]);
@@ -101,9 +104,13 @@ export default function EventEditDialog({
   const updateAvailableStaff = () => {
     if (!date) return;
     
-    // Use getStaffByRole instead of getAvailableStaff since we fixed the hook
-    const videographers = getStaffByRole("Videographer");
-    const photographers = getStaffByRole("Photographer");
+    // Get available staff based on date and time
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    const { videographers, photographers } = getAvailableStaff(
+      formattedDate,
+      startTime,
+      endTime
+    );
     
     // Add currently assigned staff who might not be available now
     const allVideographers = [...videographers];
@@ -138,15 +145,15 @@ export default function EventEditDialog({
     setLoading(true);
 
     // Create videographer assignments
-    const videographers: StaffAssignment[] = selectedVideographers.map(staffId => ({
+    const videographers: EventAssignment[] = selectedVideographers.map(staffId => ({
       staffId,
-      attendanceStatus: 'Pending'
+      status: 'Assigned'
     }));
     
     // Create photographer assignments
-    const photographers: StaffAssignment[] = selectedPhotographers.map(staffId => ({
+    const photographers: EventAssignment[] = selectedPhotographers.map(staffId => ({
       staffId,
-      attendanceStatus: 'Pending'
+      status: 'Assigned'
     }));
 
     const updatedEvent: Partial<Event> = {

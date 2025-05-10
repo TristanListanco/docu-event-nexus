@@ -20,7 +20,7 @@ import { useStaff } from "@/hooks/use-staff";
 export default function StaffFormDialog() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { addStaffMember } = useStaff();
+  const { createStaffMember } = useStaff();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -76,12 +76,12 @@ export default function StaffFormDialog() {
     setLoading(true);
     
     try {
-      await addStaffMember(
-        formData.name,
-        formData.role,
-        undefined, // photoUrl
+      await createStaffMember({
+        name: formData.name,
+        role: formData.role,
+        email: formData.email || undefined,
         schedules
-      );
+      });
       
       setOpen(false);
       setFormData({
