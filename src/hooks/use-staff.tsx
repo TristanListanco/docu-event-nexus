@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -48,7 +49,7 @@ export const useStaff = () => {
           };
         }
         
-        // Fix: Use correct typing for the RPC function parameters
+        // Fix: Use a correctly typed parameter object for the RPC function
         const { data: assignmentsData } = await supabase.rpc(
           'count_staff_assignments', 
           { staff_id_param: member.id }
