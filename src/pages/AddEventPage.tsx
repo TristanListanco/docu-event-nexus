@@ -1,406 +1,390 @@
-
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription
-} from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useNavigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
-import { Calendar as CalendarIcon, Clock, Users } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EventType, StaffMember } from "@/types/models";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
-
-const formSchema = z.object({
-  title: z.string().min(2, {
-    message: "Event title must be at least 2 characters.",
-  }),
-  date: z.date({
-    required_error: "A date is required.",
-  }),
-  startTime: z.string().min(1, {
-    message: "Start time is required.",
-  }),
-  endTime: z.string().min(1, {
-    message: "End time is required.",
-  }),
-  location: z.string().min(2, {
-    message: "Location must be at least 2 characters.",
-  }),
-  eventType: z.string().min(1, {
-    message: "Please select an event type.",
-  }),
-  videographers: z.array(z.string()).optional(),
-  photographers: z.array(z.string()).optional(),
-}).refine((data) => {
-  return data.startTime < data.endTime;
-}, {
-  message: "End time must be after start time.",
-  path: ["endTime"]
-});
+import { StaffMember, EventType, EventStatus } from "@/types/models";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { Listbox } from '@headlessui/react'
 
 export default function AddEventPage() {
+  const [name, setName] = useState("");
+  const [logId, setLogId] = useState("");
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [type, setType] = useState<EventType>("General");
+  const [status, setStatus] = useState<EventStatus>("Upcoming");
+  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
+  const [isBigEvent, setIsBigEvent] = useState(false);
+  const [bigEventId, setBigEventId] = useState("");
+  const [selectedVideographers, setSelectedVideographers] = useState<StaffMember[]>([]);
+  const [selectedPhotographers, setSelectedPhotographers] = useState<StaffMember[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const { addEvent } = useEvents();
+  const { staff, getStaffByRole } = useStaff();
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const { createEvent } = useEvents();
-  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
-  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
-  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
-  
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      location: "",
-      startTime: "09:00",
-      endTime: "11:00",
-      eventType: "",
-      videographers: [],
-      photographers: []
-    },
+
+  const videographers = getStaffByRole("Videographer");
+  const photographers = getStaffByRole("Photographer");
+
+  const [selectedStaff, setSelectedStaff] = useState<{
+    videographers: StaffMember[];
+    photographers: StaffMember[];
+  }>({
+    videographers: [],
+    photographers: [],
   });
 
-  // Watch for changes to date, start time and end time to update available staff
-  const watchDate = form.watch("date");
-  const watchStartTime = form.watch("startTime");
-  const watchEndTime = form.watch("endTime");
-
-  // Update available staff whenever date or time changes
   useEffect(() => {
-    const checkAvailableStaff = async () => {
-      if (!watchDate || !watchStartTime || !watchEndTime) return;
-      
-      setIsCheckingAvailability(true);
-      
-      const formattedDate = format(watchDate, 'yyyy-MM-dd');
-      
-      // Check available videographers
-      const videographers = await getAvailableStaff(
-        formattedDate,
-        watchStartTime,
-        watchEndTime,
-        "Videographer"
-      );
-      
-      // Check available photographers
-      const photographers = await getAvailableStaff(
-        formattedDate,
-        watchStartTime,
-        watchEndTime,
-        "Photographer"
-      );
-      
-      setAvailableVideographers(videographers);
-      setAvailablePhotographers(photographers);
-      setIsCheckingAvailability(false);
-    };
-    
-    if (watchDate && watchStartTime && watchEndTime) {
-      checkAvailableStaff();
-    }
-  }, [watchDate, watchStartTime, watchEndTime]);
+    setSelectedStaff({
+      videographers: selectedVideographers,
+      photographers: selectedPhotographers,
+    });
+  }, [selectedVideographers, selectedPhotographers]);
+  
+  // Function to generate a unique log ID
+  const generateLogId = () => {
+    const prefix = "EVNT";
+    const randomId = Math.random().toString(36).substring(2, 9).toUpperCase();
+    const newLogId = `${prefix}-${randomId}`;
+    setLogId(newLogId);
+  };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setLoading(true);
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+
     try {
-      const result = await createEvent({
-        name: values.title,
-        date: format(values.date, 'yyyy-MM-dd'),
-        startTime: values.startTime,
-        endTime: values.endTime,
-        location: values.location,
-        type: values.eventType as EventType,
-        status: 'Upcoming',
-        ignoreScheduleConflicts: false,
-        isBigEvent: false
-      });
+      if (!name || !logId || !date || !startTime || !endTime || !location) {
+        toast({
+          title: "Missing Fields",
+          description: "Please fill in all required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
       
-      if (result) {
-        navigate("/events");
+      if (new Date(`${date.toISOString().split('T')[0]}T${endTime}`) <= new Date(`${date.toISOString().split('T')[0]}T${startTime}`)) {
+        toast({
+          title: "Invalid Time",
+          description: "End time must be later than start time.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Create arrays of just the IDs
+      const videographerIds = selectedVideographers.map(v => v.id);
+      const photographerIds = selectedPhotographers.map(p => p.id);
+
+      // Save the event
+      const eventId = await addEvent(
+        {
+          name,
+          logId,
+          date: date.toISOString().split('T')[0],
+          startTime,
+          endTime,
+          location,
+          type,
+          status,
+          ignoreScheduleConflicts,
+          isBigEvent,
+          bigEventId
+        },
+        videographerIds,
+        photographerIds
+      );
+
+      // If successful, redirect to the event details page
+      if (eventId) {
+        navigate(`/events/${eventId}`);
+        
+        // Update selected staff
+        setSelectedStaff({
+          videographers: selectedVideographers,
+          photographers: selectedPhotographers
+        });
       }
     } catch (error) {
-      console.error("Error creating event:", error);
-      toast({
-        title: "Error",
-        description: "There was a problem creating the event.",
-        variant: "destructive",
-      });
+      console.error("Error submitting form:", error);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b">
-        <div className="flex items-center justify-between p-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Add New Event</h1>
-            <p className="text-muted-foreground">Create a new event for your schedule</p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/events")}
-          >
-            Cancel
-          </Button>
-        </div>
+    <div className="container py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Add Event</h1>
+        <Button onClick={() => navigate("/events")} variant="outline">
+          Cancel
+        </Button>
       </div>
-      
-      <div className="p-4 flex justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Event Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter event title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+      <Separator className="my-4" />
+      <Card>
+        <CardHeader>
+          <CardTitle>Event Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Event Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Event Name"
+                  required
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Event Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Select a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Time</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              </div>
+              <div>
+                <Label htmlFor="logId">Event Log ID</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="logId"
+                    type="text"
+                    value={logId}
+                    onChange={(e) => setLogId(e.target.value)}
+                    placeholder="Event Log ID"
+                    required
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="endTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Time</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <Input type="time" {...field} />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Button type="button" variant="outline" onClick={generateLogId}>
+                    Generate
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label>Event Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      disabled={(date) =>
+                        date < new Date()
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startTime">Start Time</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
                   />
                 </div>
-                
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter event location" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <div>
+                  <Label htmlFor="endTime">End Time</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="location">Event Location</Label>
+              <Input
+                id="location"
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Event Location"
+                required
+              />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="type">Event Type</Label>
+                <Select value={type} onValueChange={(value) => setType(value as EventType)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SPECOM">SPECOM</SelectItem>
+                    <SelectItem value="LITCOM">LITCOM</SelectItem>
+                    <SelectItem value="CUACOM">CUACOM</SelectItem>
+                    <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                    <SelectItem value="General">General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Event Status</Label>
+                <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select event status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Upcoming">Upcoming</SelectItem>
+                    <SelectItem value="Ongoing">Ongoing</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="ignoreConflicts"
+                checked={ignoreScheduleConflicts}
+                onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
+              />
+              <Label htmlFor="ignoreConflicts">Ignore Schedule Conflicts</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isBigEvent"
+                checked={isBigEvent}
+                onCheckedChange={(checked) => setIsBigEvent(!!checked)}
+              />
+              <Label htmlFor="isBigEvent">Is Big Event</Label>
+            </div>
+            {isBigEvent && (
+              <div>
+                <Label htmlFor="bigEventId">Big Event ID</Label>
+                <Input
+                  id="bigEventId"
+                  type="text"
+                  value={bigEventId}
+                  onChange={(e) => setBigEventId(e.target.value)}
+                  placeholder="Big Event ID"
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="eventType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select event type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="SPECOM">SPECOM</SelectItem>
-                          <SelectItem value="LITCOM">LITCOM</SelectItem>
-                          <SelectItem value="CUACOM">CUACOM</SelectItem>
-                          <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                          <SelectItem value="General">General</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Videographers */}
-                <FormField
-                  control={form.control}
-                  name="videographers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Videographers</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange([value])}
-                        value={field.value?.[0]}
-                        disabled={isCheckingAvailability || !watchDate}
+              </div>
+            )}
+            <div>
+              <Label>Videographers</Label>
+              <Listbox value={selectedVideographers} onChange={setSelectedVideographers} multiple>
+                <div className="relative mt-1">
+                  <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
+                    <span className="block truncate">
+                      {selectedVideographers.length > 0
+                        ? selectedVideographers.map((person) => person.name).join(', ')
+                        : 'Select Videographers'}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                    </span>
+                  </Listbox.Button>
+                  <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                    {videographers.map((person) => (
+                      <Listbox.Option
+                        key={person.id}
+                        className={({ active }) =>
+                          cn(
+                            'relative cursor-default select-none py-2 pl-10 pr-4',
+                            active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
+                          )
+                        }
+                        value={person}
                       >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a videographer" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isCheckingAvailability ? (
-                            <div className="p-2 text-center">
-                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
-                              <p>Checking availability...</p>
-                            </div>
-                          ) : availableVideographers.length > 0 ? (
-                            availableVideographers.map((videographer) => (
-                              <SelectItem key={videographer.id} value={videographer.id}>
-                                {videographer.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-2 text-center text-muted-foreground">
-                              <Users className="h-4 w-4 mx-auto mb-2" />
-                              <p>No available videographers for this time</p>
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        {!watchDate ? "Select a date and time first" : "Available videographers for the selected time"}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Photographers */}
-                <FormField
-                  control={form.control}
-                  name="photographers"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Photographers</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange([value])}
-                        value={field.value?.[0]}
-                        disabled={isCheckingAvailability || !watchDate}
+                        {({ selected }) => (
+                          <>
+                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                              {person.name}
+                            </span>
+                            {selected ? (
+                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
+                              </span>
+                            ) : null}
+                          </>
+                        )}
+                      </Listbox.Option>
+                    ))}
+                  </Listbox.Options>
+                </div>
+              </Listbox>
+            </div>
+            <div>
+              <Label>Photographers</Label>
+              <Listbox value={selectedPhotographers} onChange={setSelectedPhotographers} multiple>
+                <div className="relative mt-1">
+                  <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
+                    <span className="block truncate">
+                      {selectedPhotographers.length > 0
+                        ? selectedPhotographers.map((person) => person.name).join(', ')
+                        : 'Select Photographers'}
+                    </span>
+                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                    </span>
+                  </Listbox.Button>
+                  <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                    {photographers.map((person) => (
+                      <Listbox.Option
+                        key={person.id}
+                        className={({ active }) =>
+                          cn(
+                            'relative cursor-default select-none py-2 pl-10 pr-4',
+                            active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
+                          )
+                        }
+                        value={person}
                       >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a photographer" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isCheckingAvailability ? (
-                            <div className="p-2 text-center">
-                              <Clock className="animate-spin h-4 w-4 mx-auto mb-2" />
-                              <p>Checking availability...</p>
-                            </div>
-                          ) : availablePhotographers.length > 0 ? (
-                            availablePhotographers.map((photographer) => (
-                              <SelectItem key={photographer.id} value={photographer.id}>
-                                {photographer.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="p-2 text-center text-muted-foreground">
-                              <Users className="h-4 w-4 mx-auto mb-2" />
-                              <p>No available photographers for this time</p>
-                            </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        {!watchDate ? "Select a date and time first" : "Available photographers for the selected time"}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating..." : "Create Event"}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
+                        {({ selected }) => (
+                          <>
+                            <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                              {person.name}
+                            </span>
+                            {selected ? (
+                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-600">
+                              </span>
+                            ) : null}
+                          </>
+                        )}
+                      </Listbox.Option>
+                    ))}
+                  </Listbox.Options>
+                </div>
+              </Listbox>
+            </div>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Submitting..." : "Add Event"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
