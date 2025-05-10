@@ -12,25 +12,29 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useStaff } from "@/hooks/use-staff";
-import { StaffMember } from "@/types/models";
+import { useEvents } from "@/hooks/use-events";
+import { useAuth } from "@/hooks/use-auth";
+import { Event } from "@/types/models";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-interface StaffDeleteDialogProps {
+interface EventDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  staff: StaffMember;
+  event: Event;
+  onEventDeleted: () => void;
 }
 
-export default function StaffDeleteDialog({ 
+export default function EventDeleteDialog({ 
   open, 
   onOpenChange, 
-  staff 
-}: StaffDeleteDialogProps) {
+  event,
+  onEventDeleted
+}: EventDeleteDialogProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { deleteStaffMember } = useStaff();
+  const { user } = useAuth();
 
   const handleDelete = async () => {
     if (!password.trim()) {
@@ -38,20 +42,43 @@ export default function StaffDeleteDialog({
       return;
     }
 
+    if (!user) {
+      setError("You must be logged in to delete an event");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const success = await deleteStaffMember(staff.id, password);
-      if (success) {
-        toast({
-          title: "Staff Deleted",
-          description: `${staff.name} has been successfully removed.`
-        });
-        onOpenChange(false);
-      } else {
-        setError("Failed to delete staff member");
+      // Verify user password first
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password
+      });
+      
+      if (authError) {
+        throw new Error("Incorrect password. Please try again.");
       }
+
+      // Delete the event
+      const { error: deleteError } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id)
+        .eq('user_id', user.id);
+        
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      toast({
+        title: "Event Deleted",
+        description: `${event.name} has been successfully deleted.`
+      });
+      
+      onEventDeleted();
+      onOpenChange(false);
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -65,9 +92,9 @@ export default function StaffDeleteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete{" "}
-            <span className="font-semibold">{staff.name}</span> and all associated
-            schedules and assignments.
+            This action cannot be undone. This will permanently delete the event{" "}
+            <span className="font-semibold">{event.name}</span> and all associated
+            assignments and records.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
@@ -99,7 +126,7 @@ export default function StaffDeleteDialog({
             disabled={loading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {loading ? "Deleting..." : "Delete Staff Member"}
+            {loading ? "Deleting..." : "Delete Event"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

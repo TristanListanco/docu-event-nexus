@@ -51,7 +51,7 @@ export const useStaff = () => {
         // Fix: Use a correctly typed parameter object for the RPC function
         const { data: assignmentsData } = await supabase.rpc(
           'count_staff_assignments', 
-          { staff_id_param: member.id } as { staff_id_param: string }
+          { staff_id_param: member.id }
         );
         
         // Fix: Check if assignmentsData is null

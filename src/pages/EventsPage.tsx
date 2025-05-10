@@ -3,17 +3,28 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Plus, RefreshCw } from "lucide-react";
+import { Calendar, Plus, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
-import { EventType } from "@/types/models";
+import { EventType, Event } from "@/types/models";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import EventDeleteDialog from "@/components/events/event-delete-dialog";
+import EventEditDialog from "@/components/events/event-edit-dialog";
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { events, loading, loadEvents } = useEvents();
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Filter events based on search query
   const filteredEvents = events.filter(event => 
@@ -21,6 +32,22 @@ export default function EventsPage() {
     event.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
     event.logId.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleEventClick = (event: Event) => {
+    navigate(`/events/${event.id}`);
+  };
+
+  const handleEditEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    setSelectedEvent(event);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    setSelectedEvent(event);
+    setDeleteDialogOpen(true);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -65,16 +92,39 @@ export default function EventsPage() {
               <Card 
                 key={event.id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/events/${event.id}`)}
+                onClick={() => handleEventClick(event)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between">
                     <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center">
                       <Calendar className="h-5 w-5 text-primary" />
                     </div>
-                    <Badge variant="outline" className="bg-primary/10 text-primary">
-                      {event.type}
-                    </Badge>
+                    <div className="flex space-x-1">
+                      <Badge variant="outline" className="bg-primary/10 text-primary">
+                        {event.type}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <span className="sr-only">Open menu</span>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => handleEditEvent(e, event)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Edit Event</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => handleDeleteEvent(e, event)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Event</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <CardTitle className="mt-2">{event.name}</CardTitle>
                   <p className="text-muted-foreground text-sm">
@@ -117,6 +167,26 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Event Dialog */}
+      {selectedEvent && (
+        <EventEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          event={selectedEvent}
+          onEventUpdated={loadEvents}
+        />
+      )}
+
+      {/* Delete Event Dialog */}
+      {selectedEvent && (
+        <EventDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          event={selectedEvent}
+          onEventDeleted={loadEvents}
+        />
+      )}
     </div>
   );
 }

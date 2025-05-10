@@ -4,7 +4,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, Info } from "lucide-react";
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function MainLayout() {
         {/* Navigation */}
         <div className="flex flex-col gap-1 p-2 flex-1">
           <Button
-            variant={isActive("/events") ? "default" : "ghost"}
+            variant={isActive("/events") || location.pathname.startsWith("/events/") ? "default" : "ghost"}
             className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-2 w-full`}
             onClick={() => navigate("/events")}
           >
@@ -52,6 +52,14 @@ export default function MainLayout() {
           >
             <Users size={20} />
             {!collapsed && <span>Staff</span>}
+          </Button>
+          <Button
+            variant={isActive("/about") ? "default" : "ghost"}
+            className={`flex items-center ${collapsed ? "justify-center" : "justify-start"} gap-2 w-full`}
+            onClick={() => navigate("/about")}
+          >
+            <Info size={20} />
+            {!collapsed && <span>About</span>}
           </Button>
         </div>
 

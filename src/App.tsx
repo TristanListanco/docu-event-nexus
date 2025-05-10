@@ -9,8 +9,10 @@ import MainLayout from "@/components/layout/main-layout";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import EventsPage from "@/pages/EventsPage";
+import EventDetailsPage from "@/pages/EventDetailsPage";
 import AddEventPage from "@/pages/AddEventPage";
 import StaffPage from "@/pages/StaffPage";
+import AboutPage from "@/pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "@/components/auth/protected-route";
 
@@ -30,8 +32,10 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<MainLayout />}>
                 <Route path="/events" element={<EventsPage />} />
+                <Route path="/events/:eventId" element={<EventDetailsPage />} />
                 <Route path="/events/new" element={<AddEventPage />} />
                 <Route path="/staff" element={<StaffPage />} />
+                <Route path="/about" element={<AboutPage />} />
               </Route>
             </Route>
             

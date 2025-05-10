@@ -106,7 +106,8 @@ export const useEvents = () => {
         bigEventId: data.big_event_id || undefined
       };
       
-      setEvents(prevEvents => [newEvent, ...prevEvents]);
+      // Update the local state and reload events to ensure everything is fresh
+      await loadEvents();
       
       toast({
         title: "Event Created",
@@ -162,14 +163,8 @@ export const useEvents = () => {
         throw error;
       }
       
-      // Update local state
-      setEvents(prevEvents => 
-        prevEvents.map(event => 
-          event.id === eventId 
-            ? { ...event, ...eventData } 
-            : event
-        )
-      );
+      // Reload events instead of updating local state to ensure everything is fresh
+      await loadEvents();
       
       toast({
         title: "Event Updated",
@@ -190,6 +185,44 @@ export const useEvents = () => {
     }
   };
   
+  const deleteEvent = async (eventId: string) => {
+    if (!user) return false;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      await loadEvents();
+      
+      toast({
+        title: "Event Deleted",
+        description: "The event has been successfully deleted.",
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      toast({
+        title: "Failed to delete event",
+        description: error.message || "An error occurred while deleting the event",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Load events on component mount and when user changes
   useEffect(() => {
     if (user) {
@@ -199,5 +232,5 @@ export const useEvents = () => {
     }
   }, [user]);
   
-  return { events, loading, loadEvents, createEvent, updateEvent };
+  return { events, loading, loadEvents, createEvent, updateEvent, deleteEvent };
 };

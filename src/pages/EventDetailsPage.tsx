@@ -18,15 +18,27 @@ import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { Event, StaffMember } from "@/types/models";
+import EventEditDialog from "@/components/events/event-edit-dialog";
+import EventDeleteDialog from "@/components/events/event-delete-dialog";
+import { format } from "date-fns";
 
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { events, loading } = useEvents();
+  const { events, loading, loadEvents } = useEvents();
   const { staff } = useStaff();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
   const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
+  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (events.length === 0 && !loading) {
+      loadEvents();
+    }
+  }, []);
 
   useEffect(() => {
     if (events.length > 0 && eventId) {
@@ -36,11 +48,11 @@ export default function EventDetailsPage() {
         
         // Find assigned staff
         const videographers = staff.filter(s => 
-          foundEvent.videographers.some(v => v.staffId === s.id)
+          foundEvent.videographers && foundEvent.videographers.some(v => v.staffId === s.id)
         );
         
         const photographers = staff.filter(s => 
-          foundEvent.photographers.some(p => p.staffId === s.id)
+          foundEvent.photographers && foundEvent.photographers.some(p => p.staffId === s.id)
         );
         
         setAssignedVideographers(videographers);
@@ -48,6 +60,14 @@ export default function EventDetailsPage() {
       }
     }
   }, [events, eventId, staff]);
+
+  const handleAfterEdit = () => {
+    loadEvents();
+  };
+
+  const handleAfterDelete = () => {
+    navigate("/events");
+  };
 
   if (loading) {
     return (
@@ -91,6 +111,8 @@ export default function EventDetailsPage() {
     }
   };
 
+  const formattedDate = event.date ? format(new Date(event.date), 'MMMM d, yyyy') : 'No date specified';
+
   return (
     <div className="flex flex-col h-full">
       <div className="border-b">
@@ -106,7 +128,7 @@ export default function EventDetailsPage() {
             >
               Back to Events
             </Button>
-            <Button>
+            <Button onClick={() => setEditDialogOpen(true)}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Event
             </Button>
@@ -131,7 +153,7 @@ export default function EventDetailsPage() {
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <CalendarIcon className="h-4 w-4 mr-2" />
-                    {event.date}
+                    {formattedDate}
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <Clock className="h-4 w-4 mr-2" />
@@ -217,19 +239,43 @@ export default function EventDetailsPage() {
               <CardDescription>Manage event settings and assignments</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full">
+              <Button className="w-full" onClick={() => setEditDialogOpen(true)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Event
               </Button>
               
-              <Button variant="destructive" className="w-full">
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Cancel Event
+                Delete Event
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Edit Event Dialog */}
+      {event && (
+        <EventEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          event={event}
+          onEventUpdated={handleAfterEdit}
+        />
+      )}
+
+      {/* Delete Event Dialog */}
+      {event && (
+        <EventDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          event={event}
+          onEventDeleted={handleAfterDelete}
+        />
+      )}
     </div>
   );
 }
