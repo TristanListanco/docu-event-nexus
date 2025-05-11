@@ -1,15 +1,16 @@
+
 import { Routes, Route } from 'react-router-dom';
-import { AuthLayout } from './layouts/AuthLayout';
-import { MainLayout } from './layouts/MainLayout';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { Index } from './pages/Index';
-import { AboutPage } from './pages/AboutPage';
-import { StaffPage } from './pages/StaffPage';
-import { EventsPage } from './pages/EventsPage';
-import { AddEventPage } from './pages/AddEventPage';
-import { NotFound } from './pages/NotFound';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import AuthLayout from './components/layout/auth-layout';
+import MainLayout from './components/layout/main-layout';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import Index from './pages/Index';
+import AboutPage from './pages/AboutPage';
+import StaffPage from './pages/StaffPage';
+import EventsPage from './pages/EventsPage';
+import AddEventPage from './pages/AddEventPage';
+import NotFound from './pages/NotFound';
+import ProtectedRoute from './components/auth/protected-route';
 import EventDetailsPage from './pages/EventDetailsPage';
 import AddMultiDayEventPage from './pages/AddMultiDayEventPage';
 

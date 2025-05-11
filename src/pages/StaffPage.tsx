@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,7 @@ import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
 
 export default function StaffPage() {
-  const { staff, loadStaffMembers } = useStaff();
+  const { staff, loadStaff } = useStaff();
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -42,7 +41,7 @@ export default function StaffPage() {
   );
 
   const handleStaffUpdated = async () => {
-    await loadStaffMembers();
+    await loadStaff();
   };
 
   const handleEditClick = (staffMember: StaffMember) => {
@@ -199,7 +198,8 @@ export default function StaffPage() {
         <StaffDeleteDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          staff={selectedStaff}
+          staffId={selectedStaff.id}
+          staffName={selectedStaff.name}
           onStaffDeleted={handleStaffUpdated}
         />
       )}

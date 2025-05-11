@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import * as LuSidebar from "@headlessui/react";
 import { cn } from "@/lib/utils";
@@ -33,8 +32,7 @@ const Sidebar = ({ className, children }: React.HTMLAttributes<HTMLDivElement>) 
   const { open } = React.useContext(SidebarContext);
 
   return (
-    <LuSidebar
-      as="aside"
+    <aside
       className={cn(
         "fixed inset-y-0 left-0 z-20 flex h-full w-[220px] flex-col border-r bg-background transition-all duration-300 ease-in-out data-[closed]:w-[60px] md:relative",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:data-[closed]:translate-x-0",
@@ -43,7 +41,7 @@ const Sidebar = ({ className, children }: React.HTMLAttributes<HTMLDivElement>) 
       data-closed={!open ? true : undefined}
     >
       {children}
-    </LuSidebar>
+    </aside>
   );
 };
 
