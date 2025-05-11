@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useStaff } from "@/hooks/use-staff";
+import { toast } from "@/hooks/use-toast";
 
 export interface StaffDeleteDialogProps {
   open: boolean;
@@ -31,6 +32,16 @@ export default function StaffDeleteDialog({
   const { deleteStaffMember } = useStaff();
 
   const handleDelete = async () => {
+    if (!staffId) {
+      toast({
+        title: "Error",
+        description: "No staff member selected for deletion",
+        variant: "destructive",
+      });
+      onOpenChange(false);
+      return;
+    }
+
     setIsDeleting(true);
     
     try {
@@ -39,6 +50,13 @@ export default function StaffDeleteDialog({
       if (success) {
         onStaffDeleted();
       }
+    } catch (error) {
+      console.error("Error deleting staff member:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete staff member",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
       onOpenChange(false);
