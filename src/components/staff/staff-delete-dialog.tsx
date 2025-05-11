@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useStaff } from "@/hooks/use-staff";
 
-interface StaffDeleteDialogProps {
+export interface StaffDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   staffId: string;
@@ -34,7 +34,6 @@ export default function StaffDeleteDialog({
     setIsDeleting(true);
     
     try {
-      // Updated to pass only one argument 
       const success = await deleteStaffMember(staffId);
       
       if (success) {

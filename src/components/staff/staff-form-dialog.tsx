@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface StaffFormDialogProps {
+export interface StaffFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStaffAdded: () => void;

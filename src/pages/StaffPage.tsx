@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +23,7 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   // Filter staff based on search query and role
   const filteredStaff = staff.filter(member => 
@@ -56,7 +56,15 @@ export default function StaffPage() {
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <StaffFormDialog />
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Staff Member
+            </Button>
+            <StaffFormDialog 
+              open={addDialogOpen}
+              onOpenChange={setAddDialogOpen}
+              onStaffAdded={loadStaff}
+            />
           </div>
         </div>
       </div>
@@ -153,7 +161,9 @@ export default function StaffPage() {
         <StaffDeleteDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          staff={selectedStaff}
+          staffId={selectedStaff.id}
+          staffName={selectedStaff.name}
+          onStaffDeleted={loadStaff}
         />
       )}
     </div>
