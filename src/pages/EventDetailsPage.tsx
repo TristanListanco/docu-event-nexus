@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -34,35 +33,34 @@ export default function EventDetailsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Load events if needed
   useEffect(() => {
     if (events.length === 0 && !loading) {
       loadEvents();
     }
-  }, []);
+  }, [events.length, loading, loadEvents]);
 
+  // Update event and staff assignments when data is available
   useEffect(() => {
-    if (events.length > 0 && eventId) {
-      const foundEvent = events.find(e => e.id === eventId);
-      if (foundEvent) {
-        setEvent(foundEvent);
-        
-        // Find assigned staff when both event and staff data are available
-        if (staff.length > 0) {
-          // Find assigned videographers
-          const videographers = staff.filter(s => 
-            foundEvent.videographers && foundEvent.videographers.some(v => v.staffId === s.id)
-          );
-          
-          // Find assigned photographers
-          const photographers = staff.filter(s => 
-            foundEvent.photographers && foundEvent.photographers.some(p => p.staffId === s.id)
-          );
-          
-          setAssignedVideographers(videographers);
-          setAssignedPhotographers(photographers);
-        }
-      }
-    }
+    if (!eventId || !events.length || !staff.length) return;
+    
+    const foundEvent = events.find(e => e.id === eventId);
+    if (!foundEvent) return;
+    
+    setEvent(foundEvent);
+    
+    // Find assigned videographers
+    const videographers = staff.filter(s => 
+      foundEvent.videographers?.some(v => v.staffId === s.id)
+    );
+    
+    // Find assigned photographers
+    const photographers = staff.filter(s => 
+      foundEvent.photographers?.some(p => p.staffId === s.id)
+    );
+    
+    setAssignedVideographers(videographers);
+    setAssignedPhotographers(photographers);
   }, [events, eventId, staff]);
 
   const handleAfterEdit = () => {

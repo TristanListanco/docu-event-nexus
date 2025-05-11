@@ -17,12 +17,12 @@ import AddMultiDayEventPage from './pages/AddMultiDayEventPage';
 const App = () => {
   return (
     <Routes>
-      <Route element={<AuthLayout />}>
+      <Route path="/" element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Route>
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Index />} />
+      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route index element={<Index />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/staff" element={<StaffPage />} />
         <Route path="/events" element={<EventsPage />} />
