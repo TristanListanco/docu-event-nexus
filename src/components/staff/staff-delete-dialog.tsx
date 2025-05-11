@@ -10,52 +10,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember } from "@/types/models";
-import { toast } from "@/hooks/use-toast";
 
 interface StaffDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  staff: StaffMember;
+  staffId: string;
+  staffName: string;
+  onStaffDeleted: () => void;
 }
 
-export default function StaffDeleteDialog({ 
-  open, 
-  onOpenChange, 
-  staff 
+export default function StaffDeleteDialog({
+  open,
+  onOpenChange,
+  staffId,
+  staffName,
+  onStaffDeleted,
 }: StaffDeleteDialogProps) {
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { deleteStaffMember } = useStaff();
 
   const handleDelete = async () => {
-    if (!password.trim()) {
-      setError("Please enter your password to confirm");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
+    setIsDeleting(true);
+    
     try {
-      const success = await deleteStaffMember(staff.id, password);
+      // Updated to pass only one argument 
+      const success = await deleteStaffMember(staffId);
+      
       if (success) {
-        toast({
-          title: "Staff Deleted",
-          description: `${staff.name} has been successfully removed.`
-        });
-        onOpenChange(false);
-      } else {
-        setError("Failed to delete staff member");
+        onStaffDeleted();
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
     } finally {
-      setLoading(false);
+      setIsDeleting(false);
+      onOpenChange(false);
     }
   };
 
@@ -63,43 +50,23 @@ export default function StaffDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
           <AlertDialogDescription>
-            This action cannot be undone. This will permanently delete{" "}
-            <span className="font-semibold">{staff.name}</span> and all associated
-            schedules and assignments.
+            Are you sure you want to delete {staffName}? This action cannot be
+            undone and will remove all schedules associated with this staff member.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        
-        <div className="py-4">
-          <Label htmlFor="password" className="text-sm font-medium">
-            Enter your password to confirm deletion
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1"
-            placeholder="Your password"
-            required
-          />
-          {error && (
-            <p className="text-sm text-destructive mt-2">{error}</p>
-          )}
-        </div>
-        
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleDelete();
             }}
-            disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="bg-red-600 hover:bg-red-700"
+            disabled={isDeleting}
           >
-            {loading ? "Deleting..." : "Delete Staff Member"}
+            {isDeleting ? "Deleting..." : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

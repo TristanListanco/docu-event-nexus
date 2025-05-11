@@ -84,11 +84,12 @@ export const useStaff = () => {
     }
   };
   
-  const createStaffMember = async (staffData: { 
-    name: string; 
-    role: StaffRole; 
-    schedules: Omit<Schedule, "id">[] 
-  }) => {
+  const addStaffMember = async (
+    name: string, 
+    role: StaffRole, 
+    photoUrl?: string,
+    schedules?: Omit<Schedule, "id">[]
+  ) => {
     if (!user) return null;
     
     try {
@@ -99,8 +100,9 @@ export const useStaff = () => {
         .from("staff_members")
         .insert({
           user_id: user.id,
-          name: staffData.name,
-          role: staffData.role,
+          name: name,
+          role: role,
+          photo_url: photoUrl
         })
         .select()
         .single();
@@ -110,8 +112,8 @@ export const useStaff = () => {
       }
       
       // Insert schedules if any
-      if (staffData.schedules.length > 0) {
-        const schedulesWithIds = staffData.schedules.map(schedule => ({
+      if (schedules && schedules.length > 0) {
+        const schedulesWithIds = schedules.map(schedule => ({
           user_id: user.id,
           staff_id: newStaff.id,
           day_of_week: schedule.dayOfWeek,
@@ -134,7 +136,7 @@ export const useStaff = () => {
       
       toast({
         title: "Staff Member Created",
-        description: `${staffData.name} has been added successfully.`,
+        description: `${name} has been added successfully.`,
       });
       
       return newStaff;
@@ -153,9 +155,10 @@ export const useStaff = () => {
   
   const updateStaffMember = async (
     staffId: string, 
-    staffData: {
+    updates: {
       name?: string;
       role?: StaffRole;
+      photoUrl?: string;
       schedules?: Omit<Schedule, "id">[];
     }
   ) => {
@@ -165,10 +168,11 @@ export const useStaff = () => {
       setLoading(true);
       
       // Update staff member basic info
-      if (staffData.name || staffData.role !== undefined) {
+      if (updates.name || updates.role !== undefined || updates.photoUrl !== undefined) {
         const updateData: any = {};
-        if (staffData.name) updateData.name = staffData.name;
-        if (staffData.role !== undefined) updateData.role = staffData.role;
+        if (updates.name) updateData.name = updates.name;
+        if (updates.role !== undefined) updateData.role = updates.role;
+        if (updates.photoUrl !== undefined) updateData.photo_url = updates.photoUrl;
         
         const { error: staffError } = await supabase
           .from("staff_members")
@@ -182,7 +186,7 @@ export const useStaff = () => {
       }
       
       // Update schedules if provided
-      if (staffData.schedules) {
+      if (updates.schedules) {
         // First delete existing schedules
         const { error: deleteError } = await supabase
           .from("schedules")
@@ -195,8 +199,8 @@ export const useStaff = () => {
         }
         
         // Then insert new schedules if any
-        if (staffData.schedules.length > 0) {
-          const schedulesWithIds = staffData.schedules.map(schedule => ({
+        if (updates.schedules.length > 0) {
+          const schedulesWithIds = updates.schedules.map(schedule => ({
             user_id: user.id,
             staff_id: staffId,
             day_of_week: schedule.dayOfWeek,
@@ -344,7 +348,7 @@ export const useStaff = () => {
     staff, 
     loading, 
     loadStaff, 
-    createStaffMember, 
+    addStaffMember,
     updateStaffMember, 
     deleteStaffMember,
     getAvailableStaff

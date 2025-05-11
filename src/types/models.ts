@@ -33,6 +33,11 @@ export interface StaffAssignment {
   attendanceStatus: AttendanceStatus;
 }
 
+export interface EventAssignment {
+  staffId: string;
+  status: string;
+}
+
 export interface Event {
   id: string;
   logId: string; // Unique Event Log ID

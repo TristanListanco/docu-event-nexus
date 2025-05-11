@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -13,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { Event, EventStatus, EventAssignment } from "@/types/models";
+import { Event, EventStatus, StaffAssignment } from "@/types/models";
 import {
   Select,
   SelectContent,
@@ -23,8 +22,6 @@ import {
 } from "@/components/ui/select";
 import {
   Calendar as CalendarIcon,
-  User,
-  Camera
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -145,15 +142,15 @@ export default function EventEditDialog({
     setLoading(true);
 
     // Create videographer assignments
-    const videographers: EventAssignment[] = selectedVideographers.map(staffId => ({
+    const videographers: StaffAssignment[] = selectedVideographers.map(staffId => ({
       staffId,
-      status: 'Assigned'
+      attendanceStatus: 'Pending'
     }));
     
     // Create photographer assignments
-    const photographers: EventAssignment[] = selectedPhotographers.map(staffId => ({
+    const photographers: StaffAssignment[] = selectedPhotographers.map(staffId => ({
       staffId,
-      status: 'Assigned'
+      attendanceStatus: 'Pending'
     }));
 
     const updatedEvent: Partial<Event> = {

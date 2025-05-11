@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Event, EventType, EventStatus, StaffAssignment } from "@/types/models";
+import { Event, EventType, EventStatus, StaffAssignment, AttendanceStatus } from "@/types/models";
 
 export const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -52,14 +51,14 @@ export const useEvents = () => {
           videoAssignments.forEach((assignment: any) => {
             videographers.push({
               staffId: assignment.staff_id,
-              attendanceStatus: assignment.attendance_status
+              attendanceStatus: assignment.attendance_status as AttendanceStatus
             });
           });
           
           photoAssignments.forEach((assignment: any) => {
             photographers.push({
               staffId: assignment.staff_id,
-              attendanceStatus: assignment.attendance_status
+              attendanceStatus: assignment.attendance_status as AttendanceStatus
             });
           });
         }
@@ -139,8 +138,8 @@ export const useEvents = () => {
           user_id: user.id,
           event_id: data.id,
           staff_id: staffId,
-          role: 'Videographer',
-          attendance_status: 'Pending'
+          role: 'Videographer' as const,
+          attendance_status: 'Pending' as AttendanceStatus
         }));
         
         const { error: assignError } = await supabase
@@ -157,8 +156,8 @@ export const useEvents = () => {
           user_id: user.id,
           event_id: data.id,
           staff_id: staffId,
-          role: 'Photographer',
-          attendance_status: 'Pending'
+          role: 'Photographer' as const,
+          attendance_status: 'Pending' as AttendanceStatus
         }));
         
         const { error: assignError } = await supabase
