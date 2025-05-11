@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,14 +102,88 @@ export default function AddMultiDayEventPage() {
   };
   
   // When date range changes, initialize day events
-  const handleDateRangeChange = (startDate: Date | undefined, endDate: Date | undefined) => {
-    if (startDate && endDate) {
-      setStartDate(startDate);
-      setEndDate(endDate);
+  const handleDateRangeChange = (newStartDate: Date | undefined, newEndDate: Date | undefined) => {
+    if (newStartDate && newEndDate) {
+      setStartDate(newStartDate);
+      setEndDate(newEndDate);
       
-      // Initialize day events after both dates are selected
-      if (startDate && endDate) {
-        initializeDayEvents();
+      // Initialize or update day events after both dates are selected
+      if (dayEvents.length === 0) {
+        // First time initialization
+        const days = differenceInDays(newEndDate, newStartDate) + 1;
+        const initialEvents: DayEvent[] = [];
+        
+        for (let i = 0; i < days; i++) {
+          const day = addDays(newStartDate, i);
+          initialEvents.push({
+            name: "",
+            startTime: "",
+            endTime: "",
+            location: "",
+            type: "General",
+            date: day,
+            videographers: [],
+            photographers: [],
+            ignoreScheduleConflicts: false,
+          });
+        }
+        
+        setDayEvents(initialEvents);
+        if (days > 0) {
+          setActiveTab(`day-1`);
+        }
+      } else {
+        // Update existing events when date range changes
+        const currentCount = dayEvents.length;
+        const newCount = differenceInDays(newEndDate, newStartDate) + 1;
+        
+        if (newCount > currentCount) {
+          // Add more days
+          const additionalEvents: DayEvent[] = [];
+          for (let i = currentCount; i < newCount; i++) {
+            const day = addDays(newStartDate, i);
+            additionalEvents.push({
+              name: "",
+              startTime: "",
+              endTime: "",
+              location: "",
+              type: "General",
+              date: day,
+              videographers: [],
+              photographers: [],
+              ignoreScheduleConflicts: false,
+            });
+          }
+          
+          // Also update dates for existing events
+          const updatedEvents = [...dayEvents].map((event, i) => ({
+            ...event,
+            date: addDays(newStartDate, i)
+          }));
+          
+          setDayEvents([...updatedEvents, ...additionalEvents]);
+        } else if (newCount < currentCount) {
+          // Remove excess days
+          const trimmedEvents = dayEvents.slice(0, newCount).map((event, i) => ({
+            ...event,
+            date: addDays(newStartDate, i)
+          }));
+          
+          setDayEvents(trimmedEvents);
+          
+          // Make sure active tab is still valid
+          const activeTabIndex = parseInt(activeTab.replace('day-', ''));
+          if (activeTabIndex > newCount) {
+            setActiveTab('day-1');
+          }
+        } else {
+          // Same number of days, just update the dates
+          const updatedEvents = [...dayEvents].map((event, i) => ({
+            ...event,
+            date: addDays(newStartDate, i)
+          }));
+          setDayEvents(updatedEvents);
+        }
       }
     }
   };
@@ -148,6 +222,14 @@ export default function AddMultiDayEventPage() {
     }
     
     const formattedDate = format(dayEvent.date, 'yyyy-MM-dd');
+    
+    if (dayEvent.ignoreScheduleConflicts) {
+      // Return all staff if ignoring conflicts
+      const videographers = staff.filter(s => s.role === 'Videographer');
+      const photographers = staff.filter(s => s.role === 'Photographer');
+      return { videographers, photographers };
+    }
+    
     return getAvailableStaff(formattedDate, dayEvent.startTime, dayEvent.endTime);
   };
   
@@ -226,6 +308,13 @@ export default function AddMultiDayEventPage() {
       setLoading(false);
     }
   };
+
+  // Watch for date changes
+  useEffect(() => {
+    if (startDate && endDate) {
+      handleDateRangeChange(startDate, endDate);
+    }
+  }, [startDate, endDate]);
   
   return (
     <div className="container py-6">
@@ -283,9 +372,6 @@ export default function AddMultiDayEventPage() {
                         setStartDate(date);
                         if (date && (!endDate || date > endDate)) {
                           setEndDate(date);
-                          handleDateRangeChange(date, date);
-                        } else if (date && endDate) {
-                          handleDateRangeChange(date, endDate);
                         }
                       }}
                       initialFocus
@@ -316,12 +402,7 @@ export default function AddMultiDayEventPage() {
                       <Calendar
                         mode="single"
                         selected={endDate}
-                        onSelect={(date) => {
-                          if (date && startDate && date >= startDate) {
-                            setEndDate(date);
-                            handleDateRangeChange(startDate, date);
-                          }
-                        }}
+                        onSelect={setEndDate}
                         disabled={(date) => date < startDate!}
                         initialFocus
                         className="pointer-events-auto"
@@ -442,6 +523,19 @@ export default function AddMultiDayEventPage() {
                         </Select>
                       </div>
                       
+                      <div className="flex items-center space-x-2 sm:col-span-2">
+                        <Checkbox 
+                          id={`day-${index}-ignore-conflicts`}
+                          checked={dayEvents[index]?.ignoreScheduleConflicts || false}
+                          onCheckedChange={(checked) => 
+                            updateDayEvent(index, "ignoreScheduleConflicts", checked === true)
+                          }
+                        />
+                        <Label htmlFor={`day-${index}-ignore-conflicts`}>
+                          Ignore schedule conflicts
+                        </Label>
+                      </div>
+                      
                       <div className="space-y-2">
                         <Label htmlFor={`day-${index}-start-time`}>Start Time</Label>
                         <Input
@@ -471,19 +565,6 @@ export default function AddMultiDayEventPage() {
                           placeholder="Enter location"
                         />
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`day-${index}-ignore-conflicts`}
-                        checked={dayEvents[index]?.ignoreScheduleConflicts || false}
-                        onCheckedChange={(checked) => 
-                          updateDayEvent(index, "ignoreScheduleConflicts", checked === true)
-                        }
-                      />
-                      <Label htmlFor={`day-${index}-ignore-conflicts`}>
-                        Ignore schedule conflicts
-                      </Label>
                     </div>
                     
                     <div className="border-t pt-4">

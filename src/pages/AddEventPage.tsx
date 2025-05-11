@@ -4,16 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEvents } from "@/hooks/use-events";
-import { useStaff } from "@/hooks/use-staff";
-import { EventType } from "@/types/models";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -24,87 +14,139 @@ import {
 import { cn } from "@/lib/utils";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useStaff } from "@/hooks/use-staff";
+import { useEvents } from "@/hooks/use-events";
+import { EventType } from "@/types/models";
+import { toast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AddEventPage() {
+  const navigate = useNavigate();
+  const { staff, getAvailableStaff } = useStaff();
+  const { createEvent } = useEvents();
+  
+  // Event form state
   const [name, setName] = useState("");
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState<Date | undefined>();
+  const [location, setLocation] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [location, setLocation] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
+  const [loading, setLoading] = useState(false);
   
+  // Staff selection state
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   
-  const [loading, setLoading] = useState(false);
+  // Get available staff based on selected date and time
+  const getAvailableStaffMembers = () => {
+    if (!date || !startTime || !endTime) {
+      return {
+        videographers: [],
+        photographers: []
+      };
+    }
+    
+    if (ignoreScheduleConflicts) {
+      // If ignoring conflicts, show all staff
+      const videographers = staff.filter(s => s.role === 'Videographer');
+      const photographers = staff.filter(s => s.role === 'Photographer');
+      return { videographers, photographers };
+    }
+    
+    return getAvailableStaff(format(date, 'yyyy-MM-dd'), startTime, endTime);
+  };
   
-  const { createEvent } = useEvents();
-  const { staff, getAvailableStaff } = useStaff();
-  const navigate = useNavigate();
+  // Toggle staff selection
+  const toggleVideographer = (staffId: string) => {
+    setSelectedVideographers(prev => 
+      prev.includes(staffId) 
+        ? prev.filter(id => id !== staffId) 
+        : [...prev, staffId]
+    );
+  };
   
-  const availableStaff = date && startTime && endTime
-    ? getAvailableStaff(format(date, 'yyyy-MM-dd'), startTime, endTime)
-    : { videographers: [], photographers: [] };
+  const togglePhotographer = (staffId: string) => {
+    setSelectedPhotographers(prev => 
+      prev.includes(staffId) 
+        ? prev.filter(id => id !== staffId) 
+        : [...prev, staffId]
+    );
+  };
   
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date) return;
+    
+    if (!date || !startTime || !endTime || !name || !location) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setLoading(true);
     
-    const formattedDate = format(date, "yyyy-MM-dd");
-    
-    const eventData = {
-      name,
-      date: formattedDate,
-      startTime,
-      endTime,
-      location,
-      type,
-      ignoreScheduleConflicts,
-      status: "Upcoming" as const,
-      videographers: selectedVideographers,
-      photographers: selectedPhotographers,
-      isBigEvent: false
-    };
-    
-    const newEvent = await createEvent(eventData);
-    
-    if (newEvent) {
-      navigate(`/events/${newEvent.id}`);
+    try {
+      const eventData = {
+        name,
+        date: format(date, 'yyyy-MM-dd'),
+        startTime,
+        endTime,
+        location,
+        type,
+        status: "Upcoming" as const,
+        videographers: selectedVideographers,
+        photographers: selectedPhotographers,
+        ignoreScheduleConflicts
+      };
+      
+      await createEvent(eventData);
+      navigate("/events");
+    } catch (error) {
+      console.error("Error creating event:", error);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
   
-  const handleVideographerChange = (staffId: string) => {
-    setSelectedVideographers(prev => 
-      prev.includes(staffId)
-        ? prev.filter(id => id !== staffId)
-        : [...prev, staffId]
-    );
+  // Reset staff selections when date/time changes
+  const resetStaffSelections = () => {
+    setSelectedVideographers([]);
+    setSelectedPhotographers([]);
   };
   
-  const handlePhotographerChange = (staffId: string) => {
-    setSelectedPhotographers(prev => 
-      prev.includes(staffId)
-        ? prev.filter(id => id !== staffId)
-        : [...prev, staffId]
-    );
+  const handleDateChange = (newDate: Date | undefined) => {
+    setDate(newDate);
+    resetStaffSelections();
   };
-
-  // Update available staff when date/time changes
-  const updateAvailableStaff = () => {
-    if (!date || !startTime || !endTime) {
-      return { videographers: [], photographers: [] };
+  
+  const handleTimeChange = (field: "start" | "end", value: string) => {
+    if (field === "start") {
+      setStartTime(value);
+    } else {
+      setEndTime(value);
     }
-    
-    const formattedDate = format(date, 'yyyy-MM-dd');
-    return getAvailableStaff(formattedDate, startTime, endTime);
+    resetStaffSelections();
   };
-
+  
+  const handleIgnoreConflictsChange = (checked: boolean) => {
+    setIgnoreScheduleConflicts(checked);
+    resetStaffSelections();
+  };
+  
+  const { videographers, photographers } = getAvailableStaffMembers();
+  
   return (
     <div className="container py-6">
       <div className="mb-6 flex items-center">
@@ -130,75 +172,19 @@ export default function AddEventPage() {
                 <Label htmlFor="name">Event Name</Label>
                 <Input
                   id="name"
+                  placeholder="Enter event name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  placeholder="Enter event name"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="endTime">End Time</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  required
-                  placeholder="Enter location"
                 />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="type">Event Type</Label>
-                <Select value={type} onValueChange={(value) => setType(value as EventType)}>
+                <Select
+                  value={type}
+                  onValueChange={(value) => setType(value as EventType)}
+                >
                   <SelectTrigger id="type">
                     <SelectValue placeholder="Select event type" />
                   </SelectTrigger>
@@ -213,17 +199,77 @@ export default function AddEventPage() {
               </div>
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="Enter event location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                required
+              />
+            </div>
+            
             <div className="flex items-center space-x-2">
               <Checkbox 
-                id="ignoreConflicts"
+                id="ignore-conflicts"
                 checked={ignoreScheduleConflicts}
-                onCheckedChange={(checked) => 
-                  setIgnoreScheduleConflicts(checked === true)
-                }
+                onCheckedChange={(checked) => handleIgnoreConflictsChange(checked === true)}
               />
-              <Label htmlFor="ignoreConflicts">
-                Ignore schedule conflicts
+              <Label htmlFor="ignore-conflicts">
+                Ignore staff schedule conflicts
               </Label>
+            </div>
+            
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={handleDateChange}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="start-time">Start Time</Label>
+                <Input
+                  id="start-time"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => handleTimeChange("start", e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="end-time">End Time</Label>
+                <Input
+                  id="end-time"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => handleTimeChange("end", e.target.value)}
+                  required
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -234,17 +280,21 @@ export default function AddEventPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Videographers</h3>
-              {availableStaff.videographers.length > 0 ? (
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {availableStaff.videographers.map((videographer) => (
+              <h3 className="font-medium">Videographers</h3>
+              
+              {videographers.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {videographers.map((videographer) => (
                     <div key={videographer.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`video-${videographer.id}`}
                         checked={selectedVideographers.includes(videographer.id)}
-                        onCheckedChange={() => handleVideographerChange(videographer.id)}
+                        onCheckedChange={() => toggleVideographer(videographer.id)}
                       />
-                      <Label htmlFor={`video-${videographer.id}`} className="flex items-center">
+                      <Label
+                        htmlFor={`video-${videographer.id}`}
+                        className="flex items-center"
+                      >
                         <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
                           {videographer.name.split(" ").map((n) => n[0]).join("")}
                         </span>
@@ -263,17 +313,21 @@ export default function AddEventPage() {
             </div>
             
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Photographers</h3>
-              {availableStaff.photographers.length > 0 ? (
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {availableStaff.photographers.map((photographer) => (
+              <h3 className="font-medium">Photographers</h3>
+              
+              {photographers.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {photographers.map((photographer) => (
                     <div key={photographer.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`photo-${photographer.id}`}
                         checked={selectedPhotographers.includes(photographer.id)}
-                        onCheckedChange={() => handlePhotographerChange(photographer.id)}
+                        onCheckedChange={() => togglePhotographer(photographer.id)}
                       />
-                      <Label htmlFor={`photo-${photographer.id}`} className="flex items-center">
+                      <Label
+                        htmlFor={`photo-${photographer.id}`}
+                        className="flex items-center"
+                      >
                         <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
                           {photographer.name.split(" ").map((n) => n[0]).join("")}
                         </span>
@@ -298,11 +352,10 @@ export default function AddEventPage() {
             type="button"
             variant="outline"
             onClick={() => navigate("/events")}
-            disabled={loading}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={loading || !date}>
+          <Button type="submit" disabled={loading}>
             {loading ? "Creating..." : "Create Event"}
           </Button>
         </div>

@@ -1,15 +1,16 @@
-
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { MenuIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, MenuIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const SidebarContext = React.createContext<{
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleSidebar: () => void;
 }>({
   open: false,
   setOpen: () => {},
+  toggleSidebar: () => {},
 });
 
 const SidebarProvider = ({
@@ -21,8 +22,12 @@ const SidebarProvider = ({
 }) => {
   const [open, setOpen] = React.useState(defaultOpen);
   
+  const toggleSidebar = React.useCallback(() => {
+    setOpen(prev => !prev);
+  }, []);
+  
   return (
-    <SidebarContext.Provider value={{ open, setOpen }}>
+    <SidebarContext.Provider value={{ open, setOpen, toggleSidebar }}>
       {children}
     </SidebarContext.Provider>
   );
@@ -34,7 +39,7 @@ const Sidebar = ({ className, children }: React.HTMLAttributes<HTMLDivElement>) 
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-20 flex h-full w-[220px] flex-col border-r bg-background transition-all duration-300 ease-in-out data-[closed]:w-[60px] md:relative",
+        "fixed inset-y-0 left-0 z-20 flex h-full w-[220px] flex-col border-r bg-sidebar transition-all duration-300 ease-in-out data-[closed]:w-[60px] md:relative",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0 md:data-[closed]:translate-x-0",
         className
       )}
@@ -46,7 +51,7 @@ const Sidebar = ({ className, children }: React.HTMLAttributes<HTMLDivElement>) 
 };
 
 const SidebarHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-  const { open } = React.useContext(SidebarContext);
+  const { open, toggleSidebar } = React.useContext(SidebarContext);
   
   return (
     <div
@@ -57,7 +62,7 @@ const SidebarHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElem
       )}
       {...props}
     >
-      {/* Replace text with logo */}
+      {/* Logo */}
       <div className="flex items-center">
         <img 
           src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
@@ -68,6 +73,16 @@ const SidebarHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElem
           )} 
         />
       </div>
+      
+      {/* Toggle button (visible in desktop view) */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleSidebar}
+        className="hidden md:flex"
+      >
+        {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </Button>
     </div>
   );
 };

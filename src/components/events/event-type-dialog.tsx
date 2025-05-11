@@ -33,40 +33,40 @@ export default function EventTypeDialog({ open, onOpenChange }: EventTypeDialogP
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader className="mb-6">
-          <DialogTitle className="text-2xl font-semibold">Choose Event Type</DialogTitle>
-          <DialogDescription className="text-base mt-3">
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-xl sm:text-2xl font-semibold">Choose Event Type</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base mt-2">
             Select whether you want to create a single event or a multi-day event.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid grid-cols-2 gap-8 py-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 py-4">
           <Button 
             variant="outline" 
-            className="flex flex-col items-center justify-center h-48 p-6"
+            className="flex flex-col items-center justify-center h-40 sm:h-48 p-4 sm:p-6"
             onClick={handleSingleEvent}
           >
-            <CalendarIcon className="h-16 w-16 mb-5 text-primary" />
-            <span className="font-medium text-lg mb-2">Single Event</span>
-            <span className="text-sm text-muted-foreground text-center">
+            <CalendarIcon className="h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-5 text-primary" />
+            <span className="font-medium text-base sm:text-lg mb-1 sm:mb-2">Single Event</span>
+            <span className="text-xs sm:text-sm text-muted-foreground text-center">
               Create one event on a specific date
             </span>
           </Button>
           
           <Button 
             variant="outline" 
-            className="flex flex-col items-center justify-center h-48 p-6"
+            className="flex flex-col items-center justify-center h-40 sm:h-48 p-4 sm:p-6"
             onClick={handleMultiDayEvent}
           >
-            <CalendarDays className="h-16 w-16 mb-5 text-primary" />
-            <span className="font-medium text-lg mb-2">Multi-Day Event</span>
-            <span className="text-sm text-muted-foreground text-center">
+            <CalendarDays className="h-12 w-12 sm:h-16 sm:w-16 mb-3 sm:mb-5 text-primary" />
+            <span className="font-medium text-base sm:text-lg mb-1 sm:mb-2">Multi-Day Event</span>
+            <span className="text-xs sm:text-sm text-muted-foreground text-center">
               Create multiple events over a span of dates
             </span>
           </Button>
         </div>
         
-        <DialogFooter className="mt-6">
+        <DialogFooter className="mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

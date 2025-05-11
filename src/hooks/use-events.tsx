@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -132,6 +133,12 @@ export const useEvents = () => {
         throw error;
       }
       
+      console.log("Created event:", data);
+      console.log("Staff assignments to add:", { 
+        videographers: eventData.videographers, 
+        photographers: eventData.photographers 
+      });
+      
       // Add staff assignments if provided
       if (eventData.videographers && eventData.videographers.length > 0) {
         const videographerAssignments = eventData.videographers.map(staffId => ({
@@ -142,13 +149,17 @@ export const useEvents = () => {
           attendance_status: 'Pending' as AttendanceStatus
         }));
         
-        const { error: assignError } = await supabase
+        console.log("Adding videographer assignments:", videographerAssignments);
+        const { data: assignData, error: assignError } = await supabase
           .from('staff_assignments')
-          .insert(videographerAssignments);
+          .insert(videographerAssignments)
+          .select();
           
         if (assignError) {
           console.error("Error assigning videographers:", assignError);
+          throw assignError;
         }
+        console.log("Videographer assignments added:", assignData);
       }
       
       if (eventData.photographers && eventData.photographers.length > 0) {
@@ -160,13 +171,17 @@ export const useEvents = () => {
           attendance_status: 'Pending' as AttendanceStatus
         }));
         
-        const { error: assignError } = await supabase
+        console.log("Adding photographer assignments:", photographerAssignments);
+        const { data: assignData, error: assignError } = await supabase
           .from('staff_assignments')
-          .insert(photographerAssignments);
+          .insert(photographerAssignments)
+          .select();
           
         if (assignError) {
           console.error("Error assigning photographers:", assignError);
+          throw assignError;
         }
+        console.log("Photographer assignments added:", assignData);
       }
       
       const newEvent: Event = {
