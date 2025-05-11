@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -63,6 +66,9 @@ export default function EventEditDialog({
   
   const [availableVideographers, setAvailableVideographers] = useState<any[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<any[]>([]);
+  
+  const [assignedVideographers, setAssignedVideographers] = useState<any[]>([]);
+  const [assignedPhotographers, setAssignedPhotographers] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -86,10 +92,25 @@ export default function EventEditDialog({
         setSelectedPhotographers([]);
       }
       
+      // Find assigned staff for display
+      if (staff.length > 0) {
+        // Find assigned videographers
+        const videographers = staff.filter(s => 
+          event.videographers && event.videographers.some(v => v.staffId === s.id)
+        );
+        setAssignedVideographers(videographers);
+        
+        // Find assigned photographers
+        const photographers = staff.filter(s => 
+          event.photographers && event.photographers.some(p => p.staffId === s.id)
+        );
+        setAssignedPhotographers(photographers);
+      }
+      
       // Update available staff when dialog opens
       updateAvailableStaff();
     }
-  }, [open, event]);
+  }, [open, event, staff]);
   
   // Update available staff when date/time changes
   useEffect(() => {
@@ -142,16 +163,24 @@ export default function EventEditDialog({
     setLoading(true);
 
     // Create videographer assignments
-    const videographers: StaffAssignment[] = selectedVideographers.map(staffId => ({
-      staffId,
-      attendanceStatus: 'Pending'
-    }));
+    const videographers: StaffAssignment[] = selectedVideographers.map(staffId => {
+      // Preserve attendance status if it exists
+      const existingAssignment = event.videographers?.find(v => v.staffId === staffId);
+      return {
+        staffId,
+        attendanceStatus: existingAssignment?.attendanceStatus || 'Pending'
+      };
+    });
     
     // Create photographer assignments
-    const photographers: StaffAssignment[] = selectedPhotographers.map(staffId => ({
-      staffId,
-      attendanceStatus: 'Pending'
-    }));
+    const photographers: StaffAssignment[] = selectedPhotographers.map(staffId => {
+      // Preserve attendance status if it exists
+      const existingAssignment = event.photographers?.find(p => p.staffId === staffId);
+      return {
+        staffId,
+        attendanceStatus: existingAssignment?.attendanceStatus || 'Pending'
+      };
+    });
 
     const updatedEvent: Partial<Event> = {
       name,
@@ -189,15 +218,18 @@ export default function EventEditDialog({
       setSelectedPhotographers(prev => [...prev, staffId]);
     }
   };
+  
+  // Check if the event is scheduled (has assigned staff)
+  const isScheduled = (event.videographers?.length > 0 || event.photographers?.length > 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Event</DialogTitle>
             <DialogDescription>
-              Update the details and staff assignments for this event.
+              Update the details {!isScheduled && "and staff assignments"} for this event.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -229,12 +261,13 @@ export default function EventEditDialog({
                       {date ? format(date, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0 pointer-events-auto">
                     <Calendar
                       mode="single"
                       selected={date}
                       onSelect={setDate}
                       initialFocus
+                      className="pointer-events-auto"
                     />
                   </PopoverContent>
                 </Popover>
@@ -293,74 +326,139 @@ export default function EventEditDialog({
                   <SelectItem value="Upcoming">Upcoming</SelectItem>
                   <SelectItem value="Ongoing">Ongoing</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {/* Videographer Assignment */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">
-                Videographers
-              </Label>
-              <div className="col-span-3 space-y-2">
-                {availableVideographers.length > 0 ? (
-                  availableVideographers.map(videographer => (
-                    <div key={videographer.id} className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id={`video-${videographer.id}`} 
-                        checked={selectedVideographers.includes(videographer.id)} 
-                        onChange={() => handleVideographerChange(videographer.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`video-${videographer.id}`} className="flex items-center">
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {videographer.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                        {videographer.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground text-sm italic">
-                    No videographers available for this time slot
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Staff Assignments Section */}
+            <Separator className="my-2" />
+            <h3 className="text-sm font-medium">Staff Assignments</h3>
             
-            {/* Photographer Assignment */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">
-                Photographers
-              </Label>
-              <div className="col-span-3 space-y-2">
-                {availablePhotographers.length > 0 ? (
-                  availablePhotographers.map(photographer => (
-                    <div key={photographer.id} className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id={`photo-${photographer.id}`} 
-                        checked={selectedPhotographers.includes(photographer.id)} 
-                        onChange={() => handlePhotographerChange(photographer.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`photo-${photographer.id}`} className="flex items-center">
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {photographer.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                        {photographer.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground text-sm italic">
-                    No photographers available for this time slot
+            {isScheduled ? (
+              <>
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">
+                    Videographers
+                  </Label>
+                  <div className="col-span-3 space-y-2">
+                    {assignedVideographers.length > 0 ? (
+                      assignedVideographers.map(videographer => (
+                        <div key={videographer.id} className="flex items-center p-2 bg-muted/50 rounded-md">
+                          <Avatar className="h-6 w-6 mr-2">
+                            <AvatarImage src={videographer.photoUrl} alt={videographer.name} />
+                            <AvatarFallback className="text-xs">
+                              {videographer.name.split(" ").map((n: string) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{videographer.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No videographers assigned</p>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+                
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">
+                    Photographers
+                  </Label>
+                  <div className="col-span-3 space-y-2">
+                    {assignedPhotographers.length > 0 ? (
+                      assignedPhotographers.map(photographer => (
+                        <div key={photographer.id} className="flex items-center p-2 bg-muted/50 rounded-md">
+                          <Avatar className="h-6 w-6 mr-2">
+                            <AvatarImage src={photographer.photoUrl} alt={photographer.name} />
+                            <AvatarFallback className="text-xs">
+                              {photographer.name.split(" ").map((n: string) => n[0]).join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{photographer.name}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No photographers assigned</p>
+                    )}
+                  </div>
+                </div>
+                
+                <p className="text-xs text-muted-foreground col-span-4 text-center mt-2">
+                  Staff has already been assigned to this event. To modify assignments, please create a new event.
+                </p>
+              </>
+            ) : (
+              <>
+                {/* Videographer Assignment */}
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">
+                    Videographers
+                  </Label>
+                  <div className="col-span-3 space-y-2">
+                    {availableVideographers.length > 0 ? (
+                      availableVideographers.map(videographer => (
+                        <div key={videographer.id} className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            id={`video-${videographer.id}`} 
+                            checked={selectedVideographers.includes(videographer.id)} 
+                            onChange={() => handleVideographerChange(videographer.id)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <label htmlFor={`video-${videographer.id}`} className="flex items-center">
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarImage src={videographer.photoUrl} alt={videographer.name} />
+                              <AvatarFallback className="text-xs">
+                                {videographer.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            {videographer.name}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted-foreground text-sm italic">
+                        No videographers available for this time slot
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Photographer Assignment */}
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label className="text-right pt-2">
+                    Photographers
+                  </Label>
+                  <div className="col-span-3 space-y-2">
+                    {availablePhotographers.length > 0 ? (
+                      availablePhotographers.map(photographer => (
+                        <div key={photographer.id} className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            id={`photo-${photographer.id}`} 
+                            checked={selectedPhotographers.includes(photographer.id)} 
+                            onChange={() => handlePhotographerChange(photographer.id)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <label htmlFor={`photo-${photographer.id}`} className="flex items-center">
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarImage src={photographer.photoUrl} alt={photographer.name} />
+                              <AvatarFallback className="text-xs">
+                                {photographer.name.split(' ').map((n: string) => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            {photographer.name}
+                          </label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-muted-foreground text-sm italic">
+                        No photographers available for this time slot
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

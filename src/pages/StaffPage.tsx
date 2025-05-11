@@ -1,177 +1,207 @@
 
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useState, useEffect } from "react";
+import { useStaff } from "@/hooks/use-staff";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Edit, MoreVertical, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Search,
+  Plus,
+  User,
+  UserCheck,
+  UserX,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StaffMember, StaffRole } from "@/types/models";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
-import { useStaff } from "@/hooks/use-staff";
-import { StaffMember } from "@/types/models";
 
 export default function StaffPage() {
-  const { staff, loading, loadStaff } = useStaff();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"All" | "Videographer" | "Photographer">("All");
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const { staff, loadStaffMembers } = useStaff();
+  const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter staff based on search query and role
-  const filteredStaff = staff.filter(member => 
-    member.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
-    (roleFilter === "All" || member.role === roleFilter)
+  // Filter staff based on search query
+  const filteredStaff = staff.filter((member) =>
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    member.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle edit action
-  const handleEdit = (member: StaffMember) => {
-    setSelectedStaff(member);
+  const handleStaffUpdated = async () => {
+    await loadStaffMembers();
+  };
+
+  const handleEditClick = (staffMember: StaffMember) => {
+    setSelectedStaff(staffMember);
     setEditDialogOpen(true);
   };
 
-  // Handle delete action
-  const handleDelete = (member: StaffMember) => {
-    setSelectedStaff(member);
+  const handleDeleteClick = (staffMember: StaffMember) => {
+    setSelectedStaff(staffMember);
     setDeleteDialogOpen(true);
   };
 
+  const getRoleBadge = (role: StaffRole) => {
+    switch (role) {
+      case "Videographer":
+        return <Badge variant="secondary">Videographer</Badge>;
+      case "Photographer":
+        return <Badge>Photographer</Badge>;
+      default:
+        return <Badge variant="outline">{role}</Badge>;
+    }
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Staff Management</h2>
-          <p className="text-muted-foreground">Manage your staff members and their schedules</p>
+    <div className="flex flex-col h-full">
+      <div className="border-b">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center">
+            <User className="h-5 w-5 mr-2" />
+            <h1 className="text-2xl font-bold tracking-tight">Staff</h1>
+          </div>
+          <Button onClick={() => setFormDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Add Staff
+          </Button>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={loadStaff} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Staff Member
-            </Button>
-            <StaffFormDialog 
-              open={addDialogOpen}
-              onOpenChange={setAddDialogOpen}
-              onStaffAdded={loadStaff}
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-center mb-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search staff..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
+
+        {filteredStaff.length === 0 ? (
+          <div className="text-center p-8 border rounded-lg">
+            <User className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium">No staff found</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {searchQuery
+                ? "Try adjusting your search query"
+                : "Get started by adding your first staff member"}
+            </p>
+            <Button 
+              className="mt-4" 
+              onClick={() => setFormDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Staff
+            </Button>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Statistics</TableHead>
+                  <TableHead className="w-24 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStaff.map((staffMember) => (
+                  <TableRow key={staffMember.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center">
+                        <Avatar className="h-8 w-8 mr-2">
+                          <AvatarImage src={staffMember.photoUrl} alt={staffMember.name} />
+                          <AvatarFallback>
+                            {staffMember.name.split(" ").map(n => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        {staffMember.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getRoleBadge(staffMember.role)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <div className="flex items-center">
+                          <UserCheck className="h-3 w-3 mr-1 text-green-500" />
+                          <span className="text-xs text-muted-foreground">
+                            {staffMember.statistics.completed} Completed
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <UserX className="h-3 w-3 mr-1 text-red-500" />
+                          <span className="text-xs text-muted-foreground">
+                            {staffMember.statistics.absent} Absent
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEditClick(staffMember)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDeleteClick(staffMember)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      {/* Search and filter */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search staff members..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant={roleFilter === "All" ? "default" : "outline"}
-            onClick={() => setRoleFilter("All")}
-          >
-            All
-          </Button>
-          <Button
-            variant={roleFilter === "Videographer" ? "default" : "outline"}
-            onClick={() => setRoleFilter("Videographer")}
-          >
-            Videographers
-          </Button>
-          <Button
-            variant={roleFilter === "Photographer" ? "default" : "outline"}
-            onClick={() => setRoleFilter("Photographer")}
-          >
-            Photographers
-          </Button>
-        </div>
-      </div>
+      <StaffFormDialog
+        open={formDialogOpen}
+        onOpenChange={setFormDialogOpen}
+        onStaffAdded={handleStaffUpdated}
+      />
 
-      {/* Staff grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredStaff.map((member) => (
-          <Card key={member.id}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xl">{member.name}</CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                    <span className="sr-only">Actions</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleEdit(member)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handleDelete(member)}
-                    className="text-red-500 focus:text-red-500"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary/10">
-                    {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <div className="text-sm font-medium leading-none">{member.role}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {member.schedules?.length || 0} scheduled classes
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Dialogs */}
       {selectedStaff && (
-        <>
-          <StaffEditDialog
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            staff={selectedStaff}
-            onStaffUpdated={loadStaff}
-          />
+        <StaffEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          staff={selectedStaff}
+          onStaffUpdated={handleStaffUpdated}
+        />
+      )}
 
-          <StaffDeleteDialog
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-            staffId={selectedStaff.id}
-            staffName={selectedStaff.name}
-            onStaffDeleted={loadStaff}
-          />
-        </>
+      {selectedStaff && (
+        <StaffDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          staff={selectedStaff}
+          onStaffDeleted={handleStaffUpdated}
+        />
       )}
     </div>
   );
