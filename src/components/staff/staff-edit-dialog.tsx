@@ -20,9 +20,10 @@ interface StaffEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   staff: StaffMember;
+  onStaffUpdated?: () => void;
 }
 
-export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEditDialogProps) {
+export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpdated }: StaffEditDialogProps) {
   const [loading, setLoading] = useState(false);
   const { updateStaffMember } = useStaff();
   
@@ -143,6 +144,10 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
         role: formData.role,
         schedules
       });
+      
+      if (onStaffUpdated) {
+        onStaffUpdated();
+      }
       
       onOpenChange(false);
     } catch (error) {
