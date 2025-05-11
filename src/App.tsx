@@ -21,14 +21,16 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
       </Route>
-      <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route index element={<Index />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/staff" element={<StaffPage />} />
-        <Route path="/events" element={<EventsPage />} />
-        <Route path="/events/add" element={<AddEventPage />} />
-        <Route path="/events/add-multi" element={<AddMultiDayEventPage />} />
-        <Route path="/events/:eventId" element={<EventDetailsPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout />}>
+          <Route index element={<Index />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/staff" element={<StaffPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/add" element={<AddEventPage />} />
+          <Route path="/events/add-multi" element={<AddMultiDayEventPage />} />
+          <Route path="/events/:eventId" element={<EventDetailsPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
