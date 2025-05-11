@@ -268,6 +268,7 @@ export default function EventDetailsPage() {
           onOpenChange={setEditDialogOpen}
           event={event}
           onEventUpdated={handleAfterEdit}
+          readOnlyStaff={true}
         />
       )}
 

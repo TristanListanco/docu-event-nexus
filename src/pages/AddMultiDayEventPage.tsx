@@ -182,9 +182,13 @@ export default function AddMultiDayEventPage() {
     setLoading(true);
     
     try {
+      let bigEventId = "";
+      
       // Create all events sequentially
-      for (const dayEvent of dayEvents) {
-        await createEvent({
+      for (let i = 0; i < dayEvents.length; i++) {
+        const dayEvent = dayEvents[i];
+        
+        const createdEvent = await createEvent({
           name: `${name} - ${dayEvent.name}`,
           date: format(dayEvent.date, 'yyyy-MM-dd'),
           startTime: dayEvent.startTime,
@@ -195,8 +199,14 @@ export default function AddMultiDayEventPage() {
           videographers: dayEvent.videographers,
           photographers: dayEvent.photographers,
           ignoreScheduleConflicts: dayEvent.ignoreScheduleConflicts,
-          isBigEvent: true
+          isBigEvent: true,
+          bigEventId: bigEventId || undefined
         });
+        
+        // Store the ID of the first event to link all events together
+        if (i === 0 && createdEvent) {
+          bigEventId = createdEvent.id;
+        }
       }
       
       toast({
