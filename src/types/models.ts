@@ -1,6 +1,7 @@
 
 // Staff member types
 export type StaffRole = "Videographer" | "Photographer";
+export type AttendanceStatus = "Pending" | "Completed" | "Absent" | "Excused";
 
 export interface Schedule {
   id: string;
@@ -15,8 +16,9 @@ export interface StaffMember {
   name: string;
   role: StaffRole;
   photoUrl?: string;
+  email?: string;
   schedules: Schedule[];
-  statistics: {
+  statistics?: {
     completed: number;
     absent: number;
     excused: number;
@@ -25,17 +27,11 @@ export interface StaffMember {
 
 // Event types
 export type EventType = "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General";
-export type EventStatus = "Upcoming" | "Ongoing" | "Completed";
-export type AttendanceStatus = "Pending" | "Completed" | "Absent" | "Excused";
+export type EventStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";
 
 export interface StaffAssignment {
   staffId: string;
-  attendanceStatus: AttendanceStatus;
-}
-
-export interface EventAssignment {
-  staffId: string;
-  status: string;
+  attendanceStatus?: AttendanceStatus;
 }
 
 export interface Event {

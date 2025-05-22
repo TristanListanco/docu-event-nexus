@@ -19,10 +19,9 @@ interface StaffEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   staff: StaffMember;
-  onStaffUpdated?: () => void;
 }
 
-export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpdated }: StaffEditDialogProps) {
+export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEditDialogProps) {
   const [loading, setLoading] = useState(false);
   const { updateStaffMember } = useStaff();
   
@@ -138,15 +137,23 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     setLoading(true);
     
     try {
+      // Create the proper structure for schedules
+      const staffSchedules = staff.schedules || [];
+      const currentIds = staffSchedules.map(s => s.id);
+      const schedulesToUpdate: { toAdd: Omit<Schedule, "id">[]; toUpdate: Schedule[]; toDelete: string[]; } = {
+        // New schedules to add (don't have IDs)
+        toAdd: schedules.filter(s => !('id' in s)),
+        // We don't have any schedules to update in this implementation
+        toUpdate: [],
+        // Any schedule IDs that were in the staff but are no longer in our current schedules list
+        toDelete: currentIds.filter(id => !schedules.some(s => 'id' in s && s.id === id))
+      };
+      
       await updateStaffMember(staff.id, {
         name: formData.name,
         role: formData.role,
-        schedules
+        schedules: schedulesToUpdate
       });
-      
-      if (onStaffUpdated) {
-        onStaffUpdated();
-      }
       
       onOpenChange(false);
     } catch (error) {

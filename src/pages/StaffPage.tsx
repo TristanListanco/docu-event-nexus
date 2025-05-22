@@ -1,187 +1,268 @@
 
-import React, { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Users, RefreshCw, Plus, Edit, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import StaffFormDialog from "@/components/staff/staff-form-dialog";
+import StaffEditDialog from "@/components/staff/staff-edit-dialog"; 
+import StaffDeleteDialog from "@/components/staff/staff-delete-dialog"; 
+import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, StaffRole } from "@/types/models";
-import { StaffFormDialog } from "@/components/staff/staff-form-dialog";
-import { StaffEditDialog } from "@/components/staff/staff-edit-dialog";
-import { StaffDeleteDialog } from "@/components/staff/staff-delete-dialog";
-import { StaffScheduleDisplay } from "@/components/staff/staff-schedule-display";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { StaffMember } from "@/types/models";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 export default function StaffPage() {
-  const [openAddStaffDialog, setOpenAddStaffDialog] = useState(false);
-  const [openEditStaffDialog, setOpenEditStaffDialog] = useState(false);
-  const [openDeleteStaffDialog, setOpenDeleteStaffDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { staff, loading, loadStaff } = useStaff();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  const { staff, isLoading, error, refetchStaff } = useStaff();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const videographers = staff.filter((s) => s.role === "Videographer");
-  const photographers = staff.filter((s) => s.role === "Photographer");
-
-  // Calculate number of class schedules for each staff member
-  const getClassSchedulesCount = (staffMember: StaffMember) => {
-    return staffMember.schedule ? staffMember.schedule.length : 0;
-  };
-  
-  const totalVideoSchedules = videographers.reduce(
-    (total, v) => total + getClassSchedulesCount(v), 
-    0
+  // Filter staff based on search query and role
+  const filteredStaff = staff.filter(member => 
+    member.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const totalPhotoSchedules = photographers.reduce(
-    (total, p) => total + getClassSchedulesCount(p), 
-    0
-  );
+  const videographers = filteredStaff.filter(member => member.role === "Videographer");
+  const photographers = filteredStaff.filter(member => member.role === "Photographer");
 
-  const handleEditStaff = (staffMember: StaffMember) => {
-    setSelectedStaff(staffMember);
-    setOpenEditStaffDialog(true);
+  const handleEditStaff = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setEditDialogOpen(true);
   };
 
-  const handleDeleteStaff = (staffMember: StaffMember) => {
-    setSelectedStaff(staffMember);
-    setOpenDeleteStaffDialog(true);
+  const handleDeleteStaff = (staff: StaffMember) => {
+    setSelectedStaff(staff);
+    setDeleteDialogOpen(true);
   };
-
-  const handleStaffAdded = () => {
-    refetchStaff();
-  };
-
-  const handleStaffUpdated = () => {
-    refetchStaff();
-  };
-
-  const handleStaffDeleted = () => {
-    refetchStaff();
-  };
-
-  if (isLoading) {
-    return <div className="container py-6">Loading staff data...</div>;
-  }
-
-  if (error) {
-    return <div className="container py-6">Error loading staff: {error}</div>;
-  }
 
   return (
-    <div className="container py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Staff Members</h1>
-        <Button onClick={() => setOpenAddStaffDialog(true)}>Add Staff</Button>
+    <div className="flex flex-col h-full">
+      <div className="border-b">
+        <div className="flex items-center justify-between p-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Staff</h1>
+            <p className="text-muted-foreground">Manage your team members</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => loadStaff()} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <StaffFormDialog />
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-4 flex flex-col space-y-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            placeholder="Search staff..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <div className="text-center">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
+              <p className="mt-2 text-lg">Loading staff members...</p>
+            </div>
+          </div>
+        ) : staff.length > 0 ? (
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">All Staff ({filteredStaff.length})</TabsTrigger>
+              <TabsTrigger value="videographers">Videographers ({videographers.length})</TabsTrigger>
+              <TabsTrigger value="photographers">Photographers ({photographers.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="all" className="mt-4">
+              {filteredStaff.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {filteredStaff.map(member => (
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} />
+              )}
+            </TabsContent>
+            <TabsContent value="videographers" className="mt-4">
+              {videographers.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {videographers.map(member => (
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} role="Videographers" />
+              )}
+            </TabsContent>
+            <TabsContent value="photographers" className="mt-4">
+              {photographers.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {photographers.map(member => (
+                    <StaffCard 
+                      key={member.id} 
+                      staff={member} 
+                      onEdit={() => handleEditStaff(member)}
+                      onDelete={() => handleDeleteStaff(member)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyStateMessage searchQuery={searchQuery} role="Photographers" />
+              )}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <EmptyStateMessage searchQuery={searchQuery} />
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Videographers ({videographers.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-medium">
-              Total Class Schedules: {totalVideoSchedules}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Photographers ({photographers.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-medium">
-              Total Class Schedules: {totalPhotoSchedules}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Staff Members</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Class Schedules</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staff.map((staffMember) => (
-                <TableRow key={staffMember.id}>
-                  <TableCell>{staffMember.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={staffMember.role === "Videographer" ? "default" : "secondary"}>
-                      {staffMember.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col space-y-1">
-                      <span>{getClassSchedulesCount(staffMember)} schedules</span>
-                      <StaffScheduleDisplay schedule={staffMember.schedule || []} />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditStaff(staffMember)}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteStaff(staffMember)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <StaffFormDialog
-        open={openAddStaffDialog}
-        onOpenChange={setOpenAddStaffDialog}
-        onStaffAdded={handleStaffAdded}
-      />
-
+      {/* Edit Staff Dialog */}
       {selectedStaff && (
-        <>
-          <StaffEditDialog
-            open={openEditStaffDialog}
-            onOpenChange={setOpenEditStaffDialog}
-            staff={selectedStaff}
-            onStaffUpdated={handleStaffUpdated}
-          />
-          <StaffDeleteDialog
-            open={openDeleteStaffDialog}
-            onOpenChange={setOpenDeleteStaffDialog}
-            staffId={selectedStaff.id}
-            staffName={selectedStaff.name}
-            onStaffDeleted={handleStaffDeleted}
-          />
-        </>
+        <StaffEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          staff={selectedStaff}
+        />
       )}
+
+      {/* Delete Staff Dialog */}
+      {selectedStaff && (
+        <StaffDeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          staff={selectedStaff}
+        />
+      )}
+    </div>
+  );
+}
+
+interface StaffCardProps {
+  staff: StaffMember;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
+  const { name, role, photoUrl, statistics, schedules } = staff;
+  
+  return (
+    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={photoUrl} alt={name} />
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {name.split(" ").map(n => n[0]).join("")}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle className="text-lg">{name}</CardTitle>
+              <p className="text-sm text-muted-foreground">{role}</p>
+            </div>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={onDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Delete</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        
+        {schedules.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-medium text-muted-foreground mb-1">CLASS SCHEDULES</p>
+            <div className="space-y-1">
+              {schedules.map((schedule, index) => {
+                const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                return (
+                  <div key={index} className="text-xs bg-muted p-1.5 rounded">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{schedule.subject}</span>
+                      <span>{dayNames[schedule.dayOfWeek]}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {schedule.startTime} - {schedule.endTime}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+          <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-md">
+            <p className="text-sm font-medium text-green-800 dark:text-green-400">Completed</p>
+            <p className="text-xl font-bold text-green-800 dark:text-green-400">{statistics.completed}</p>
+          </div>
+          <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-md">
+            <p className="text-sm font-medium text-red-800 dark:text-red-400">Absent</p>
+            <p className="text-xl font-bold text-red-800 dark:text-red-400">{statistics.absent}</p>
+          </div>
+          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Excused</p>
+            <p className="text-xl font-bold text-yellow-800 dark:text-yellow-400">{statistics.excused}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyStateMessage({ searchQuery, role }: { searchQuery: string; role?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
+      <Users className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-medium">No staff members found</h3>
+      <p className="text-muted-foreground text-center mt-2">
+        {searchQuery ? 
+          `No staff members match your search criteria. Try a different search term.` : 
+          role ? 
+          `You haven't added any ${role.toLowerCase()} yet.` :
+          "You haven't added any staff members yet. Click the 'Add Staff Member' button to get started."}
+      </p>
     </div>
   );
 }

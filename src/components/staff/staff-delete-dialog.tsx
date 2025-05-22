@@ -10,56 +10,52 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useStaff } from "@/hooks/use-staff";
+import { StaffMember } from "@/types/models";
 import { toast } from "@/hooks/use-toast";
 
-export interface StaffDeleteDialogProps {
+interface StaffDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  staffId: string;
-  staffName: string;
-  onStaffDeleted: () => void;
+  staff: StaffMember;
 }
 
-export default function StaffDeleteDialog({
-  open,
-  onOpenChange,
-  staffId,
-  staffName,
-  onStaffDeleted,
+export default function StaffDeleteDialog({ 
+  open, 
+  onOpenChange, 
+  staff 
 }: StaffDeleteDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { deleteStaffMember } = useStaff();
 
   const handleDelete = async () => {
-    if (!staffId) {
-      toast({
-        title: "Error",
-        description: "No staff member selected for deletion",
-        variant: "destructive",
-      });
-      onOpenChange(false);
+    if (!password.trim()) {
+      setError("Please enter your password to confirm");
       return;
     }
 
-    setIsDeleting(true);
-    
+    setLoading(true);
+    setError(null);
+
     try {
-      const success = await deleteStaffMember(staffId);
-      
+      const success = await deleteStaffMember(staff.id);
       if (success) {
-        onStaffDeleted();
+        toast({
+          title: "Staff Deleted",
+          description: `${staff.name} has been successfully removed.`
+        });
+        onOpenChange(false);
+      } else {
+        setError("Failed to delete staff member");
       }
-    } catch (error) {
-      console.error("Error deleting staff member:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete staff member",
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
-      setIsDeleting(false);
-      onOpenChange(false);
+      setLoading(false);
     }
   };
 
@@ -67,23 +63,43 @@ export default function StaffDeleteDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Staff Member</AlertDialogTitle>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete {staffName}? This action cannot be
-            undone and will remove all schedules associated with this staff member.
+            This action cannot be undone. This will permanently delete{" "}
+            <span className="font-semibold">{staff.name}</span> and all associated
+            schedules and assignments.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        
+        <div className="py-4">
+          <Label htmlFor="password" className="text-sm font-medium">
+            Enter your password to confirm deletion
+          </Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1"
+            placeholder="Your password"
+            required
+          />
+          {error && (
+            <p className="text-sm text-destructive mt-2">{error}</p>
+          )}
+        </div>
+        
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleDelete();
             }}
-            className="bg-red-600 hover:bg-red-700"
-            disabled={isDeleting}
+            disabled={loading}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            {loading ? "Deleting..." : "Delete Staff Member"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
