@@ -119,10 +119,10 @@ export function useEvents() {
           end_time: eventData.endTime,
           location: eventData.location,
           type: eventData.type,
-          status: eventData.status,
+          status: eventData.status || "Upcoming", // Use default if not provided
           ignore_schedule_conflicts: eventData.ignoreScheduleConflicts,
-          is_big_event: eventData.isBigEvent,
-          big_event_id: eventData.bigEventId,
+          is_big_event: eventData.isBigEvent || false,
+          big_event_id: eventData.bigEventId || null, // Fix for empty string UUID error
           user_id: user.id
         })
         .select()

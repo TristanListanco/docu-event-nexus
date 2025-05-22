@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, EventType, EventStatus } from "@/types/models";
+import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
@@ -26,7 +26,6 @@ export default function AddEventPage() {
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [type, setType] = useState<EventType>("General");
-  const [status, setStatus] = useState<EventStatus>("Upcoming");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
   const [selectedVideographer, setSelectedVideographer] = useState<string>("");
   const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
@@ -73,7 +72,7 @@ export default function AddEventPage() {
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -128,10 +127,10 @@ export default function AddEventPage() {
           endTime,
           location,
           type,
-          status,
+          status: "Upcoming", // Default status for new events
           ignoreScheduleConflicts,
-          isBigEvent: false, // No longer used
-          bigEventId: "" // No longer used
+          isBigEvent: false,
+          bigEventId: null // Ensure this is null not empty string
         },
         videographerIds,
         photographerIds
@@ -254,37 +253,21 @@ export default function AddEventPage() {
               />
             </div>
             
-            {/* Event type and status */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type">Event Type</Label>
-                <Select value={type} onValueChange={(value) => setType(value as EventType)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SPECOM">SPECOM</SelectItem>
-                    <SelectItem value="LITCOM">LITCOM</SelectItem>
-                    <SelectItem value="CUACOM">CUACOM</SelectItem>
-                    <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                    <SelectItem value="General">General</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="status">Event Status</Label>
-                <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select event status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Upcoming">Upcoming</SelectItem>
-                    <SelectItem value="Ongoing">Ongoing</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Event type field - removed event status */}
+            <div>
+              <Label htmlFor="type">Event Type</Label>
+              <Select value={type} onValueChange={(value) => setType(value as EventType)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SPECOM">SPECOM</SelectItem>
+                  <SelectItem value="LITCOM">LITCOM</SelectItem>
+                  <SelectItem value="CUACOM">CUACOM</SelectItem>
+                  <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                  <SelectItem value="General">General</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             {/* Ignore Schedule Conflicts checkbox */}
@@ -335,7 +318,7 @@ export default function AddEventPage() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem key="no-videographers" value="no-videographers" disabled>
+                        <SelectItem value="no-videographers-available" disabled>
                           No videographers available
                         </SelectItem>
                       )}
@@ -367,7 +350,7 @@ export default function AddEventPage() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem key="no-photographers" value="no-photographers" disabled>
+                        <SelectItem value="no-photographers-available" disabled>
                           No photographers available
                         </SelectItem>
                       )}
