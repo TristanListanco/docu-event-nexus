@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
@@ -137,7 +138,7 @@ export function useEvents() {
           user_id: user.id,
           event_id: eventData_.id,
           staff_id: staffId,
-          attendance_status: "Pending"
+          attendance_status: "Pending" as AttendanceStatus
         }));
 
         const { error: videographerError } = await supabase
@@ -155,7 +156,7 @@ export function useEvents() {
           user_id: user.id,
           event_id: eventData_.id,
           staff_id: staffId,
-          attendance_status: "Pending"
+          attendance_status: "Pending" as AttendanceStatus
         }));
 
         const { error: photographerError } = await supabase
@@ -363,7 +364,7 @@ export function useEvents() {
             user_id: user.id,
             event_id: eventId,
             staff_id: staffId,
-            attendance_status: "Pending"
+            attendance_status: "Pending" as AttendanceStatus
           }));
 
           const { error: videographerError } = await supabase
@@ -381,7 +382,7 @@ export function useEvents() {
             user_id: user.id,
             event_id: eventId,
             staff_id: staffId,
-            attendance_status: "Pending"
+            attendance_status: "Pending" as AttendanceStatus
           }));
 
           const { error: photographerError } = await supabase
@@ -431,3 +432,6 @@ export function useEvents() {
     updateEvent
   };
 }
+
+// Import AttendanceStatus type for proper typing
+import { AttendanceStatus } from "@/types/models";
