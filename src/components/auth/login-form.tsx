@@ -23,10 +23,10 @@ export default function LoginForm() {
 
     try {
       await signIn(email, password);
-      navigate("/events");
+      // Navigation is handled in the signIn function
     } catch (error) {
       console.error("Login error:", error);
-      // Error toast is now handled in the login function
+      // Error toast is handled in the signIn function
     } finally {
       setLoading(false);
     }
