@@ -312,19 +312,66 @@ export function useStaff() {
     return staff.find((member) => member.id === id) || null;
   };
 
-  // New function to get available staff based on date and time
-  const getAvailableStaff = (date: string, startTime: string, endTime: string) => {
-    // Filter staff members based on their schedules
-    // This is a simple implementation that doesn't check for conflicts yet
-    const videographers = getStaffByRole("Videographer");
-    const photographers = getStaffByRole("Photographer");
+  // Enhanced function to check for schedule conflicts
+  const getAvailableStaff = (date: string, startTime: string, endTime: string, ignoreScheduleConflicts: boolean = false) => {
+    // If ignoring conflicts, return all staff
+    if (ignoreScheduleConflicts) {
+      return {
+        videographers: getStaffByRole("Videographer"),
+        photographers: getStaffByRole("Photographer")
+      };
+    }
     
-    // In a real implementation, we would check for conflicts with the given date and time
-    // For now, we just return all staff members of each role
+    // Convert event times to numbers for comparison (e.g., "09:00" -> 9.0, "14:30" -> 14.5)
+    const eventStartHour = parseTimeToDecimal(startTime);
+    const eventEndHour = parseTimeToDecimal(endTime);
+    const dayOfWeek = new Date(date).getDay(); // 0 for Sunday, 1 for Monday, etc.
+    
+    // Filter staff based on schedule availability
+    const availableVideographers = getStaffByRole("Videographer").filter(member => 
+      isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour)
+    );
+    
+    const availablePhotographers = getStaffByRole("Photographer").filter(member => 
+      isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour)
+    );
+    
     return {
-      videographers,
-      photographers
+      videographers: availableVideographers,
+      photographers: availablePhotographers
     };
+  };
+  
+  // Helper to parse time string to decimal hour (for easier comparison)
+  const parseTimeToDecimal = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours + (minutes / 60);
+  };
+  
+  // Helper to check if staff member is available at the given time
+  const isStaffAvailable = (staff: StaffMember, dayOfWeek: number, startHour: number, endHour: number): boolean => {
+    // Check if staff has any schedules for this day of week
+    const daySchedules = staff.schedules.filter(schedule => schedule.dayOfWeek === dayOfWeek);
+    
+    // If no schedules for this day, they're available
+    if (daySchedules.length === 0) return true;
+    
+    // Check for conflicts with each schedule
+    for (const schedule of daySchedules) {
+      const scheduleStart = parseTimeToDecimal(schedule.startTime);
+      const scheduleEnd = parseTimeToDecimal(schedule.endTime);
+      
+      // Check if there's an overlap
+      // If event starts during schedule, or event ends during schedule, or event completely contains schedule
+      if ((startHour >= scheduleStart && startHour < scheduleEnd) || 
+          (endHour > scheduleStart && endHour <= scheduleEnd) ||
+          (startHour <= scheduleStart && endHour >= scheduleEnd)) {
+        return false; // Not available - there's a conflict
+      }
+    }
+    
+    // No conflicts found
+    return true;
   };
 
   // Load staff on initialization

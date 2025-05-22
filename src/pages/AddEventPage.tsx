@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -15,7 +16,7 @@ import { useStaff } from "@/hooks/use-staff";
 import { StaffMember, EventType, EventStatus } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -31,35 +32,48 @@ export default function AddEventPage() {
   const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const { addEvent } = useEvents();
-  const { staff, getStaffByRole } = useStaff();
+  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Get available staff
+  // Store available staff
   const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
-  
-  // Function to update available staff based on date/time and ignore conflicts setting
+  const [scheduleCalculated, setScheduleCalculated] = useState(false);
+
+  // Check availability whenever date/time/ignoreScheduleConflicts changes
   useEffect(() => {
     if (date && startTime && endTime) {
-      // If ignoring conflicts, get all staff members by role
-      if (ignoreScheduleConflicts) {
-        setAvailableVideographers(getStaffByRole("Videographer"));
-        setAvailablePhotographers(getStaffByRole("Photographer"));
-      } else {
-        // Only show staff members available for that date/time
-        // In a real app, this would check for availability based on the selected date/time
-        // For now, we'll just show all staff members, but in a real scenario you would filter 
-        // based on conflicts with their schedules
-        setAvailableVideographers(getStaffByRole("Videographer"));
-        setAvailablePhotographers(getStaffByRole("Photographer"));
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const { videographers, photographers } = getAvailableStaff(
+        formattedDate,
+        startTime,
+        endTime,
+        ignoreScheduleConflicts
+      );
+      
+      setAvailableVideographers(videographers);
+      setAvailablePhotographers(photographers);
+      setScheduleCalculated(true);
+      
+      // Reset selections if the previously selected staff members are no longer available
+      const videographerStillAvailable = videographers.some(v => v.id === selectedVideographer);
+      const photographerStillAvailable = photographers.some(p => p.id === selectedPhotographer);
+      
+      if (!videographerStillAvailable) {
+        setSelectedVideographer("");
+      }
+      
+      if (!photographerStillAvailable) {
+        setSelectedPhotographer("");
       }
     } else {
-      // Reset if date/time not selected
+      // Reset if necessary inputs are missing
       setAvailableVideographers([]);
       setAvailablePhotographers([]);
+      setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, staff]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -68,6 +82,11 @@ export default function AddEventPage() {
     const newLogId = `${prefix}-${randomId}`;
     setLogId(newLogId);
   };
+
+  // Generate log ID on component mount
+  useEffect(() => {
+    generateLogId();
+  }, []);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -81,6 +100,7 @@ export default function AddEventPage() {
           description: "Please fill in all required fields.",
           variant: "destructive",
         });
+        setSubmitting(false);
         return;
       }
       
@@ -90,6 +110,7 @@ export default function AddEventPage() {
           description: "End time must be later than start time.",
           variant: "destructive",
         });
+        setSubmitting(false);
         return;
       }
       
@@ -109,8 +130,8 @@ export default function AddEventPage() {
           type,
           status,
           ignoreScheduleConflicts,
-          isBigEvent: false, // We removed this option as requested
-          bigEventId: "" // Empty since we removed the Big Event option
+          isBigEvent: false, // No longer used
+          bigEventId: "" // No longer used
         },
         videographerIds,
         photographerIds
@@ -142,8 +163,8 @@ export default function AddEventPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Name and Log ID fields */}
+            <div className="grid md:grid-cols-1 gap-4">
+              {/* Name field */}
               <div>
                 <Label htmlFor="name">Event Name</Label>
                 <Input
@@ -154,22 +175,6 @@ export default function AddEventPage() {
                   placeholder="Event Name"
                   required
                 />
-              </div>
-              <div>
-                <Label htmlFor="logId">Event Log ID</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="logId"
-                    type="text"
-                    value={logId}
-                    onChange={(e) => setLogId(e.target.value)}
-                    placeholder="Event Log ID"
-                    required
-                  />
-                  <Button type="button" variant="outline" onClick={generateLogId}>
-                    Generate
-                  </Button>
-                </div>
               </div>
             </div>
             
@@ -207,23 +212,31 @@ export default function AddEventPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="startTime"
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="pl-8"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="endTime">End Time</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="endTime"
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="pl-8"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -281,80 +294,96 @@ export default function AddEventPage() {
                 checked={ignoreScheduleConflicts}
                 onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
               />
-              <Label htmlFor="ignoreConflicts">Ignore Schedule Conflicts</Label>
+              <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
             </div>
             
-            {/* Videographer Selection */}
-            <div>
-              <Label htmlFor="videographer">Videographer</Label>
-              <Select 
-                value={selectedVideographer} 
-                onValueChange={setSelectedVideographer}
-                disabled={availableVideographers.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a videographer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableVideographers.length > 0 ? (
-                    availableVideographers.map((videographer) => (
-                      <SelectItem key={videographer.id} value={videographer.id}>
-                        {videographer.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem key="no-videographers" value="no-videographers" disabled>
-                      No videographers available
-                    </SelectItem>
+            {/* Staff Assignment Section */}
+            <div className="pt-4">
+              <h3 className="text-lg font-semibold mb-2">Staff Assignment</h3>
+              <div className="bg-muted/50 p-4 rounded-lg space-y-4">
+                {/* Instructions */}
+                {!scheduleCalculated && (
+                  <p className="text-sm text-muted-foreground">
+                    Please select date and time to see available staff
+                  </p>
+                )}
+                
+                {scheduleCalculated && (
+                  <p className="text-sm text-muted-foreground">
+                    {ignoreScheduleConflicts 
+                      ? "Showing all staff members (schedule conflicts ignored)" 
+                      : "Showing only staff members available for the selected time slot"}
+                  </p>
+                )}
+                
+                {/* Videographer Selection */}
+                <div>
+                  <Label htmlFor="videographer">Videographer</Label>
+                  <Select 
+                    value={selectedVideographer} 
+                    onValueChange={setSelectedVideographer}
+                    disabled={!scheduleCalculated}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a videographer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableVideographers.length > 0 ? (
+                        availableVideographers.map((videographer) => (
+                          <SelectItem key={videographer.id} value={videographer.id}>
+                            {videographer.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem key="no-videographers" value="no-videographers" disabled>
+                          No videographers available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {availableVideographers.length === 0 && scheduleCalculated && (
+                    <p className="text-sm text-amber-500 mt-1">
+                      No videographers available for this time slot
+                    </p>
                   )}
-                </SelectContent>
-              </Select>
-              {availableVideographers.length === 0 && date && startTime && endTime && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  No videographers available for this time slot
-                </p>
-              )}
-              {(!date || !startTime || !endTime) && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Please select date and time to see available staff
-                </p>
-              )}
-            </div>
-            
-            {/* Photographer Selection */}
-            <div>
-              <Label htmlFor="photographer">Photographer</Label>
-              <Select 
-                value={selectedPhotographer} 
-                onValueChange={setSelectedPhotographer}
-                disabled={availablePhotographers.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a photographer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePhotographers.length > 0 ? (
-                    availablePhotographers.map((photographer) => (
-                      <SelectItem key={photographer.id} value={photographer.id}>
-                        {photographer.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem key="no-photographers" value="no-photographers" disabled>
-                      No photographers available
-                    </SelectItem>
+                </div>
+                
+                {/* Photographer Selection */}
+                <div>
+                  <Label htmlFor="photographer">Photographer</Label>
+                  <Select 
+                    value={selectedPhotographer} 
+                    onValueChange={setSelectedPhotographer}
+                    disabled={!scheduleCalculated}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a photographer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePhotographers.length > 0 ? (
+                        availablePhotographers.map((photographer) => (
+                          <SelectItem key={photographer.id} value={photographer.id}>
+                            {photographer.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem key="no-photographers" value="no-photographers" disabled>
+                          No photographers available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {availablePhotographers.length === 0 && scheduleCalculated && (
+                    <p className="text-sm text-amber-500 mt-1">
+                      No photographers available for this time slot
+                    </p>
                   )}
-                </SelectContent>
-              </Select>
-              {availablePhotographers.length === 0 && date && startTime && endTime && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  No photographers available for this time slot
-                </p>
-              )}
+                </div>
+              </div>
             </div>
             
             {/* Submit button */}
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="mt-4">
               {submitting ? "Submitting..." : "Add Event"}
             </Button>
           </form>
