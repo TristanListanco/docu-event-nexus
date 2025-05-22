@@ -26,67 +26,51 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useStaffSelection } from "@/hooks/use-staff-selection";
 
 export default function AddEventPage() {
   const navigate = useNavigate();
-  const { staff, getAvailableStaff } = useStaff();
   const { createEvent } = useEvents();
+  
+  // Use the staff selection hook for handling staff availability
+  const {
+    ignoreScheduleConflicts,
+    setIgnoreScheduleConflicts,
+    selectedDate,
+    setSelectedDate,
+    startTime,
+    setStartTime,
+    endTime,
+    setEndTime,
+    getAvailableStaffMembers,
+    selectedVideographers,
+    selectedPhotographers,
+    toggleStaffSelection,
+  } = useStaffSelection();
   
   // Event form state
   const [name, setName] = useState("");
-  const [date, setDate] = useState<Date | undefined>();
   const [location, setLocation] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
   const [type, setType] = useState<EventType>("General");
-  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // Staff selection state
-  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
-  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
-  
   // Get available staff based on selected date and time
-  const getAvailableStaffMembers = () => {
-    if (!date || !startTime || !endTime) {
-      return {
-        videographers: [],
-        photographers: []
-      };
-    }
-    
-    if (ignoreScheduleConflicts) {
-      // If ignoring conflicts, show all staff
-      const videographers = staff.filter(s => s.role === 'Videographer');
-      const photographers = staff.filter(s => s.role === 'Photographer');
-      return { videographers, photographers };
-    }
-    
-    return getAvailableStaff(format(date, 'yyyy-MM-dd'), startTime, endTime);
-  };
+  const { videographers, photographers } = getAvailableStaffMembers();
   
   // Toggle staff selection
   const toggleVideographer = (staffId: string) => {
-    setSelectedVideographers(prev => 
-      prev.includes(staffId) 
-        ? prev.filter(id => id !== staffId) 
-        : [...prev, staffId]
-    );
+    toggleStaffSelection(staffId, 'videographer');
   };
   
   const togglePhotographer = (staffId: string) => {
-    setSelectedPhotographers(prev => 
-      prev.includes(staffId) 
-        ? prev.filter(id => id !== staffId) 
-        : [...prev, staffId]
-    );
+    toggleStaffSelection(staffId, 'photographer');
   };
   
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !startTime || !endTime || !name || !location) {
+    if (!selectedDate || !startTime || !endTime || !name || !location) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -100,7 +84,7 @@ export default function AddEventPage() {
     try {
       const eventData = {
         name,
-        date: format(date, 'yyyy-MM-dd'),
+        date: format(selectedDate, 'yyyy-MM-dd'),
         startTime,
         endTime,
         location,
@@ -108,7 +92,8 @@ export default function AddEventPage() {
         status: "Upcoming" as const,
         videographers: selectedVideographers,
         photographers: selectedPhotographers,
-        ignoreScheduleConflicts
+        ignoreScheduleConflicts,
+        isBigEvent: false // Adding the missing property
       };
       
       await createEvent(eventData);
@@ -119,33 +104,6 @@ export default function AddEventPage() {
       setLoading(false);
     }
   };
-  
-  // Reset staff selections when date/time changes
-  const resetStaffSelections = () => {
-    setSelectedVideographers([]);
-    setSelectedPhotographers([]);
-  };
-  
-  const handleDateChange = (newDate: Date | undefined) => {
-    setDate(newDate);
-    resetStaffSelections();
-  };
-  
-  const handleTimeChange = (field: "start" | "end", value: string) => {
-    if (field === "start") {
-      setStartTime(value);
-    } else {
-      setEndTime(value);
-    }
-    resetStaffSelections();
-  };
-  
-  const handleIgnoreConflictsChange = (checked: boolean) => {
-    setIgnoreScheduleConflicts(checked);
-    resetStaffSelections();
-  };
-  
-  const { videographers, photographers } = getAvailableStaffMembers();
   
   return (
     <div className="container py-6">
@@ -167,6 +125,17 @@ export default function AddEventPage() {
             <CardTitle>Event Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="ignore-conflicts"
+                checked={ignoreScheduleConflicts}
+                onCheckedChange={(checked) => setIgnoreScheduleConflicts(checked === true)}
+              />
+              <Label htmlFor="ignore-conflicts">
+                Ignore staff schedule conflicts
+              </Label>
+            </div>
+            
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Event Name</Label>
@@ -210,17 +179,6 @@ export default function AddEventPage() {
               />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="ignore-conflicts"
-                checked={ignoreScheduleConflicts}
-                onCheckedChange={(checked) => handleIgnoreConflictsChange(checked === true)}
-              />
-              <Label htmlFor="ignore-conflicts">
-                Ignore staff schedule conflicts
-              </Label>
-            </div>
-            
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Date</Label>
@@ -230,18 +188,18 @@ export default function AddEventPage() {
                       variant={"outline"}
                       className={cn(
                         "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
+                        !selectedDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
                       mode="single"
-                      selected={date}
-                      onSelect={handleDateChange}
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
                       initialFocus
                       className="pointer-events-auto"
                     />
@@ -255,7 +213,7 @@ export default function AddEventPage() {
                   id="start-time"
                   type="time"
                   value={startTime}
-                  onChange={(e) => handleTimeChange("start", e.target.value)}
+                  onChange={(e) => setStartTime(e.target.value)}
                   required
                 />
               </div>
@@ -266,7 +224,7 @@ export default function AddEventPage() {
                   id="end-time"
                   type="time"
                   value={endTime}
-                  onChange={(e) => handleTimeChange("end", e.target.value)}
+                  onChange={(e) => setEndTime(e.target.value)}
                   required
                 />
               </div>
@@ -305,7 +263,7 @@ export default function AddEventPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground italic">
-                  {date && startTime && endTime
+                  {selectedDate && startTime && endTime
                     ? "No videographers available for this time slot"
                     : "Select date and time to see available videographers"}
                 </p>
@@ -338,7 +296,7 @@ export default function AddEventPage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground italic">
-                  {date && startTime && endTime
+                  {selectedDate && startTime && endTime
                     ? "No photographers available for this time slot"
                     : "Select date and time to see available photographers"}
                 </p>

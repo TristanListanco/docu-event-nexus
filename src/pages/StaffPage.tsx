@@ -22,7 +22,7 @@ import { Plus, Search, Camera, Video, Users } from "lucide-react";
 import { StaffScheduleDisplay } from "@/components/staff/staff-schedule-display";
 
 export default function StaffPage() {
-  const { staff, loading } = useStaff();
+  const { staff, loading, loadStaff } = useStaff();
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -55,6 +55,15 @@ export default function StaffPage() {
   const handleDeleteStaff = (member: StaffMember) => {
     setSelectedStaff(member);
     setDeleteDialogOpen(true);
+  };
+
+  // Handle staff added/deleted callbacks
+  const handleStaffAdded = () => {
+    loadStaff();
+  };
+  
+  const handleStaffDeleted = () => {
+    loadStaff();
   };
   
   return (
@@ -196,8 +205,12 @@ export default function StaffPage() {
         </TabsContent>
       </Tabs>
       
-      {/* Add staff dialog */}
-      <StaffFormDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      {/* Add staff dialog - Pass the onStaffAdded prop */}
+      <StaffFormDialog 
+        open={addDialogOpen} 
+        onOpenChange={setAddDialogOpen} 
+        onStaffAdded={handleStaffAdded}
+      />
       
       {/* Edit staff dialog */}
       {selectedStaff && (
@@ -208,12 +221,14 @@ export default function StaffPage() {
         />
       )}
       
-      {/* Delete staff dialog */}
+      {/* Delete staff dialog - Fix the props to use staffId and staffName */}
       {selectedStaff && (
         <StaffDeleteDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          staff={selectedStaff}
+          staffId={selectedStaff.id}
+          staffName={selectedStaff.name}
+          onStaffDeleted={handleStaffDeleted}
         />
       )}
     </div>
