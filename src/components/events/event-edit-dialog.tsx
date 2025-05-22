@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { Event, EventStatus, StaffAssignment } from "@/types/models";
+import { Event, EventStatus } from "@/types/models";
 import {
   Select,
   SelectContent,
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -53,9 +55,10 @@ export default function EventEditDialog({
   const [endTime, setEndTime] = useState(event.endTime);
   const [location, setLocation] = useState(event.location);
   const [status, setStatus] = useState<EventStatus>(event.status);
+  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(event.ignoreScheduleConflicts);
   
-  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
-  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
+  const [selectedVideographer, setSelectedVideographer] = useState<string>("");
+  const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
   
   const [loading, setLoading] = useState(false);
   const { updateEvent } = useEvents();
@@ -72,18 +75,19 @@ export default function EventEditDialog({
       setEndTime(event.endTime);
       setLocation(event.location);
       setStatus(event.status);
+      setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
       
-      // Set selected staff from event
-      if (event.videographers) {
-        setSelectedVideographers(event.videographers.map(v => v.staffId));
+      // Set selected staff from event - now we only choose one from each role
+      if (event.videographers && event.videographers.length > 0) {
+        setSelectedVideographer(event.videographers[0].staffId);
       } else {
-        setSelectedVideographers([]);
+        setSelectedVideographer("");
       }
       
-      if (event.photographers) {
-        setSelectedPhotographers(event.photographers.map(p => p.staffId));
+      if (event.photographers && event.photographers.length > 0) {
+        setSelectedPhotographer(event.photographers[0].staffId);
       } else {
-        setSelectedPhotographers([]);
+        setSelectedPhotographer("");
       }
       
       // Update available staff when dialog opens
@@ -91,76 +95,67 @@ export default function EventEditDialog({
     }
   }, [open, event]);
   
-  // Update available staff when date/time changes
+  // Update available staff when date/time or ignore conflicts changes
   useEffect(() => {
     if (date && startTime && endTime) {
       updateAvailableStaff();
     }
-  }, [date, startTime, endTime]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts]);
   
   const updateAvailableStaff = () => {
     if (!date) return;
     
-    // Use getStaffByRole instead of getAvailableStaff since we fixed the hook
-    const videographers = getStaffByRole("Videographer");
-    const photographers = getStaffByRole("Photographer");
-    
-    // Add currently assigned staff who might not be available now
-    const allVideographers = [...videographers];
-    const allPhotographers = [...photographers];
-    
-    // Add currently assigned videographers who might not be in the available list
-    if (event.videographers) {
-      event.videographers.forEach(assignment => {
-        const staffMember = staff.find(s => s.id === assignment.staffId);
-        if (staffMember && !allVideographers.some(v => v.id === staffMember.id)) {
-          allVideographers.push(staffMember);
-        }
-      });
+    // If ignoring conflicts, get all staff members by role
+    if (ignoreScheduleConflicts) {
+      setAvailableVideographers(getStaffByRole("Videographer"));
+      setAvailablePhotographers(getStaffByRole("Photographer"));
+    } else {
+      // In a real app, this would check for availability based on date/time
+      // For now, we'll show all staff
+      setAvailableVideographers(getStaffByRole("Videographer"));
+      setAvailablePhotographers(getStaffByRole("Photographer"));
     }
     
-    // Add currently assigned photographers who might not be in the available list
-    if (event.photographers) {
-      event.photographers.forEach(assignment => {
-        const staffMember = staff.find(s => s.id === assignment.staffId);
-        if (staffMember && !allPhotographers.some(p => p.id === staffMember.id)) {
-          allPhotographers.push(staffMember);
+    // Make sure currently assigned staff are included
+    const ensureStaffIsIncluded = (staffId: string, staffList: any[], setter: React.Dispatch<React.SetStateAction<any[]>>) => {
+      if (staffId && !staffList.some(s => s.id === staffId)) {
+        const staffMember = staff.find(s => s.id === staffId);
+        if (staffMember) {
+          setter(prev => [...prev, staffMember]);
         }
-      });
+      }
+    };
+    
+    // Ensure currently assigned videographer is in the list
+    if (selectedVideographer) {
+      ensureStaffIsIncluded(selectedVideographer, availableVideographers, setAvailableVideographers);
     }
     
-    setAvailableVideographers(allVideographers);
-    setAvailablePhotographers(allPhotographers);
+    // Ensure currently assigned photographer is in the list
+    if (selectedPhotographer) {
+      ensureStaffIsIncluded(selectedPhotographer, availablePhotographers, setAvailablePhotographers);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Create videographer assignments
-    const videographers: StaffAssignment[] = selectedVideographers.map(staffId => ({
-      staffId,
-      attendanceStatus: 'Pending'
-    }));
-    
-    // Create photographer assignments
-    const photographers: StaffAssignment[] = selectedPhotographers.map(staffId => ({
-      staffId,
-      attendanceStatus: 'Pending'
-    }));
+    // Now we only send single staff members as arrays with one item
+    const videographerIds = selectedVideographer ? [selectedVideographer] : [];
+    const photographerIds = selectedPhotographer ? [selectedPhotographer] : [];
 
-    const updatedEvent: Partial<Event> = {
+    const updatedEvent = {
       name,
       date: date ? format(date, "yyyy-MM-dd") : undefined,
       startTime,
       endTime,
       location,
       status,
-      videographers,
-      photographers
+      ignoreScheduleConflicts
     };
 
-    const success = await updateEvent(event.id, updatedEvent);
+    const success = await updateEvent(event.id, updatedEvent, videographerIds, photographerIds);
 
     if (success) {
       onOpenChange(false);
@@ -168,22 +163,6 @@ export default function EventEditDialog({
     }
 
     setLoading(false);
-  };
-
-  const handleVideographerChange = (staffId: string) => {
-    if (selectedVideographers.includes(staffId)) {
-      setSelectedVideographers(prev => prev.filter(id => id !== staffId));
-    } else {
-      setSelectedVideographers(prev => [...prev, staffId]);
-    }
-  };
-  
-  const handlePhotographerChange = (staffId: string) => {
-    if (selectedPhotographers.includes(staffId)) {
-      setSelectedPhotographers(prev => prev.filter(id => id !== staffId));
-    } else {
-      setSelectedPhotographers(prev => [...prev, staffId]);
-    }
   };
 
   return (
@@ -294,66 +273,91 @@ export default function EventEditDialog({
               </Select>
             </div>
             
-            {/* Videographer Assignment */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">
-                Videographers
+            {/* Ignore Schedule Conflicts checkbox */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
+                Schedule
               </Label>
-              <div className="col-span-3 space-y-2">
-                {availableVideographers.length > 0 ? (
-                  availableVideographers.map(videographer => (
-                    <div key={videographer.id} className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id={`video-${videographer.id}`} 
-                        checked={selectedVideographers.includes(videographer.id)} 
-                        onChange={() => handleVideographerChange(videographer.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`video-${videographer.id}`} className="flex items-center">
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {videographer.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                        {videographer.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground text-sm italic">
+              <div className="flex items-center space-x-2 col-span-3">
+                <Checkbox 
+                  id="ignoreConflicts" 
+                  checked={ignoreScheduleConflicts} 
+                  onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
+                />
+                <label htmlFor="ignoreConflicts" className="text-sm">
+                  Ignore Schedule Conflicts
+                </label>
+              </div>
+            </div>
+            
+            {/* Videographer Selection */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="videographer" className="text-right">
+                Videographer
+              </Label>
+              <div className="col-span-3">
+                <Select 
+                  value={selectedVideographer} 
+                  onValueChange={setSelectedVideographer}
+                  disabled={availableVideographers.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a videographer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableVideographers.length > 0 ? (
+                      availableVideographers.map((videographer) => (
+                        <SelectItem key={videographer.id} value={videographer.id}>
+                          {videographer.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        No videographers available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {availableVideographers.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
                     No videographers available for this time slot
-                  </div>
+                  </p>
                 )}
               </div>
             </div>
             
-            {/* Photographer Assignment */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">
-                Photographers
+            {/* Photographer Selection */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="photographer" className="text-right">
+                Photographer
               </Label>
-              <div className="col-span-3 space-y-2">
-                {availablePhotographers.length > 0 ? (
-                  availablePhotographers.map(photographer => (
-                    <div key={photographer.id} className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id={`photo-${photographer.id}`} 
-                        checked={selectedPhotographers.includes(photographer.id)} 
-                        onChange={() => handlePhotographerChange(photographer.id)}
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                      />
-                      <label htmlFor={`photo-${photographer.id}`} className="flex items-center">
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {photographer.name.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                        {photographer.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-muted-foreground text-sm italic">
+              <div className="col-span-3">
+                <Select 
+                  value={selectedPhotographer} 
+                  onValueChange={setSelectedPhotographer}
+                  disabled={availablePhotographers.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a photographer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePhotographers.length > 0 ? (
+                      availablePhotographers.map((photographer) => (
+                        <SelectItem key={photographer.id} value={photographer.id}>
+                          {photographer.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        No photographers available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {availablePhotographers.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
                     No photographers available for this time slot
-                  </div>
+                  </p>
                 )}
               </div>
             </div>

@@ -241,15 +241,12 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
       <CardContent>
         <div className="grid grid-cols-3 gap-2 mt-2 text-center">
           <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-md">
-            <p className="text-sm font-medium text-green-800 dark:text-green-400">Completed</p>
             <p className="text-xl font-bold text-green-800 dark:text-green-400">{statistics.completed}</p>
           </div>
           <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-md">
-            <p className="text-sm font-medium text-red-800 dark:text-red-400">Absent</p>
             <p className="text-xl font-bold text-red-800 dark:text-red-400">{statistics.absent}</p>
           </div>
           <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md">
-            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-400">Excused</p>
             <p className="text-xl font-bold text-yellow-800 dark:text-yellow-400">{statistics.excused}</p>
           </div>
         </div>
@@ -273,3 +270,4 @@ function EmptyStateMessage({ searchQuery, role }: { searchQuery: string; role?: 
     </div>
   );
 }
+

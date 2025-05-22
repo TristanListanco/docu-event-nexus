@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { Event, EventStatus, EventType, StaffAssignment } from "@/types/models";
+import { Event, EventStatus, EventType, StaffAssignment, AttendanceStatus } from "@/types/models";
 import { toast } from "./use-toast";
 
 export function useEvents() {
@@ -72,11 +72,11 @@ export function useEvents() {
             status: event.status as EventStatus,
             videographers: videographerAssignments.map(v => ({ 
               staffId: v.staff_id,
-              attendanceStatus: v.attendance_status
+              attendanceStatus: v.attendance_status as AttendanceStatus
             })),
             photographers: photographerAssignments.map(p => ({ 
               staffId: p.staff_id,
-              attendanceStatus: p.attendance_status
+              attendanceStatus: p.attendance_status as AttendanceStatus
             })),
             ignoreScheduleConflicts: event.ignore_schedule_conflicts,
             isBigEvent: event.is_big_event,
@@ -284,11 +284,11 @@ export function useEvents() {
         status: data.status as EventStatus,
         videographers: videographers?.map(v => ({ 
           staffId: v.staff_id,
-          attendanceStatus: v.attendance_status
+          attendanceStatus: v.attendance_status as AttendanceStatus
         })) || [],
         photographers: photographers?.map(p => ({ 
           staffId: p.staff_id,
-          attendanceStatus: p.attendance_status
+          attendanceStatus: p.attendance_status as AttendanceStatus
         })) || [],
         ignoreScheduleConflicts: data.ignore_schedule_conflicts,
         isBigEvent: data.is_big_event,
@@ -432,6 +432,3 @@ export function useEvents() {
     updateEvent
   };
 }
-
-// Import AttendanceStatus type for proper typing
-import { AttendanceStatus } from "@/types/models";

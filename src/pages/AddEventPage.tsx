@@ -5,7 +5,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,33 +28,39 @@ export default function AddEventPage() {
   const [type, setType] = useState<EventType>("General");
   const [status, setStatus] = useState<EventStatus>("Upcoming");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
-  const [isBigEvent, setIsBigEvent] = useState(false);
-  const [bigEventId, setBigEventId] = useState("");
-  const [selectedVideographers, setSelectedVideographers] = useState<StaffMember[]>([]);
-  const [selectedPhotographers, setSelectedPhotographers] = useState<StaffMember[]>([]);
+  const [selectedVideographer, setSelectedVideographer] = useState<string>("");
+  const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const { addEvent } = useEvents();
   const { staff, getStaffByRole } = useStaff();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const videographers = getStaffByRole("Videographer");
-  const photographers = getStaffByRole("Photographer");
-
-  const [selectedStaff, setSelectedStaff] = useState<{
-    videographers: StaffMember[];
-    photographers: StaffMember[];
-  }>({
-    videographers: [],
-    photographers: [],
-  });
-
+  // Get available staff
+  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
+  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
+  
+  // Function to update available staff based on date/time and ignore conflicts setting
   useEffect(() => {
-    setSelectedStaff({
-      videographers: selectedVideographers,
-      photographers: selectedPhotographers,
-    });
-  }, [selectedVideographers, selectedPhotographers]);
+    if (date && startTime && endTime) {
+      // If ignoring conflicts, get all staff members by role
+      if (ignoreScheduleConflicts) {
+        setAvailableVideographers(getStaffByRole("Videographer"));
+        setAvailablePhotographers(getStaffByRole("Photographer"));
+      } else {
+        // Only show staff members available for that date/time
+        // In a real app, this would check for availability based on the selected date/time
+        // For now, we'll just show all staff members, but in a real scenario you would filter 
+        // based on conflicts with their schedules
+        setAvailableVideographers(getStaffByRole("Videographer"));
+        setAvailablePhotographers(getStaffByRole("Photographer"));
+      }
+    } else {
+      // Reset if date/time not selected
+      setAvailableVideographers([]);
+      setAvailablePhotographers([]);
+    }
+  }, [date, startTime, endTime, ignoreScheduleConflicts]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -63,24 +68,6 @@ export default function AddEventPage() {
     const randomId = Math.random().toString(36).substring(2, 9).toUpperCase();
     const newLogId = `${prefix}-${randomId}`;
     setLogId(newLogId);
-  };
-
-  // Toggle selection of videographer
-  const toggleVideographer = (videographer: StaffMember) => {
-    if (selectedVideographers.some(v => v.id === videographer.id)) {
-      setSelectedVideographers(prev => prev.filter(v => v.id !== videographer.id));
-    } else {
-      setSelectedVideographers(prev => [...prev, videographer]);
-    }
-  };
-
-  // Toggle selection of photographer
-  const togglePhotographer = (photographer: StaffMember) => {
-    if (selectedPhotographers.some(p => p.id === photographer.id)) {
-      setSelectedPhotographers(prev => prev.filter(p => p.id !== photographer.id));
-    } else {
-      setSelectedPhotographers(prev => [...prev, photographer]);
-    }
   };
 
   // Handle form submission
@@ -107,9 +94,9 @@ export default function AddEventPage() {
         return;
       }
       
-      // Create arrays of just the IDs
-      const videographerIds = selectedVideographers.map(v => v.id);
-      const photographerIds = selectedPhotographers.map(p => p.id);
+      // Create arrays with selected staff IDs (single selection)
+      const videographerIds = selectedVideographer ? [selectedVideographer] : [];
+      const photographerIds = selectedPhotographer ? [selectedPhotographer] : [];
 
       // Save the event
       const eventId = await addEvent(
@@ -123,8 +110,8 @@ export default function AddEventPage() {
           type,
           status,
           ignoreScheduleConflicts,
-          isBigEvent,
-          bigEventId
+          isBigEvent: false, // We removed this option as requested
+          bigEventId: "" // Empty since we removed the Big Event option
         },
         videographerIds,
         photographerIds
@@ -133,12 +120,6 @@ export default function AddEventPage() {
       // If successful, redirect to the event details page
       if (eventId) {
         navigate(`/events/${eventId}`);
-        
-        // Update selected staff
-        setSelectedStaff({
-          videographers: selectedVideographers,
-          photographers: selectedPhotographers
-        });
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -294,7 +275,7 @@ export default function AddEventPage() {
               </div>
             </div>
             
-            {/* Checkboxes */}
+            {/* Ignore Schedule Conflicts checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="ignoreConflicts"
@@ -303,85 +284,74 @@ export default function AddEventPage() {
               />
               <Label htmlFor="ignoreConflicts">Ignore Schedule Conflicts</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isBigEvent"
-                checked={isBigEvent}
-                onCheckedChange={(checked) => setIsBigEvent(!!checked)}
-              />
-              <Label htmlFor="isBigEvent">Is Big Event</Label>
+            
+            {/* Videographer Selection */}
+            <div>
+              <Label htmlFor="videographer">Videographer</Label>
+              <Select 
+                value={selectedVideographer} 
+                onValueChange={setSelectedVideographer}
+                disabled={availableVideographers.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a videographer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableVideographers.length > 0 ? (
+                    availableVideographers.map((videographer) => (
+                      <SelectItem key={videographer.id} value={videographer.id}>
+                        {videographer.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No videographers available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {availableVideographers.length === 0 && date && startTime && endTime && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  No videographers available for this time slot
+                </p>
+              )}
+              {(!date || !startTime || !endTime) && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Please select date and time to see available staff
+                </p>
+              )}
             </div>
             
-            {/* Big Event ID (conditional) */}
-            {isBigEvent && (
-              <div>
-                <Label htmlFor="bigEventId">Big Event ID</Label>
-                <Input
-                  id="bigEventId"
-                  type="text"
-                  value={bigEventId}
-                  onChange={(e) => setBigEventId(e.target.value)}
-                  placeholder="Big Event ID"
-                />
-              </div>
-            )}
-            
-            {/* Videographers selection */}
+            {/* Photographer Selection */}
             <div>
-              <Label className="block mb-2">Videographers</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
-                {videographers.length > 0 ? (
-                  videographers.map((person) => (
-                    <div key={person.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`video-${person.id}`} 
-                        checked={selectedVideographers.some(v => v.id === person.id)} 
-                        onCheckedChange={() => toggleVideographer(person)}
-                      />
-                      <label 
-                        htmlFor={`video-${person.id}`} 
-                        className="flex items-center cursor-pointer text-sm"
-                      >
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {person.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                        {person.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-sm">No videographers available</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Photographers selection */}
-            <div>
-              <Label className="block mb-2">Photographers</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
-                {photographers.length > 0 ? (
-                  photographers.map((person) => (
-                    <div key={person.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`photo-${person.id}`} 
-                        checked={selectedPhotographers.some(p => p.id === person.id)} 
-                        onCheckedChange={() => togglePhotographer(person)}
-                      />
-                      <label 
-                        htmlFor={`photo-${person.id}`} 
-                        className="flex items-center cursor-pointer text-sm"
-                      >
-                        <span className="bg-primary/10 text-primary w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">
-                          {person.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                        {person.name}
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground text-sm">No photographers available</p>
-                )}
-              </div>
+              <Label htmlFor="photographer">Photographer</Label>
+              <Select 
+                value={selectedPhotographer} 
+                onValueChange={setSelectedPhotographer}
+                disabled={availablePhotographers.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a photographer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePhotographers.length > 0 ? (
+                    availablePhotographers.map((photographer) => (
+                      <SelectItem key={photographer.id} value={photographer.id}>
+                        {photographer.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      No photographers available
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {availablePhotographers.length === 0 && date && startTime && endTime && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  No photographers available for this time slot
+                </p>
+              )}
             </div>
             
             {/* Submit button */}
