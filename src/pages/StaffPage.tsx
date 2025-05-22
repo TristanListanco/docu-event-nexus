@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,12 +168,8 @@ interface StaffCardProps {
 function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
   const { name, role, photoUrl, schedules } = staff;
   
-  // Initialize default statistics if they are undefined
-  const statistics = staff.statistics || {
-    completed: 0,
-    absent: 0,
-    excused: 0
-  };
+  // Initialize default statistics if they are undefined or null
+  const statistics = staff.statistics || { completed: 0, absent: 0, excused: 0 };
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
@@ -270,4 +265,3 @@ function EmptyStateMessage({ searchQuery, role }: { searchQuery: string; role?: 
     </div>
   );
 }
-

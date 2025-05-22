@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -312,7 +311,7 @@ export default function EventEditDialog({
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>
+                      <SelectItem key="no-videographers" value="no-videographers" disabled>
                         No videographers available
                       </SelectItem>
                     )}
@@ -348,7 +347,7 @@ export default function EventEditDialog({
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>
+                      <SelectItem key="no-photographers" value="no-photographers" disabled>
                         No photographers available
                       </SelectItem>
                     )}

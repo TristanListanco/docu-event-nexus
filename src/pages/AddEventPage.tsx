@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -304,7 +303,7 @@ export default function AddEventPage() {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem key="no-videographers" value="no-videographers" disabled>
                       No videographers available
                     </SelectItem>
                   )}
@@ -341,7 +340,7 @@ export default function AddEventPage() {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem key="no-photographers" value="no-photographers" disabled>
                       No photographers available
                     </SelectItem>
                   )}
