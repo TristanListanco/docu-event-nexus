@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -176,49 +175,28 @@ export default function EventDetailsPage() {
                 
                 <div>
                   <h3 className="text-sm font-medium mb-2">Assigned Staff</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <h4 className="text-xs text-muted-foreground mb-1 flex items-center">
-                        <Video className="h-3 w-3 mr-1" />
-                        VIDEOGRAPHERS
-                      </h4>
-                      {assignedVideographers.length > 0 ? (
-                        <div className="space-y-2">
-                          {assignedVideographers.map(videographer => (
-                            <div 
-                              key={videographer.id}
-                              className="flex items-center p-2 bg-muted/50 rounded-md"
-                            >
-                              <Video className="h-4 w-4 mr-2 text-muted-foreground" />
-                              <span className="text-sm">{videographer.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No videographers assigned</p>
-                      )}
-                    </div>
-                    <div>
-                      <h4 className="text-xs text-muted-foreground mb-1 flex items-center">
-                        <Camera className="h-3 w-3 mr-1" />
-                        PHOTOGRAPHERS
-                      </h4>
-                      {assignedPhotographers.length > 0 ? (
-                        <div className="space-y-2">
-                          {assignedPhotographers.map(photographer => (
-                            <div 
-                              key={photographer.id}
-                              className="flex items-center p-2 bg-muted/50 rounded-md"
-                            >
-                              <Camera className="h-4 w-4 mr-2 text-muted-foreground" />
-                              <span className="text-sm">{photographer.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No photographers assigned</p>
-                      )}
-                    </div>
+                  <div className="space-y-3">
+                    {assignedVideographers.length > 0 && (
+                      <div 
+                        className="flex items-center p-2 bg-muted/50 rounded-md"
+                      >
+                        <Video className="h-4 w-4 mr-2 text-primary" />
+                        <span className="text-sm">{assignedVideographers[0].name}</span>
+                      </div>
+                    )}
+                    
+                    {assignedPhotographers.length > 0 && (
+                      <div 
+                        className="flex items-center p-2 bg-muted/50 rounded-md"
+                      >
+                        <Camera className="h-4 w-4 mr-2 text-primary" />
+                        <span className="text-sm">{assignedPhotographers[0].name}</span>
+                      </div>
+                    )}
+                    
+                    {assignedVideographers.length === 0 && assignedPhotographers.length === 0 && (
+                      <p className="text-sm text-muted-foreground italic">No staff assigned</p>
+                    )}
                   </div>
                 </div>
               </div>

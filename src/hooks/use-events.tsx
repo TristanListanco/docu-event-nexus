@@ -1,14 +1,35 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
 import { Event, EventStatus, EventType, StaffAssignment, AttendanceStatus } from "@/types/models";
 import { toast } from "./use-toast";
+import { format } from "date-fns";
 
 export function useEvents() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+
+  const generateLogId = (eventType: EventType): string => {
+    // Create ID in format "CCSEVNT-TYPE-MONTH-DAY-YEAR"
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    
+    // Get type code
+    let typeCode;
+    switch(eventType) {
+      case "General": typeCode = "01"; break;
+      case "SPECOM": typeCode = "02"; break;
+      case "LITCOM": typeCode = "03"; break;
+      case "CUACOM": typeCode = "04"; break;
+      case "SPODACOM": typeCode = "05"; break;
+      default: typeCode = "01"; // Default to General
+    }
+    
+    return `CCSEVNT-${typeCode}-${month}-${day}-${year}`;
+  };
 
   const loadEvents = async () => {
     setLoading(true);
@@ -108,12 +129,15 @@ export function useEvents() {
         throw new Error("User not authenticated");
       }
 
+      // Generate log ID
+      const logId = generateLogId(eventData.type);
+
       // Insert the event
       const { data: eventData_, error: eventError } = await supabase
         .from("events")
         .insert({
           name: eventData.name,
-          log_id: eventData.logId,
+          log_id: logId, // Use generated log ID
           date: eventData.date,
           start_time: eventData.startTime,
           end_time: eventData.endTime,

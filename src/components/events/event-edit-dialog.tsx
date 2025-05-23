@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Clock, Camera, Video } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/use-events";
 import { Event, EventStatus, EventType, StaffMember } from "@/types/models";
@@ -296,7 +296,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
           </div>
           
-          {/* Staff Selection */}
+          {/* Staff Assignment - Combined section */}
           <div className="grid gap-4 pt-2">
             <h3 className="text-sm font-semibold">Staff Assignment</h3>
             
@@ -308,56 +308,67 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
               </p>
             )}
             
-            {/* Videographer selection */}
-            <div>
-              <Label htmlFor="videographer">Videographer</Label>
-              <Select 
-                value={selectedVideographer} 
-                onValueChange={setSelectedVideographer}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a videographer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableVideographers.length > 0 ? (
-                    availableVideographers.map((videographer) => (
-                      <SelectItem key={videographer.id} value={videographer.id}>
-                        {videographer.name}
+            {/* Unified staff section */}
+            <div className="space-y-4">
+              {/* Videographer selection */}
+              <div>
+                <Label htmlFor="videographer" className="flex items-center">
+                  <Video className="h-4 w-4 mr-2 text-primary" />
+                  Videographer
+                </Label>
+                <Select 
+                  value={selectedVideographer} 
+                  onValueChange={setSelectedVideographer}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a videographer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {availableVideographers.length > 0 ? (
+                      availableVideographers.map((videographer) => (
+                        <SelectItem key={videographer.id} value={videographer.id}>
+                          {videographer.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-videographers-available" disabled>
+                        No videographers available
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-videographers-available" disabled>
-                      No videographers available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Photographer selection */}
-            <div>
-              <Label htmlFor="photographer">Photographer</Label>
-              <Select 
-                value={selectedPhotographer} 
-                onValueChange={setSelectedPhotographer}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a photographer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePhotographers.length > 0 ? (
-                    availablePhotographers.map((photographer) => (
-                      <SelectItem key={photographer.id} value={photographer.id}>
-                        {photographer.name}
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Photographer selection */}
+              <div>
+                <Label htmlFor="photographer" className="flex items-center">
+                  <Camera className="h-4 w-4 mr-2 text-primary" />
+                  Photographer
+                </Label>
+                <Select 
+                  value={selectedPhotographer} 
+                  onValueChange={setSelectedPhotographer}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a photographer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {availablePhotographers.length > 0 ? (
+                      availablePhotographers.map((photographer) => (
+                        <SelectItem key={photographer.id} value={photographer.id}>
+                          {photographer.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-photographers-available" disabled>
+                        No photographers available
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-photographers-available" disabled>
-                      No photographers available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           
