@@ -384,37 +384,47 @@ export function useEvents() {
 
         // Add new videographer assignments
         if (videographerIds && videographerIds.length > 0) {
-          const videographerAssignments = videographerIds.map(staffId => ({
-            user_id: user.id,
-            event_id: eventId,
-            staff_id: staffId,
-            attendance_status: "Pending" as AttendanceStatus
-          }));
+          // Filter out "none" value
+          const validVideographers = videographerIds.filter(id => id !== "none");
+          
+          if (validVideographers.length > 0) {
+            const videographerAssignments = validVideographers.map(staffId => ({
+              user_id: user.id,
+              event_id: eventId,
+              staff_id: staffId,
+              attendance_status: "Pending" as AttendanceStatus
+            }));
 
-          const { error: videographerError } = await supabase
-            .from("staff_assignments")
-            .insert(videographerAssignments);
+            const { error: videographerError } = await supabase
+              .from("staff_assignments")
+              .insert(videographerAssignments);
 
-          if (videographerError) {
-            throw videographerError;
+            if (videographerError) {
+              throw videographerError;
+            }
           }
         }
 
         // Add new photographer assignments
         if (photographerIds && photographerIds.length > 0) {
-          const photographerAssignments = photographerIds.map(staffId => ({
-            user_id: user.id,
-            event_id: eventId,
-            staff_id: staffId,
-            attendance_status: "Pending" as AttendanceStatus
-          }));
+          // Filter out "none" value
+          const validPhotographers = photographerIds.filter(id => id !== "none");
+          
+          if (validPhotographers.length > 0) {
+            const photographerAssignments = validPhotographers.map(staffId => ({
+              user_id: user.id,
+              event_id: eventId,
+              staff_id: staffId,
+              attendance_status: "Pending" as AttendanceStatus
+            }));
 
-          const { error: photographerError } = await supabase
-            .from("staff_assignments")
-            .insert(photographerAssignments);
+            const { error: photographerError } = await supabase
+              .from("staff_assignments")
+              .insert(photographerAssignments);
 
-          if (photographerError) {
-            throw photographerError;
+            if (photographerError) {
+              throw photographerError;
+            }
           }
         }
       }

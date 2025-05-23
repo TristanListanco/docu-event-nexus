@@ -324,7 +324,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     <SelectValue placeholder="Select a videographer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    {/* Fix: Changed empty string to "none" */}
+                    <SelectItem value="none">None</SelectItem>
                     {availableVideographers.length > 0 ? (
                       availableVideographers.map((videographer) => (
                         <SelectItem key={videographer.id} value={videographer.id}>
@@ -354,7 +355,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     <SelectValue placeholder="Select a photographer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    {/* Fix: Changed empty string to "none" */}
+                    <SelectItem value="none">None</SelectItem>
                     {availablePhotographers.length > 0 ? (
                       availablePhotographers.map((photographer) => (
                         <SelectItem key={photographer.id} value={photographer.id}>
