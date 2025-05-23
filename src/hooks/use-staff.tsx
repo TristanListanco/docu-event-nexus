@@ -27,6 +27,9 @@ export function useStaff() {
         throw staffError;
       }
 
+      // Log staff data to debug
+      console.log("Staff data from database:", staffData);
+
       // Fetch schedules for each staff member
       const staffMembers: StaffMember[] = await Promise.all(
         staffData.map(async (member) => {
@@ -43,12 +46,13 @@ export function useStaff() {
             } as StaffMember;
           }
 
+          // Create the staff member object with proper handling of email
           return {
             id: member.id,
             name: member.name,
-            role: member.role,
+            role: member.role as StaffRole,
             photoUrl: member.photo_url,
-            email: member.email || undefined, // Handle potential missing email field
+            email: member.email, // Accessing the email property (now added to database)
             schedules: schedulesData.map((schedule) => ({
               id: schedule.id,
               dayOfWeek: schedule.day_of_week,
