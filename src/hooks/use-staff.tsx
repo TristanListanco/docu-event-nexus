@@ -52,7 +52,7 @@ export function useStaff() {
             name: member.name,
             role: member.role as StaffRole,
             photoUrl: member.photo_url,
-            email: member.email, // Accessing the email property (now added to database)
+            email: member.email || undefined, // Handle null email values
             schedules: schedulesData.map((schedule) => ({
               id: schedule.id,
               dayOfWeek: schedule.day_of_week,
