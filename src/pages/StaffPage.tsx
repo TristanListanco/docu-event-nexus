@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, RefreshCw, Edit, Trash2, Video, Camera } from "lucide-react";
+import { Users, RefreshCw, Edit, Trash2, Video, Camera, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog"; 
@@ -26,7 +26,8 @@ export default function StaffPage() {
 
   // Filter staff based on search query and role
   const filteredStaff = staff.filter(member => 
-    member.name.toLowerCase().includes(searchQuery.toLowerCase())
+    member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   
   const videographers = filteredStaff.filter(member => member.role === "Videographer");
@@ -167,7 +168,7 @@ interface StaffCardProps {
 }
 
 function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
-  const { name, role, photoUrl, schedules } = staff;
+  const { name, role, email, photoUrl, schedules } = staff;
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
@@ -183,7 +184,15 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">{name}</CardTitle>
-              <p className="text-sm text-muted-foreground">{role}</p>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <span>{role}</span>
+                {email && (
+                  <div className="flex items-center ml-2">
+                    <Mail className="h-3.5 w-3.5 mr-1" />
+                    <span>{email}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           

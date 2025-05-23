@@ -48,6 +48,7 @@ export function useStaff() {
             name: member.name,
             role: member.role,
             photoUrl: member.photo_url,
+            email: member.email, // Include email in the staff member object
             schedules: schedulesData.map((schedule) => ({
               id: schedule.id,
               dayOfWeek: schedule.day_of_week,
@@ -76,7 +77,8 @@ export function useStaff() {
     name: string,
     role: StaffRole,
     photoUrl?: string,
-    schedules: Omit<Schedule, "id">[] = []
+    schedules: Omit<Schedule, "id">[] = [],
+    email?: string // Add email parameter
   ) => {
     try {
       if (!user) {
@@ -91,6 +93,7 @@ export function useStaff() {
           role,
           photo_url: photoUrl,
           user_id: user.id,
+          email: email, // Add email to the insert
         })
         .select()
         .single();
