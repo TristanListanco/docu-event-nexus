@@ -20,12 +20,14 @@ interface StaffDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   staff: StaffMember;
+  onStaffDeleted?: () => void;
 }
 
 export default function StaffDeleteDialog({ 
   open, 
   onOpenChange, 
-  staff 
+  staff,
+  onStaffDeleted
 }: StaffDeleteDialogProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +51,11 @@ export default function StaffDeleteDialog({
           description: `${staff.name} has been successfully removed.`
         });
         onOpenChange(false);
+        
+        // Call the onStaffDeleted callback to refresh the list
+        if (onStaffDeleted) {
+          onStaffDeleted();
+        }
       } else {
         setError("Failed to delete staff member");
       }

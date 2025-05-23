@@ -1,8 +1,8 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, RefreshCw, Plus, Edit, Trash2 } from "lucide-react";
+import { Users, RefreshCw, Edit, Trash2, Video, Camera } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog"; 
@@ -153,6 +153,7 @@ export default function StaffPage() {
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
           staff={selectedStaff}
+          onStaffDeleted={loadStaff} // Pass the loadStaff function to refresh after deletion
         />
       )}
     </div>
@@ -168,20 +169,18 @@ interface StaffCardProps {
 function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
   const { name, role, photoUrl, schedules } = staff;
   
-  // Initialize default statistics if they are undefined or null
-  const statistics = staff.statistics || { completed: 0, absent: 0, excused: 0 };
-  
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={photoUrl} alt={name} />
-              <AvatarFallback className="bg-primary/10 text-primary">
-                {name.split(" ").map(n => n[0]).join("")}
-              </AvatarFallback>
-            </Avatar>
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              {role === "Videographer" ? (
+                <Video className="h-6 w-6 text-primary" />
+              ) : (
+                <Camera className="h-6 w-6 text-primary" />
+              )}
+            </div>
             <div>
               <CardTitle className="text-lg">{name}</CardTitle>
               <p className="text-sm text-muted-foreground">{role}</p>
@@ -234,17 +233,7 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
         )}
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-          <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-md">
-            <p className="text-xl font-bold text-green-800 dark:text-green-400">{statistics.completed}</p>
-          </div>
-          <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-md">
-            <p className="text-xl font-bold text-red-800 dark:text-red-400">{statistics.absent}</p>
-          </div>
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded-md">
-            <p className="text-xl font-bold text-yellow-800 dark:text-yellow-400">{statistics.excused}</p>
-          </div>
-        </div>
+        {/* Attendance counter section has been removed */}
       </CardContent>
     </Card>
   );

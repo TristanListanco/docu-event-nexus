@@ -8,8 +8,8 @@ import {
   Calendar as CalendarIcon, 
   Clock, 
   MapPin, 
-  ArrowUp, 
-  ArrowDown,
+  Video,
+  Camera,
   Edit,
   Trash2
 } from "lucide-react";
@@ -179,7 +179,7 @@ export default function EventDetailsPage() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <h4 className="text-xs text-muted-foreground mb-1 flex items-center">
-                        <ArrowUp className="h-3 w-3 mr-1" />
+                        <Video className="h-3 w-3 mr-1" />
                         VIDEOGRAPHERS
                       </h4>
                       {assignedVideographers.length > 0 ? (
@@ -189,12 +189,7 @@ export default function EventDetailsPage() {
                               key={videographer.id}
                               className="flex items-center p-2 bg-muted/50 rounded-md"
                             >
-                              <Avatar className="h-6 w-6 mr-2">
-                                <AvatarImage src={videographer.photoUrl} alt={videographer.name} />
-                                <AvatarFallback className="text-xs">
-                                  {videographer.name.split(" ").map(n => n[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
+                              <Video className="h-4 w-4 mr-2 text-muted-foreground" />
                               <span className="text-sm">{videographer.name}</span>
                             </div>
                           ))}
@@ -205,7 +200,7 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                       <h4 className="text-xs text-muted-foreground mb-1 flex items-center">
-                        <ArrowDown className="h-3 w-3 mr-1" />
+                        <Camera className="h-3 w-3 mr-1" />
                         PHOTOGRAPHERS
                       </h4>
                       {assignedPhotographers.length > 0 ? (
@@ -215,12 +210,7 @@ export default function EventDetailsPage() {
                               key={photographer.id}
                               className="flex items-center p-2 bg-muted/50 rounded-md"
                             >
-                              <Avatar className="h-6 w-6 mr-2">
-                                <AvatarImage src={photographer.photoUrl} alt={photographer.name} />
-                                <AvatarFallback className="text-xs">
-                                  {photographer.name.split(" ").map(n => n[0]).join("")}
-                                </AvatarFallback>
-                              </Avatar>
+                              <Camera className="h-4 w-4 mr-2 text-muted-foreground" />
                               <span className="text-sm">{photographer.name}</span>
                             </div>
                           ))}
