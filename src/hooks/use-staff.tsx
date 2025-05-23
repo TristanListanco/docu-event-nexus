@@ -48,7 +48,7 @@ export function useStaff() {
             name: member.name,
             role: member.role,
             photoUrl: member.photo_url,
-            email: member.email, // Include email in the staff member object
+            email: member.email || undefined, // Handle potential missing email field
             schedules: schedulesData.map((schedule) => ({
               id: schedule.id,
               dayOfWeek: schedule.day_of_week,

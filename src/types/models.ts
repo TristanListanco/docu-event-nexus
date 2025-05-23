@@ -20,7 +20,8 @@ export interface StaffMember {
 
 export type EventType = "General" | "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM";
 export type EventStatus = "Upcoming" | "Ongoing" | "Completed" | "Cancelled";
-export type AttendanceStatus = "Pending" | "Confirmed" | "Absent" | "Late";
+// Updated to match the database enums
+export type AttendanceStatus = "Pending" | "Completed" | "Absent" | "Excused";
 
 export interface StaffAssignment {
   staffId: string;
