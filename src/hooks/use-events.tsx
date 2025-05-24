@@ -47,39 +47,31 @@ export function useEvents() {
         throw error;
       }
 
-      // We need to fetch staff assignments separately 
+      // We need to fetch staff assignments separately and filter by role
       const events: Event[] = await Promise.all(
         data.map(async (event) => {
-          // Query for videographers - don't filter by role in the query
-          const { data: videographers, error: videographersError } = await supabase
+          // Query for all staff assignments for this event
+          const { data: allAssignments, error: assignmentsError } = await supabase
             .from("staff_assignments")
-            .select("staff_id, attendance_status")
+            .select(`
+              staff_id, 
+              attendance_status,
+              staff_members!inner(role)
+            `)
             .eq("event_id", event.id);
 
-          // Filter the results by checking if the staff member is a videographer
-          const videographerAssignments = videographers?.filter(v => {
-            // You would get the staff member and check their role, 
-            // but we'll assume all staff assignments are valid now
-            return true;
-          }) || [];
-
-          // Query for photographers - don't filter by role in the query
-          const { data: photographers, error: photographersError } = await supabase
-            .from("staff_assignments")
-            .select("staff_id, attendance_status")
-            .eq("event_id", event.id);
-          
-          // Filter the results by checking if the staff member is a photographer
-          const photographerAssignments = photographers?.filter(p => {
-            // You would get the staff member and check their role
-            // but we'll assume all staff assignments are valid now
-            return true;
-          }) || [];
-
-          if (videographersError || photographersError) {
-            console.error("Error fetching staff assignments:", 
-              videographersError || photographersError);
+          if (assignmentsError) {
+            console.error("Error fetching staff assignments:", assignmentsError);
           }
+
+          // Filter assignments by role
+          const videographerAssignments = allAssignments?.filter(a => 
+            a.staff_members?.role === "Videographer"
+          ) || [];
+          
+          const photographerAssignments = allAssignments?.filter(a => 
+            a.staff_members?.role === "Photographer"
+          ) || [];
 
           return {
             id: event.id,
@@ -280,21 +272,28 @@ export function useEvents() {
         return null;
       }
 
-      // Fetch staff assignments
-      const { data: videographers, error: videographersError } = await supabase
+      // Fetch staff assignments with role information
+      const { data: allAssignments, error: assignmentsError } = await supabase
         .from("staff_assignments")
-        .select("staff_id, attendance_status")
+        .select(`
+          staff_id, 
+          attendance_status,
+          staff_members!inner(role)
+        `)
         .eq("event_id", eventId);
 
-      const { data: photographers, error: photographersError } = await supabase
-        .from("staff_assignments")
-        .select("staff_id, attendance_status") 
-        .eq("event_id", eventId);
-
-      if (videographersError || photographersError) {
-        console.error("Error fetching staff assignments:", 
-          videographersError || photographersError);
+      if (assignmentsError) {
+        console.error("Error fetching staff assignments:", assignmentsError);
       }
+
+      // Filter assignments by role
+      const videographerAssignments = allAssignments?.filter(a => 
+        a.staff_members?.role === "Videographer"
+      ) || [];
+      
+      const photographerAssignments = allAssignments?.filter(a => 
+        a.staff_members?.role === "Photographer"
+      ) || [];
 
       const event: Event = {
         id: data.id,
@@ -306,14 +305,14 @@ export function useEvents() {
         location: data.location,
         type: data.type as EventType,
         status: data.status as EventStatus,
-        videographers: videographers?.map(v => ({ 
+        videographers: videographerAssignments.map(v => ({ 
           staffId: v.staff_id,
           attendanceStatus: v.attendance_status as AttendanceStatus
-        })) || [],
-        photographers: photographers?.map(p => ({ 
+        })),
+        photographers: photographerAssignments.map(p => ({ 
           staffId: p.staff_id,
           attendanceStatus: p.attendance_status as AttendanceStatus
-        })) || [],
+        })),
         ignoreScheduleConflicts: data.ignore_schedule_conflicts,
         isBigEvent: data.is_big_event,
         bigEventId: data.big_event_id

@@ -184,11 +184,11 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">{name}</CardTitle>
-              <div className="flex items-center text-sm text-muted-foreground">
-                <span>{role}</span>
+              <div className="flex flex-col space-y-1">
+                <span className="text-sm text-muted-foreground">{role}</span>
                 {email && (
-                  <div className="flex items-center ml-2">
-                    <Mail className="h-3.5 w-3.5 mr-1" />
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Mail className="h-3 w-3 mr-1" />
                     <span>{email}</span>
                   </div>
                 )}
