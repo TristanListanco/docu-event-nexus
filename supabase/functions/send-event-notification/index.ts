@@ -44,7 +44,7 @@ function generateICSContent(event: NotificationRequest): string {
 VERSION:2.0
 PRODID:-//Event Management System//Event Notification//EN
 BEGIN:VEVENT
-UID:${event.eventId}@eventmanagement.com
+UID:${event.eventId}@admin-ccsdocu.com
 DTSTAMP:${now}
 DTSTART:${startFormatted}
 DTEND:${endFormatted}
@@ -104,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const emailResponse = await resend.emails.send({
-        from: "Event Management <onboarding@resend.dev>",
+        from: "CCS Event Management <noreply@admin-ccsdocu.com>",
         to: [staff.email],
         subject: `Event Assignment: ${notificationData.eventName}`,
         html: `
@@ -133,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
             
             <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            <p style="color: #666; font-size: 12px;">This is an automated notification from the Event Management System.</p>
+            <p style="color: #666; font-size: 12px;">This is an automated notification from the CCS Event Management System.</p>
           </div>
         `,
         attachments: [
