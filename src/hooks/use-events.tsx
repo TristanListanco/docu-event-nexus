@@ -129,16 +129,16 @@ export function useEvents() {
         .from("events")
         .insert({
           name: eventData.name,
-          log_id: logId, // Use generated log ID
+          log_id: logId,
           date: eventData.date,
           start_time: eventData.startTime,
           end_time: eventData.endTime,
           location: eventData.location,
           type: eventData.type,
-          status: "Upcoming", // Hard-coded default status
+          status: "Upcoming",
           ignore_schedule_conflicts: eventData.ignoreScheduleConflicts,
           is_big_event: eventData.isBigEvent || false,
-          big_event_id: eventData.bigEventId || null, // This resolves the UUID error
+          big_event_id: eventData.bigEventId || null,
           user_id: user.id
         })
         .select()
@@ -148,6 +148,8 @@ export function useEvents() {
         throw eventError;
       }
 
+      const allAssignedStaffIds = [...videographerIds, ...photographerIds];
+      
       // Insert staff assignments for videographers
       if (videographerIds.length > 0) {
         const videographerAssignments = videographerIds.map(staffId => ({
@@ -184,13 +186,69 @@ export function useEvents() {
         }
       }
 
+      // If there are assigned staff, send email notifications
+      if (allAssignedStaffIds.length > 0) {
+        try {
+          // Get staff details for email notifications
+          const { data: staffData, error: staffError } = await supabase
+            .from("staff_members")
+            .select("id, name, email, role")
+            .in("id", allAssignedStaffIds);
+
+          if (staffError) {
+            console.error("Error fetching staff for notifications:", staffError);
+          } else if (staffData && staffData.length > 0) {
+            // Send notification emails
+            const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
+              body: {
+                eventId: eventData_.id,
+                eventName: eventData.name,
+                eventDate: eventData.date,
+                startTime: eventData.startTime,
+                endTime: eventData.endTime,
+                location: eventData.location,
+                type: eventData.type,
+                assignedStaff: staffData.map(staff => ({
+                  id: staff.id,
+                  name: staff.name,
+                  email: staff.email,
+                  role: staff.role
+                }))
+              }
+            });
+
+            if (notificationError) {
+              console.error("Error sending notifications:", notificationError);
+              // Don't throw here - event creation was successful, just notification failed
+              toast({
+                title: "Event Created",
+                description: `${eventData.name} has been created, but email notifications failed to send.`,
+                variant: "default",
+              });
+            } else {
+              toast({
+                title: "Event Created",
+                description: `${eventData.name} has been created and email notifications sent to assigned staff.`,
+              });
+            }
+          }
+        } catch (notificationError) {
+          console.error("Error with notifications:", notificationError);
+          toast({
+            title: "Event Created",
+            description: `${eventData.name} has been created, but email notifications failed to send.`,
+            variant: "default",
+          });
+        }
+      } else {
+        toast({
+          title: "Event Created",
+          description: `${eventData.name} has been successfully created.`,
+        });
+      }
+
       // Refresh the events list
       await loadEvents();
-
-      toast({
-        title: "Event Added",
-        description: `${eventData.name} has been successfully created.`,
-      });
 
       return eventData_.id;
     } catch (error: any) {
