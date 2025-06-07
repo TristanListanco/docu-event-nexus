@@ -19,9 +19,10 @@ interface StaffEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   staff: StaffMember;
+  onStaffUpdated?: () => void;
 }
 
-export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEditDialogProps) {
+export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpdated }: StaffEditDialogProps) {
   const [loading, setLoading] = useState(false);
   const { updateStaffMember } = useStaff();
   
@@ -38,11 +39,9 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     subject: ""
   });
 
-  // For editing an existing schedule
   const [editingScheduleIndex, setEditingScheduleIndex] = useState<number | null>(null);
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
-  // Load staff schedules when the dialog opens
   useEffect(() => {
     setFormData({
       name: staff.name,
@@ -80,18 +79,15 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     }
     
     if (isEditingSchedule && editingScheduleIndex !== null) {
-      // Update existing schedule
       const updatedSchedules = [...schedules];
       updatedSchedules[editingScheduleIndex] = { ...currentSchedule };
       setSchedules(updatedSchedules);
       setIsEditingSchedule(false);
       setEditingScheduleIndex(null);
     } else {
-      // Add new schedule
       setSchedules([...schedules, { ...currentSchedule }]);
     }
     
-    // Reset form
     setCurrentSchedule({
       dayOfWeek: currentSchedule.dayOfWeek,
       startTime: "09:00",
@@ -126,7 +122,6 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
   const removeSchedule = (index: number) => {
     setSchedules(schedules.filter((_, i) => i !== index));
     
-    // If currently editing this schedule, cancel the edit
     if (isEditingSchedule && editingScheduleIndex === index) {
       cancelEdit();
     }
@@ -137,25 +132,26 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
     setLoading(true);
     
     try {
-      // Create the proper structure for schedules
       const staffSchedules = staff.schedules || [];
       const currentIds = staffSchedules.map(s => s.id);
       const schedulesToUpdate: { toAdd: Omit<Schedule, "id">[]; toUpdate: Schedule[]; toDelete: string[]; } = {
-        // New schedules to add (don't have IDs)
         toAdd: schedules.filter(s => !('id' in s)),
-        // We don't have any schedules to update in this implementation
         toUpdate: [],
-        // Any schedule IDs that were in the staff but are no longer in our current schedules list
         toDelete: currentIds.filter(id => !schedules.some(s => 'id' in s && s.id === id))
       };
       
-      await updateStaffMember(staff.id, {
+      const success = await updateStaffMember(staff.id, {
         name: formData.name,
         role: formData.role,
         schedules: schedulesToUpdate
       });
       
-      onOpenChange(false);
+      if (success) {
+        if (onStaffUpdated) {
+          onStaffUpdated();
+        }
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error("Error updating staff:", error);
     } finally {
@@ -207,7 +203,6 @@ export default function StaffEditDialog({ open, onOpenChange, staff }: StaffEdit
               </Select>
             </div>
             
-            {/* Schedule Section */}
             <div className="border-t pt-4 mt-2">
               <h3 className="font-medium mb-3">Class Schedule</h3>
               
