@@ -60,18 +60,16 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setStatus(event.status);
       setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
       
-      // Initialize selected staff from event
-      if (event.videographers && event.videographers.length > 0) {
-        setSelectedVideographer(event.videographers[0].staffId);
-      } else {
-        setSelectedVideographer("none");
-      }
+      // Initialize selected staff from event - Fix the initialization logic
+      const assignedVideographer = event.videographers && event.videographers.length > 0 
+        ? event.videographers[0].staffId 
+        : "none";
+      const assignedPhotographer = event.photographers && event.photographers.length > 0 
+        ? event.photographers[0].staffId 
+        : "none";
       
-      if (event.photographers && event.photographers.length > 0) {
-        setSelectedPhotographer(event.photographers[0].staffId);
-      } else {
-        setSelectedPhotographer("none");
-      }
+      setSelectedVideographer(assignedVideographer);
+      setSelectedPhotographer(assignedPhotographer);
     }
   }, [event, open]);
   
