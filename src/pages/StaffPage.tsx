@@ -1,42 +1,42 @@
+
 import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
+import { StaffMember } from "@/types/models";
 import StaffHeader from "@/components/staff/staff-header";
+import StaffViewControls from "@/components/staff/staff-view-controls";
+import StaffListItem from "@/components/staff/staff-list-item";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
-import StaffListItem from "@/components/staff/staff-list-item";
-import StaffViewControls from "@/components/staff/staff-view-controls";
-import { StaffMember, StaffRole } from "@/types/models";
 
 export default function StaffPage() {
   const { staff, loading } = useStaff();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterRole, setFilterRole] = useState<StaffRole | "All">("All");
+  const [viewMode, setViewMode] = useState<"list" | "card">("list");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterRole, setFilterRole] = useState<"All" | "Photographer" | "Videographer">("All");
 
+  // Filter staff based on search and role
   const filteredStaff = staff.filter((member) => {
-    if (filterRole === "All") return true;
-    return member.roles.includes(filterRole);
+    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = filterRole === "All" || member.roles?.includes(filterRole as any);
+    return matchesSearch && matchesRole;
   });
 
-  const handleEdit = (staff: StaffMember) => {
-    setSelectedStaff(staff);
+  const handleEdit = (staffMember: StaffMember) => {
+    setSelectedStaff(staffMember);
     setEditDialogOpen(true);
   };
 
-  const handleDelete = (staff: StaffMember) => {
-    setSelectedStaff(staff);
+  const handleDelete = (staffMember: StaffMember) => {
+    setSelectedStaff(staffMember);
     setDeleteDialogOpen(true);
   };
 
   const handleStaffUpdated = () => {
-    // Staff list will auto-refresh through the hook
-  };
-
-  const handleStaffAdded = () => {
     // Staff list will auto-refresh through the hook
   };
 
@@ -57,29 +57,26 @@ export default function StaffPage() {
           <StaffViewControls
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
             filterRole={filterRole}
             onFilterRoleChange={setFilterRole}
           />
 
-          {staff.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-lg text-muted-foreground mb-4">No staff members found</p>
-            </div>
-          ) : (
-            <div className={
-              viewMode === "grid" 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
-                : "space-y-2"
-            }>
-              {filteredStaff.map((member) => (
-                <StaffListItem
-                  key={member.id}
-                  staff={member}
-                  viewMode={viewMode}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
+          <div className="space-y-4">
+            {filteredStaff.map((member) => (
+              <StaffListItem
+                key={member.id}
+                staff={member}
+                onEdit={() => handleEdit(member)}
+                onDelete={() => handleDelete(member)}
+              />
+            ))}
+          </div>
+
+          {filteredStaff.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No staff members found.</p>
             </div>
           )}
         </div>
@@ -88,7 +85,7 @@ export default function StaffPage() {
       <StaffFormDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        onStaffAdded={handleStaffAdded}
+        onStaffAdded={handleStaffUpdated}
       />
 
       {selectedStaff && (

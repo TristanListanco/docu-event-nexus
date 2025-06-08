@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useEvents } from "@/hooks/use-events";
 import EventsHeader from "@/components/events/events-header";
@@ -52,6 +53,10 @@ export default function EventsPage() {
     // Events list will auto-refresh through the hook
   };
 
+  const handleEventDeleted = () => {
+    // Events list will auto-refresh through the hook
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -78,20 +83,20 @@ export default function EventsPage() {
           />
 
           {events.length === 0 ? (
-            <EventsEmptyState />
+            <EventsEmptyState searchQuery="" />
           ) : (
             <>
               {viewMode === "grid" ? (
                 <EventsGrid
                   events={filteredAndSortedEvents}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
+                  onEventEdit={handleEdit}
+                  onEventDelete={handleDelete}
                 />
               ) : (
                 <EventsList
                   events={filteredAndSortedEvents}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
+                  onEventEdit={handleEdit}
+                  onEventDelete={handleDelete}
                 />
               )}
             </>
@@ -112,6 +117,7 @@ export default function EventsPage() {
             open={deleteDialogOpen}
             onOpenChange={setDeleteDialogOpen}
             event={selectedEvent}
+            onEventDeleted={handleEventDeleted}
           />
         </>
       )}

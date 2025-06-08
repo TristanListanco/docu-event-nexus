@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Camera, Video } from "lucide-react";
+import { X, Plus, Camera, Video, UserX } from "lucide-react";
 import { StaffMember, StaffRole } from "@/types/models";
 
 interface MultiStaffSelectorProps {
@@ -27,9 +27,14 @@ export default function MultiStaffSelector({
   const [pendingSelection, setPendingSelection] = useState<string>("");
 
   const handleAddStaff = () => {
-    if (pendingSelection && !selectedStaffIds.includes(pendingSelection)) {
-      const newSelection = [...selectedStaffIds, pendingSelection];
-      onSelectionChange(newSelection);
+    if (pendingSelection) {
+      if (pendingSelection === "none") {
+        // Clear all selections when "none" is selected
+        onSelectionChange([]);
+      } else if (!selectedStaffIds.includes(pendingSelection)) {
+        const newSelection = [...selectedStaffIds, pendingSelection];
+        onSelectionChange(newSelection);
+      }
       setPendingSelection("");
     }
   };
@@ -51,6 +56,9 @@ export default function MultiStaffSelector({
 
   const roleIcon = role === "Videographer" ? Video : Camera;
   const RoleIcon = roleIcon;
+
+  // Check if no staff is assigned
+  const hasNoAssignment = selectedStaffIds.length === 0;
 
   return (
     <div className="space-y-3">
@@ -80,8 +88,18 @@ export default function MultiStaffSelector({
         </div>
       )}
 
+      {/* Show "None assigned" badge when no staff is selected */}
+      {hasNoAssignment && (
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <UserX className="h-3 w-3" />
+            None assigned
+          </Badge>
+        </div>
+      )}
+
       {/* Add New Staff */}
-      {canAddMore && availableForSelection.length > 0 && (
+      {(canAddMore || hasNoAssignment) && (
         <div className="flex gap-2">
           <Select 
             value={pendingSelection} 
@@ -92,6 +110,12 @@ export default function MultiStaffSelector({
               <SelectValue placeholder={`Select ${role.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">
+                <div className="flex items-center gap-2">
+                  <UserX className="h-4 w-4" />
+                  None (no {role.toLowerCase()} needed)
+                </div>
+              </SelectItem>
               {availableForSelection.map((staff) => (
                 <SelectItem key={staff.id} value={staff.id}>
                   {staff.name}
