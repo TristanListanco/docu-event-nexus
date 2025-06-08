@@ -233,7 +233,7 @@ interface StaffCardProps {
 }
 
 function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
-  const { name, roles, email, photoUrl, schedules } = staff;
+  const { name, roles, schedules } = staff;
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
@@ -263,12 +263,6 @@ function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
               </div>
               <div className="flex flex-col space-y-1">
                 <span className="text-sm text-muted-foreground">{roles.join(' & ')}</span>
-                {email && (
-                  <div className="flex items-center text-xs text-muted-foreground min-w-0">
-                    <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
-                    <span className="truncate" title={email}>{email}</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>

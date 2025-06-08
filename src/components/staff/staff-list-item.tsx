@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Video, Camera, Mail, Edit, Trash2 } from "lucide-react";
+import { Video, Camera, Edit, Trash2 } from "lucide-react";
 import { StaffMember } from "@/types/models";
 import { 
   DropdownMenu,
@@ -19,7 +19,7 @@ interface StaffListItemProps {
 }
 
 export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: StaffListItemProps) {
-  const { name, roles, email } = staff;
+  const { name, roles } = staff;
   
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
@@ -41,20 +41,14 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
               <h3 className="font-medium truncate">{name}</h3>
-              {isOnLeave && (
-                <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
-                  On Leave
-                </Badge>
-              )}
             </div>
             <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>
           </div>
           
-          {email && (
-            <div className="flex items-center text-sm text-muted-foreground min-w-0">
-              <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
-              <span className="truncate" title={email}>{email}</span>
-            </div>
+          {isOnLeave && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs flex-shrink-0">
+              On Leave
+            </Badge>
           )}
         </div>
         
