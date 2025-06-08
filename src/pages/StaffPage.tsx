@@ -235,7 +235,7 @@ interface StaffCardProps {
 }
 
 function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
-  const { name, role, email, photoUrl, schedules } = staff;
+  const { name, roles, email, photoUrl, schedules } = staff;
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
@@ -243,7 +243,12 @@ function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 min-w-0 flex-1">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              {role === "Videographer" ? (
+              {roles.includes("Videographer") && roles.includes("Photographer") ? (
+                <div className="flex">
+                  <Video className="h-3 w-3 text-primary mr-1" />
+                  <Camera className="h-3 w-3 text-primary" />
+                </div>
+              ) : roles.includes("Videographer") ? (
                 <Video className="h-6 w-6 text-primary" />
               ) : (
                 <Camera className="h-6 w-6 text-primary" />
@@ -259,7 +264,7 @@ function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
                 )}
               </div>
               <div className="flex flex-col space-y-1">
-                <span className="text-sm text-muted-foreground">{role}</span>
+                <span className="text-sm text-muted-foreground">{roles.join(' & ')}</span>
                 {email && (
                   <div className="flex items-center text-xs text-muted-foreground min-w-0">
                     <Mail className="h-3 w-3 mr-1 flex-shrink-0" />

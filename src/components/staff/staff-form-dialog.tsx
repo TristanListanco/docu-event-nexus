@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, X, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StaffRole, Schedule } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 
@@ -25,7 +25,7 @@ export default function StaffFormDialog() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "Photographer" as StaffRole,
+    roles: [] as StaffRole[], // Changed to array of roles
   });
   
   const [schedules, setSchedules] = useState<Omit<Schedule, "id">[]>([]);
@@ -41,8 +41,13 @@ export default function StaffFormDialog() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleRoleChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, role: value as StaffRole }));
+  const handleRoleChange = (role: StaffRole, checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
+    }));
   };
   
   const handleScheduleChange = (field: keyof typeof currentSchedule, value: string | number) => {
@@ -73,28 +78,31 @@ export default function StaffFormDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.roles.length === 0) {
+      return; // Require at least one role
+    }
+    
     setLoading(true);
     
     try {
       const success = await addStaffMember(
         formData.name,
-        formData.role,
+        formData.roles, // Pass array of roles
         undefined, // photoUrl
         schedules,
-        formData.email // Pass email to the addStaffMember function
+        formData.email
       );
       
       if (success) {
         setOpen(false);
-        // Reset form data
         setFormData({
           name: "",
           email: "",
-          role: "Photographer"
+          roles: []
         });
         setSchedules([]);
         
-        // Refresh the staff list automatically
         await loadStaff();
       }
     } catch (error) {
@@ -151,21 +159,27 @@ export default function StaffFormDialog() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Role
+              <Label className="text-right">
+                Roles
               </Label>
-              <Select 
-                value={formData.role}
-                onValueChange={handleRoleChange}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Photographer">Photographer</SelectItem>
-                  <SelectItem value="Videographer">Videographer</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="col-span-3 space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="photographer"
+                    checked={formData.roles.includes("Photographer")}
+                    onCheckedChange={(checked) => handleRoleChange("Photographer", !!checked)}
+                  />
+                  <Label htmlFor="photographer">Photographer</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="videographer"
+                    checked={formData.roles.includes("Videographer")}
+                    onCheckedChange={(checked) => handleRoleChange("Videographer", !!checked)}
+                  />
+                  <Label htmlFor="videographer">Videographer</Label>
+                </div>
+              </div>
             </div>
             
             {/* Schedule Section */}
@@ -272,7 +286,7 @@ export default function StaffFormDialog() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || formData.roles.length === 0}>
               {loading ? "Adding..." : "Add Staff"}
             </Button>
           </DialogFooter>

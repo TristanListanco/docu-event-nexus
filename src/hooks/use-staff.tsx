@@ -27,12 +27,21 @@ export function useStaff() {
         throw staffError;
       }
 
-      // Log staff data to debug
       console.log("Staff data from database:", staffData);
 
-      // Fetch schedules and leave dates for each staff member
+      // Fetch staff roles, schedules and leave dates for each staff member
       const staffMembers: StaffMember[] = await Promise.all(
         staffData.map(async (member) => {
+          // Fetch roles for this staff member
+          const { data: rolesData, error: rolesError } = await supabase
+            .from("staff_roles")
+            .select("role")
+            .eq("staff_id", member.id);
+
+          if (rolesError) {
+            console.error("Error loading staff roles:", rolesError.message);
+          }
+
           const { data: schedulesData, error: schedulesError } = await supabase
             .from("schedules")
             .select("*")
@@ -42,7 +51,6 @@ export function useStaff() {
             console.error("Error loading schedules:", schedulesError.message);
           }
 
-          // Fetch leave dates - using any type to bypass TypeScript issues until types are updated
           const { data: leaveDatesData, error: leaveDatesError } = await (supabase as any)
             .from("leave_dates")
             .select("*")
@@ -52,11 +60,10 @@ export function useStaff() {
             console.error("Error loading leave dates:", leaveDatesError.message);
           }
 
-          // Create the staff member object with proper handling of email
           return {
             id: member.id,
             name: member.name,
-            role: member.role as StaffRole,
+            roles: rolesData ? rolesData.map(r => r.role as StaffRole) : [member.role as StaffRole], // Fallback to old role if no new roles
             photoUrl: member.photo_url,
             email: member.email || undefined,
             schedules: schedulesData ? schedulesData.map((schedule) => ({
@@ -90,7 +97,7 @@ export function useStaff() {
 
   const addStaffMember = async (
     name: string,
-    role: StaffRole,
+    roles: StaffRole[], // Changed to accept multiple roles
     photoUrl?: string,
     schedules: Omit<Schedule, "id">[] = [],
     email?: string
@@ -100,12 +107,12 @@ export function useStaff() {
         throw new Error("User not authenticated");
       }
 
-      // Insert the staff member
+      // Insert the staff member (keeping the role field for backward compatibility)
       const { data, error } = await supabase
         .from("staff_members")
         .insert({
           name,
-          role,
+          role: roles[0] || 'Photographer', // Use first role as primary for backward compatibility
           photo_url: photoUrl,
           user_id: user.id,
           email: email,
@@ -115,6 +122,23 @@ export function useStaff() {
 
       if (error) {
         throw error;
+      }
+
+      // Insert roles into staff_roles table
+      if (roles.length > 0) {
+        const rolesToInsert = roles.map((role) => ({
+          staff_id: data.id,
+          user_id: user.id,
+          role: role,
+        }));
+
+        const { error: rolesError } = await supabase
+          .from("staff_roles")
+          .insert(rolesToInsert);
+
+        if (rolesError) {
+          throw rolesError;
+        }
       }
 
       // Insert schedules if any
@@ -137,12 +161,11 @@ export function useStaff() {
         }
       }
 
-      // Reload staff to get the updated list with schedules
       await loadStaff();
 
       toast({
         title: "Staff Member Added",
-        description: `${name} has been successfully added as ${role}.`,
+        description: `${name} has been successfully added with roles: ${roles.join(', ')}.`,
       });
 
       return true;
@@ -161,7 +184,7 @@ export function useStaff() {
     id: string,
     updates: {
       name?: string;
-      role?: StaffRole;
+      roles?: StaffRole[]; // Changed to support multiple roles
       photoUrl?: string;
       email?: string;
       schedules?: {
@@ -180,7 +203,7 @@ export function useStaff() {
       // Update the staff member
       const staffUpdates: any = {};
       if (updates.name) staffUpdates.name = updates.name;
-      if (updates.role) staffUpdates.role = updates.role;
+      if (updates.roles && updates.roles.length > 0) staffUpdates.role = updates.roles[0]; // Keep primary role for backward compatibility
       if (updates.photoUrl !== undefined) staffUpdates.photo_url = updates.photoUrl;
       if (updates.email !== undefined) staffUpdates.email = updates.email || null;
 
@@ -193,6 +216,36 @@ export function useStaff() {
 
         if (error) {
           throw error;
+        }
+      }
+
+      // Handle roles if provided
+      if (updates.roles !== undefined) {
+        // Delete all existing roles
+        const { error: deleteRolesError } = await supabase
+          .from("staff_roles")
+          .delete()
+          .eq("staff_id", id);
+
+        if (deleteRolesError) {
+          throw deleteRolesError;
+        }
+
+        // Insert new roles
+        if (updates.roles.length > 0) {
+          const rolesToInsert = updates.roles.map((role) => ({
+            staff_id: id,
+            user_id: user.id,
+            role: role,
+          }));
+
+          const { error: insertRolesError } = await supabase
+            .from("staff_roles")
+            .insert(rolesToInsert);
+
+          if (insertRolesError) {
+            throw insertRolesError;
+          }
         }
       }
 
@@ -279,7 +332,6 @@ export function useStaff() {
         }
       }
 
-      // Reload staff to get the updated list with schedules
       await loadStaff();
 
       toast({
@@ -303,6 +355,16 @@ export function useStaff() {
     try {
       if (!user) {
         throw new Error("User not authenticated");
+      }
+
+      // Delete staff roles first
+      const { error: rolesError } = await supabase
+        .from("staff_roles")
+        .delete()
+        .eq("staff_id", id);
+
+      if (rolesError) {
+        throw rolesError;
       }
 
       // First, delete all schedules for this staff member
@@ -346,7 +408,6 @@ export function useStaff() {
         throw error;
       }
 
-      // Update the local state by removing the deleted staff member
       setStaff(staff.filter((s) => s.id !== id));
 
       toast({
@@ -367,14 +428,13 @@ export function useStaff() {
   };
 
   const getStaffByRole = (role: StaffRole) => {
-    return staff.filter((member) => member.role === role);
+    return staff.filter((member) => member.roles.includes(role));
   };
 
   const getStaffById = (id: string) => {
     return staff.find((member) => member.id === id) || null;
   };
 
-  // Enhanced function to check for schedule conflicts and leave dates
   const getAvailableStaff = useCallback((
     eventDate: string,
     startTime: string,
@@ -384,7 +444,6 @@ export function useStaff() {
     console.log('Getting available staff for:', { eventDate, startTime, endTime, ignoreScheduleConflicts });
     
     const filteredStaff = staff.filter(member => {
-      // First check if staff is on leave - this always excludes them
       const isOnLeave = member.leaveDates?.some(leave => {
         const leaveStart = parseISO(leave.startDate);
         const leaveEnd = parseISO(leave.endDate);
@@ -397,12 +456,10 @@ export function useStaff() {
         return false;
       }
 
-      // If ignoring schedule conflicts, staff is available (since they're not on leave)
       if (ignoreScheduleConflicts) {
         return true;
       }
 
-      // Check schedule conflicts for staff not on leave
       const eventDay = getDay(parseISO(eventDate));
       
       const hasScheduleConflict = member.schedules.some(schedule => {
@@ -422,8 +479,8 @@ export function useStaff() {
       return !hasScheduleConflict;
     });
 
-    const videographers = filteredStaff.filter(member => member.role === 'Videographer');
-    const photographers = filteredStaff.filter(member => member.role === 'Photographer');
+    const videographers = filteredStaff.filter(member => member.roles.includes('Videographer'));
+    const photographers = filteredStaff.filter(member => member.roles.includes('Photographer'));
     
     console.log('Available videographers:', videographers.map(v => v.name));
     console.log('Available photographers:', photographers.map(p => p.name));
@@ -476,7 +533,81 @@ export function useStaff() {
     loadStaff,
     addStaffMember,
     updateStaffMember,
-    deleteStaffMember,
+    deleteStaffMember: async (id: string) => {
+      try {
+        if (!user) {
+          throw new Error("User not authenticated");
+        }
+
+        // Delete staff roles first
+        const { error: rolesError } = await supabase
+          .from("staff_roles")
+          .delete()
+          .eq("staff_id", id);
+
+        if (rolesError) {
+          throw rolesError;
+        }
+
+        // First, delete all schedules for this staff member
+        const { error: scheduleError } = await supabase
+          .from("schedules")
+          .delete()
+          .eq("staff_id", id);
+
+        if (scheduleError) {
+          throw scheduleError;
+        }
+
+        // Delete all leave dates for this staff member
+        const { error: leaveError } = await (supabase as any)
+          .from("leave_dates")
+          .delete()
+          .eq("staff_id", id);
+
+        if (leaveError) {
+          throw leaveError;
+        }
+
+        // Then, delete all staff assignments for this staff member
+        const { error: assignmentError } = await supabase
+          .from("staff_assignments")
+          .delete()
+          .eq("staff_id", id);
+
+        if (assignmentError) {
+          throw assignmentError;
+        }
+
+        // Finally, delete the staff member
+        const { error } = await supabase
+          .from("staff_members")
+          .delete()
+          .eq("id", id)
+          .eq("user_id", user.id);
+
+        if (error) {
+          throw error;
+        }
+
+        setStaff(staff.filter((s) => s.id !== id));
+
+        toast({
+          title: "Staff Member Deleted",
+          description: "Staff member has been successfully deleted.",
+        });
+
+        return true;
+      } catch (error: any) {
+        console.error("Error deleting staff member:", error.message);
+        toast({
+          title: "Error deleting staff member",
+          description: error.message || "Could not delete staff member. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    },
     getStaffByRole,
     getStaffById,
     getAvailableStaff

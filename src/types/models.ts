@@ -18,7 +18,7 @@ export interface LeaveDate {
 export interface StaffMember {
   id: string;
   name: string;
-  role: StaffRole;
+  roles: StaffRole[]; // Changed from single role to array of roles
   photoUrl?: string;
   email?: string;
   schedules: Schedule[];
