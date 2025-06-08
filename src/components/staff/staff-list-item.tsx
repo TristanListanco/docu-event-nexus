@@ -19,7 +19,7 @@ interface StaffListItemProps {
 }
 
 export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: StaffListItemProps) {
-  const { name, roles } = staff;
+  const { name, roles, subjectSchedules } = staff;
   
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
@@ -42,7 +42,15 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
             <div className="flex items-center space-x-2">
               <h3 className="font-medium truncate">{name}</h3>
             </div>
-            <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>
+              {subjectSchedules && subjectSchedules.length > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium">Subjects: </span>
+                  {subjectSchedules.map(ss => ss.subject).join(', ')}
+                </div>
+              )}
+            </div>
           </div>
           
           {isOnLeave && (

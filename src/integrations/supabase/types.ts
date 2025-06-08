@@ -147,7 +147,7 @@ export type Database = {
           id: string
           staff_id: string
           start_time: string
-          subject: string
+          subject_schedule_id: string | null
           user_id: string
         }
         Insert: {
@@ -156,7 +156,7 @@ export type Database = {
           id?: string
           staff_id: string
           start_time: string
-          subject: string
+          subject_schedule_id?: string | null
           user_id: string
         }
         Update: {
@@ -165,7 +165,7 @@ export type Database = {
           id?: string
           staff_id?: string
           start_time?: string
-          subject?: string
+          subject_schedule_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -174,6 +174,13 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedules_subject_schedule_id_fkey"
+            columns: ["subject_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "subject_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -267,6 +274,30 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["staff_role"]
           staff_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subject_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          staff_id: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          staff_id: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          staff_id?: string
+          subject?: string
           user_id?: string
         }
         Relationships: []

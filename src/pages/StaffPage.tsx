@@ -233,7 +233,7 @@ interface StaffCardProps {
 }
 
 function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
-  const { name, roles, schedules } = staff;
+  const { name, roles, subjectSchedules } = staff;
   
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
@@ -290,21 +290,36 @@ function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
           </DropdownMenu>
         </div>
         
-        {schedules.length > 0 && (
+        {subjectSchedules && subjectSchedules.length > 0 && (
           <div className="mt-3">
             <p className="text-xs font-medium text-muted-foreground mb-1">CLASS SCHEDULES</p>
-            <div className="space-y-1">
-              {schedules.map((schedule, index) => {
+            <div className="space-y-2">
+              {subjectSchedules.map((subjectSchedule, index) => {
                 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                
+                // Group schedules by time slots
+                const timeSlotMap = new Map<string, number[]>();
+                subjectSchedule.schedules.forEach(schedule => {
+                  const key = `${schedule.startTime}-${schedule.endTime}`;
+                  if (!timeSlotMap.has(key)) {
+                    timeSlotMap.set(key, []);
+                  }
+                  timeSlotMap.get(key)!.push(schedule.dayOfWeek);
+                });
+
                 return (
                   <div key={index} className="text-xs bg-muted p-1.5 rounded">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{schedule.subject}</span>
-                      <span>{dayNames[schedule.dayOfWeek]}</span>
-                    </div>
-                    <div className="text-muted-foreground">
-                      {schedule.startTime} - {schedule.endTime}
-                    </div>
+                    <div className="font-medium text-primary mb-1">{subjectSchedule.subject}</div>
+                    {Array.from(timeSlotMap.entries()).map(([timeSlot, days], timeIndex) => {
+                      const [startTime, endTime] = timeSlot.split('-');
+                      const sortedDays = days.sort((a, b) => a - b);
+                      return (
+                        <div key={timeIndex} className="text-muted-foreground">
+                          <span className="font-medium">{startTime} - {endTime}</span>
+                          <span className="ml-2">({sortedDays.map(day => dayNames[day]).join(', ')})</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -313,7 +328,7 @@ function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
         )}
       </CardHeader>
       <CardContent>
-        {/* Attendance counter section has been removed */}
+        {/* Content section */}
       </CardContent>
     </Card>
   );

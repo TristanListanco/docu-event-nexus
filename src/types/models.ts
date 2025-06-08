@@ -6,7 +6,13 @@ export interface Schedule {
   dayOfWeek: number; // 0 (Sunday) to 6 (Saturday)
   startTime: string; // "HH:MM" format
   endTime: string; // "HH:MM" format
+  subjectScheduleId: string; // Reference to subject_schedules table
+}
+
+export interface SubjectSchedule {
+  id: string;
   subject: string;
+  schedules: Schedule[];
 }
 
 export interface LeaveDate {
@@ -22,6 +28,7 @@ export interface StaffMember {
   photoUrl?: string;
   email?: string;
   schedules: Schedule[];
+  subjectSchedules: SubjectSchedule[];
   leaveDates: LeaveDate[];
 }
 

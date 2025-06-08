@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { StaffMember, Schedule, StaffRole, LeaveDate } from "@/types/models";
+import { StaffMember, Schedule, StaffRole, LeaveDate, SubjectSchedule } from "@/types/models";
 import { toast } from "./use-toast";
 import { isWithinInterval, parseISO, isBefore, isAfter, getDay } from "date-fns";
 
@@ -29,7 +29,7 @@ export function useStaff() {
 
       console.log("Staff data from database:", staffData);
 
-      // Fetch staff roles, schedules and leave dates for each staff member
+      // Fetch staff roles, schedules, subject schedules and leave dates for each staff member
       const staffMembers: StaffMember[] = await Promise.all(
         staffData.map(async (member) => {
           // Fetch roles for this staff member
@@ -42,6 +42,17 @@ export function useStaff() {
             console.error("Error loading staff roles:", rolesError.message);
           }
 
+          // Fetch subject schedules
+          const { data: subjectSchedulesData, error: subjectSchedulesError } = await supabase
+            .from("subject_schedules")
+            .select("*")
+            .eq("staff_id", member.id);
+
+          if (subjectSchedulesError) {
+            console.error("Error loading subject schedules:", subjectSchedulesError.message);
+          }
+
+          // Fetch schedules with subject schedule references
           const { data: schedulesData, error: schedulesError } = await supabase
             .from("schedules")
             .select("*")
@@ -60,19 +71,40 @@ export function useStaff() {
             console.error("Error loading leave dates:", leaveDatesError.message);
           }
 
+          // Group schedules by subject schedule
+          const subjectSchedules: SubjectSchedule[] = (subjectSchedulesData || []).map(ss => ({
+            id: ss.id,
+            subject: ss.subject,
+            schedules: (schedulesData || [])
+              .filter(schedule => schedule.subject_schedule_id === ss.id)
+              .map(schedule => ({
+                id: schedule.id,
+                dayOfWeek: schedule.day_of_week,
+                startTime: schedule.start_time,
+                endTime: schedule.end_time,
+                subjectScheduleId: schedule.subject_schedule_id
+              }))
+          }));
+
+          // Legacy schedules (without subject_schedule_id) for backward compatibility
+          const legacySchedules = (schedulesData || [])
+            .filter(schedule => !schedule.subject_schedule_id)
+            .map(schedule => ({
+              id: schedule.id,
+              dayOfWeek: schedule.day_of_week,
+              startTime: schedule.start_time,
+              endTime: schedule.end_time,
+              subjectScheduleId: ''
+            }));
+
           return {
             id: member.id,
             name: member.name,
             roles: rolesData ? rolesData.map(r => r.role as StaffRole) : [member.role as StaffRole], // Fallback to old role if no new roles
             photoUrl: member.photo_url,
             email: member.email || undefined,
-            schedules: schedulesData ? schedulesData.map((schedule) => ({
-              id: schedule.id,
-              dayOfWeek: schedule.day_of_week,
-              startTime: schedule.start_time,
-              endTime: schedule.end_time,
-              subject: schedule.subject,
-            })) as Schedule[] : [],
+            schedules: legacySchedules,
+            subjectSchedules: subjectSchedules,
             leaveDates: leaveDatesData ? leaveDatesData.map((leave: any) => ({
               id: leave.id,
               startDate: leave.start_date,
@@ -100,7 +132,8 @@ export function useStaff() {
     roles: StaffRole[], // Changed to accept multiple roles
     photoUrl?: string,
     schedules: Omit<Schedule, "id">[] = [],
-    email?: string
+    email?: string,
+    subjectSchedules: SubjectSchedule[] = []
   ) => {
     try {
       if (!user) {
@@ -141,7 +174,43 @@ export function useStaff() {
         }
       }
 
-      // Insert schedules if any
+      // Insert subject schedules and their associated schedules
+      for (const subjectSchedule of subjectSchedules) {
+        const { data: subjectData, error: subjectError } = await supabase
+          .from("subject_schedules")
+          .insert({
+            staff_id: data.id,
+            user_id: user.id,
+            subject: subjectSchedule.subject,
+          })
+          .select()
+          .single();
+
+        if (subjectError) {
+          throw subjectError;
+        }
+
+        if (subjectSchedule.schedules.length > 0) {
+          const schedulesToInsert = subjectSchedule.schedules.map((schedule) => ({
+            staff_id: data.id,
+            user_id: user.id,
+            day_of_week: schedule.dayOfWeek,
+            start_time: schedule.startTime,
+            end_time: schedule.endTime,
+            subject_schedule_id: subjectData.id,
+          }));
+
+          const { error: scheduleError } = await supabase
+            .from("schedules")
+            .insert(schedulesToInsert);
+
+          if (scheduleError) {
+            throw scheduleError;
+          }
+        }
+      }
+
+      // Insert legacy schedules if any (for backward compatibility)
       if (schedules.length > 0) {
         const schedulesToInsert = schedules.map((schedule) => ({
           staff_id: data.id,
@@ -149,7 +218,6 @@ export function useStaff() {
           day_of_week: schedule.dayOfWeek,
           start_time: schedule.startTime,
           end_time: schedule.endTime,
-          subject: schedule.subject,
         }));
 
         const { error: scheduleError } = await supabase
@@ -192,6 +260,7 @@ export function useStaff() {
         toUpdate: Schedule[];
         toDelete: string[];
       };
+      subjectSchedules?: SubjectSchedule[];
       leaveDates?: LeaveDate[];
     }
   ) => {
@@ -249,21 +318,71 @@ export function useStaff() {
         }
       }
 
-      // Handle schedules if provided
+      // Handle subject schedules if provided
+      if (updates.subjectSchedules !== undefined) {
+        // Delete all existing subject schedules and their schedules
+        const { error: deleteSubjectSchedulesError } = await supabase
+          .from("subject_schedules")
+          .delete()
+          .eq("staff_id", id);
+
+        if (deleteSubjectSchedulesError) {
+          throw deleteSubjectSchedulesError;
+        }
+
+        // Insert new subject schedules
+        for (const subjectSchedule of updates.subjectSchedules) {
+          const { data: subjectData, error: subjectError } = await supabase
+            .from("subject_schedules")
+            .insert({
+              staff_id: id,
+              user_id: user.id,
+              subject: subjectSchedule.subject,
+            })
+            .select()
+            .single();
+
+          if (subjectError) {
+            throw subjectError;
+          }
+
+          if (subjectSchedule.schedules.length > 0) {
+            const schedulesToInsert = subjectSchedule.schedules.map((schedule) => ({
+              staff_id: id,
+              user_id: user.id,
+              day_of_week: schedule.dayOfWeek,
+              start_time: schedule.startTime,
+              end_time: schedule.endTime,
+              subject_schedule_id: subjectData.id,
+            }));
+
+            const { error: scheduleError } = await supabase
+              .from("schedules")
+              .insert(schedulesToInsert);
+
+            if (scheduleError) {
+              throw scheduleError;
+            }
+          }
+        }
+      }
+
+      // Handle legacy schedules if provided (for backward compatibility)
       if (updates.schedules) {
-        // Delete schedules
+        // Delete legacy schedules (ones without subject_schedule_id)
         if (updates.schedules.toDelete.length > 0) {
           const { error: deleteError } = await supabase
             .from("schedules")
             .delete()
-            .in("id", updates.schedules.toDelete);
+            .in("id", updates.schedules.toDelete)
+            .is("subject_schedule_id", null);
 
           if (deleteError) {
             throw deleteError;
           }
         }
 
-        // Add new schedules
+        // Add new legacy schedules
         if (updates.schedules.toAdd.length > 0) {
           const schedulesToAdd = updates.schedules.toAdd.map((schedule) => ({
             staff_id: id,
@@ -271,7 +390,6 @@ export function useStaff() {
             day_of_week: schedule.dayOfWeek,
             start_time: schedule.startTime,
             end_time: schedule.endTime,
-            subject: schedule.subject,
           }));
 
           const { error: addError } = await supabase
@@ -283,7 +401,7 @@ export function useStaff() {
           }
         }
 
-        // Update existing schedules
+        // Update existing legacy schedules
         for (const schedule of updates.schedules.toUpdate) {
           const { error: updateError } = await supabase
             .from("schedules")
@@ -291,7 +409,6 @@ export function useStaff() {
               day_of_week: schedule.dayOfWeek,
               start_time: schedule.startTime,
               end_time: schedule.endTime,
-              subject: schedule.subject,
             })
             .eq("id", schedule.id);
 
@@ -367,7 +484,17 @@ export function useStaff() {
         throw rolesError;
       }
 
-      // First, delete all schedules for this staff member
+      // Delete subject schedules (this will cascade delete related schedules)
+      const { error: subjectSchedulesError } = await supabase
+        .from("subject_schedules")
+        .delete()
+        .eq("staff_id", id);
+
+      if (subjectSchedulesError) {
+        throw subjectSchedulesError;
+      }
+
+      // Delete any remaining legacy schedules
       const { error: scheduleError } = await supabase
         .from("schedules")
         .delete()
@@ -462,7 +589,13 @@ export function useStaff() {
 
       const eventDay = getDay(parseISO(eventDate));
       
-      const hasScheduleConflict = member.schedules.some(schedule => {
+      // Check both legacy schedules and subject schedules
+      const allSchedules = [
+        ...member.schedules,
+        ...member.subjectSchedules.flatMap(ss => ss.schedules)
+      ];
+      
+      const hasScheduleConflict = allSchedules.some(schedule => {
         if (schedule.dayOfWeek !== eventDay) return false;
         
         const scheduleStart = parseISO(`${eventDate}T${schedule.startTime}`);
@@ -487,38 +620,6 @@ export function useStaff() {
     
     return { videographers, photographers };
   }, [staff]);
-
-  // Helper to parse time string to decimal hour (for easier comparison)
-  const parseTimeToDecimal = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours + (minutes / 60);
-  };
-  
-  // Helper to check if staff member is available at the given time
-  const isStaffAvailable = (staff: StaffMember, dayOfWeek: number, startHour: number, endHour: number): boolean => {
-    // Check if staff has any schedules for this day of week
-    const daySchedules = staff.schedules.filter(schedule => schedule.dayOfWeek === dayOfWeek);
-    
-    // If no schedules for this day, they're available
-    if (daySchedules.length === 0) return true;
-    
-    // Check for conflicts with each schedule
-    for (const schedule of daySchedules) {
-      const scheduleStart = parseTimeToDecimal(schedule.startTime);
-      const scheduleEnd = parseTimeToDecimal(schedule.endTime);
-      
-      // Check if there's an overlap
-      // If event starts during schedule, or event ends during schedule, or event completely contains schedule
-      if ((startHour >= scheduleStart && startHour < scheduleEnd) || 
-          (endHour > scheduleStart && endHour <= scheduleEnd) ||
-          (startHour <= scheduleStart && endHour >= scheduleEnd)) {
-        return false; // Not available - there's a conflict
-      }
-    }
-    
-    // No conflicts found
-    return true;
-  };
 
   // Load staff on initialization
   useEffect(() => {
@@ -549,7 +650,17 @@ export function useStaff() {
           throw rolesError;
         }
 
-        // First, delete all schedules for this staff member
+        // Delete subject schedules (this will cascade delete related schedules)
+        const { error: subjectSchedulesError } = await supabase
+          .from("subject_schedules")
+          .delete()
+          .eq("staff_id", id);
+
+        if (subjectSchedulesError) {
+          throw subjectSchedulesError;
+        }
+
+        // Delete any remaining legacy schedules
         const { error: scheduleError } = await supabase
           .from("schedules")
           .delete()
