@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -48,33 +49,36 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   const { updateEvent } = useEvents();
   const { toast } = useToast();
   
-  // Initialize selected staff from event
+  // Initialize form values when event or dialog opens
   useEffect(() => {
-    if (event.videographers && event.videographers.length > 0) {
-      setSelectedVideographer(event.videographers[0].staffId);
-    } else {
-      setSelectedVideographer("none");
+    if (open && event) {
+      setName(event.name);
+      setDate(new Date(event.date));
+      setStartTime(event.startTime);
+      setEndTime(event.endTime);
+      setLocation(event.location);
+      setType(event.type);
+      setStatus(event.status);
+      setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
+      
+      // Initialize selected staff from event
+      if (event.videographers && event.videographers.length > 0) {
+        setSelectedVideographer(event.videographers[0].staffId);
+      } else {
+        setSelectedVideographer("none");
+      }
+      
+      if (event.photographers && event.photographers.length > 0) {
+        setSelectedPhotographer(event.photographers[0].staffId);
+      } else {
+        setSelectedPhotographer("none");
+      }
     }
-    if (event.photographers && event.photographers.length > 0) {
-      setSelectedPhotographer(event.photographers[0].staffId);
-    } else {
-      setSelectedPhotographer("none");
-    }
-    
-    // Reset form values when event changes
-    setName(event.name);
-    setDate(new Date(event.date));
-    setStartTime(event.startTime);
-    setEndTime(event.endTime);
-    setLocation(event.location);
-    setType(event.type);
-    setStatus(event.status);
-    setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
-  }, [event]);
+  }, [event, open]);
   
-  // Calculate available staff
+  // Calculate available staff when date, time, or conflicts setting changes
   useEffect(() => {
-    if (date && startTime && endTime) {
+    if (date && startTime && endTime && staff.length > 0) {
       const formattedDate = format(date, 'yyyy-MM-dd');
       const { videographers, photographers } = getAvailableStaff(
         formattedDate,
@@ -106,35 +110,12 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setAvailableVideographers(allVideographers);
       setAvailablePhotographers(allPhotographers);
       setScheduleCalculated(true);
-      
-      // Only reset selections if they are not the current event staff and not available
-      const videographerStillAvailable = allVideographers.some(v => v.id === selectedVideographer);
-      const photographerStillAvailable = allPhotographers.some(p => p.id === selectedPhotographer);
-      
-      // Check if the currently selected videographer is the one from the event
-      const isCurrentEventVideographer = event.videographers && 
-        event.videographers.length > 0 && 
-        selectedVideographer === event.videographers[0].staffId;
-      
-      // Check if the currently selected photographer is the one from the event
-      const isCurrentEventPhotographer = event.photographers && 
-        event.photographers.length > 0 && 
-        selectedPhotographer === event.photographers[0].staffId;
-      
-      // Only reset if not available AND not the current event staff member
-      if (!videographerStillAvailable && !isCurrentEventVideographer) {
-        setSelectedVideographer("none");
-      }
-      
-      if (!photographerStillAvailable && !isCurrentEventPhotographer) {
-        setSelectedPhotographer("none");
-      }
     } else {
       setAvailableVideographers([]);
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, event.videographers, event.photographers, selectedVideographer, selectedPhotographer]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, event.videographers, event.photographers]);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -322,7 +303,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
           </div>
           
-          {/* Staff Assignment - Combined section */}
+          {/* Staff Assignment */}
           <div className="grid gap-4 pt-2">
             <h3 className="text-sm font-semibold">Staff Assignment</h3>
             
@@ -334,7 +315,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
               </p>
             )}
             
-            {/* Unified staff section */}
             <div className="space-y-4">
               {/* Videographer selection */}
               <div>
