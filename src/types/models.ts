@@ -57,4 +57,5 @@ export interface Event {
   ignoreScheduleConflicts: boolean;
   isBigEvent: boolean;
   bigEventId?: string | null;
+  organizer?: string;
 }

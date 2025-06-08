@@ -45,6 +45,7 @@ export type Database = {
           location: string
           log_id: string
           name: string
+          organizer: string | null
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
           type: Database["public"]["Enums"]["event_type"]
@@ -61,6 +62,7 @@ export type Database = {
           location: string
           log_id: string
           name: string
+          organizer?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
           type: Database["public"]["Enums"]["event_type"]
@@ -77,6 +79,7 @@ export type Database = {
           location?: string
           log_id?: string
           name?: string
+          organizer?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
           type?: Database["public"]["Enums"]["event_type"]

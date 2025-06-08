@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.8";
@@ -14,6 +15,7 @@ interface NotificationRequest {
   startTime: string;
   endTime: string;
   location: string;
+  organizer?: string;
   type: string;
   assignedStaff: Array<{
     id: string;
@@ -28,6 +30,7 @@ interface NotificationRequest {
     startTime?: { old: string; new: string };
     endTime?: { old: string; new: string };
     location?: { old: string; new: string };
+    organizer?: { old: string; new: string };
     type?: { old: string; new: string };
   };
 }
@@ -46,6 +49,12 @@ function generateICSContent(event: NotificationRequest): string {
   const endFormatted = formatDateForICS(endDateTime);
   const now = formatDateForICS(new Date());
   
+  // Calculate alarm times (6 hours and 1 hour before)
+  const alarm6HoursBefore = new Date(startDateTime.getTime() - (6 * 60 * 60 * 1000));
+  const alarm1HourBefore = new Date(startDateTime.getTime() - (1 * 60 * 60 * 1000));
+  
+  const organizerInfo = event.organizer ? `\\nOrganizer: ${event.organizer}` : '';
+  
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Event Management System//Event Notification//EN
@@ -55,13 +64,18 @@ DTSTAMP:${now}
 DTSTART:${startFormatted}
 DTEND:${endFormatted}
 SUMMARY:${event.eventName}
-DESCRIPTION:${event.isUpdate ? 'Event details have been updated.' : 'You have been assigned to this event.'} Event: ${event.eventName}
+DESCRIPTION:${event.isUpdate ? 'Event details have been updated.' : 'You have been assigned to this event.'} Event: ${event.eventName}${organizerInfo}
 LOCATION:${event.location}
 STATUS:CONFIRMED
 BEGIN:VALARM
-TRIGGER:-PT30M
+TRIGGER:-PT360M
 ACTION:DISPLAY
-DESCRIPTION:Event reminder: ${event.eventName}
+DESCRIPTION:Event reminder (6 hours): ${event.eventName}
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT60M
+ACTION:DISPLAY
+DESCRIPTION:Event reminder (1 hour): ${event.eventName}
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
@@ -89,6 +103,9 @@ function generateChangesHtml(changes: any): string {
   }
   if (changes.location) {
     changesHtml += `<li><strong>Location:</strong> "${changes.location.old}" → "${changes.location.new}"</li>`;
+  }
+  if (changes.organizer) {
+    changesHtml += `<li><strong>Organizer:</strong> "${changes.organizer.old}" → "${changes.organizer.new}"</li>`;
   }
   if (changes.type) {
     changesHtml += `<li><strong>Event Type:</strong> ${changes.type.old} → ${changes.type.new}</li>`;
@@ -196,6 +213,10 @@ const handler = async (req: Request): Promise<Response> => {
       const emailTitle = isUpdate ? 'Event Updated!' : "You've Been Assigned to an Event!";
       const emailSubject = isUpdate ? `Event Update: ${notificationData.eventName}` : `Event Assignment: ${notificationData.eventName}`;
       
+      const organizerSection = notificationData.organizer 
+        ? `<p><strong>Organizer:</strong> ${notificationData.organizer}</p>`
+        : '';
+      
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">${emailTitle}</h2>
@@ -206,6 +227,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h3 style="color: #2563eb; margin-top: 0;">${isUpdate ? 'Updated Event Details' : 'Event Details'}</h3>
             <p><strong>Event:</strong> ${notificationData.eventName}</p>
             <p><strong>Type:</strong> ${notificationData.type}</p>
+            ${organizerSection}
             <p><strong>Role:</strong> ${staff.role}</p>
             <p><strong>Date:</strong> ${eventDate}</p>
             <p><strong>Time:</strong> ${notificationData.startTime} - ${notificationData.endTime}</p>
@@ -221,7 +243,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
             <p style="margin: 0;"><strong>📅 Calendar File Attached</strong></p>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar.</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event.</p>
           </div>
           
           <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>

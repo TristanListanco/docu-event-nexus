@@ -25,6 +25,7 @@ export default function AddEventPage() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
+  const [organizer, setOrganizer] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
   const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
@@ -127,6 +128,7 @@ export default function AddEventPage() {
           startTime,
           endTime,
           location,
+          organizer: organizer || undefined,
           type,
           status: "Upcoming", // Default status for new events
           ignoreScheduleConflicts,
@@ -177,6 +179,19 @@ export default function AddEventPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Event Name"
                     required
+                    className="w-full"
+                  />
+                </div>
+                
+                {/* Organizer field */}
+                <div className="space-y-2">
+                  <Label htmlFor="organizer">Organizer/s</Label>
+                  <Input
+                    id="organizer"
+                    type="text"
+                    value={organizer}
+                    onChange={(e) => setOrganizer(e.target.value)}
+                    placeholder="Event Organizer/s"
                     className="w-full"
                   />
                 </div>

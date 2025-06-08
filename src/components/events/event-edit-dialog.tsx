@@ -35,6 +35,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   const [startTime, setStartTime] = useState(event.startTime);
   const [endTime, setEndTime] = useState(event.endTime);
   const [location, setLocation] = useState(event.location);
+  const [organizer, setOrganizer] = useState(event.organizer || "");
   const [type, setType] = useState<EventType>(event.type);
   const [status, setStatus] = useState<EventStatus>(event.status);
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(event.ignoreScheduleConflicts);
@@ -57,6 +58,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setStartTime(event.startTime);
       setEndTime(event.endTime);
       setLocation(event.location);
+      setOrganizer(event.organizer || "");
       setType(event.type);
       setStatus(event.status);
       setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
@@ -138,6 +140,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
           startTime,
           endTime,
           location,
+          organizer: organizer || undefined,
           type,
           status,
           ignoreScheduleConflicts,
@@ -177,6 +180,17 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+            />
+          </div>
+
+          {/* Organizer field */}
+          <div className="grid gap-2">
+            <Label htmlFor="organizer">Organizer/s</Label>
+            <Input
+              id="organizer"
+              value={organizer}
+              onChange={(e) => setOrganizer(e.target.value)}
+              placeholder="Event Organizer/s"
             />
           </div>
           
