@@ -1,9 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar, Trash2, MoreVertical } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Event } from "@/types/models";
 
@@ -18,8 +16,6 @@ interface EventCardProps {
 export default function EventCard({ 
   event, 
   onEventClick, 
-  onEditEvent, 
-  onDeleteEvent, 
   getEventStatus 
 }: EventCardProps) {
   const dynamicStatus = getEventStatus(event);
@@ -34,31 +30,9 @@ export default function EventCard({
           <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center">
             <Calendar className="h-5 w-5 text-primary" />
           </div>
-          <div className="flex space-x-1">
-            <Badge variant="outline" className="bg-primary/10 text-primary">
-              {event.type}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <span className="sr-only">Open menu</span>
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => onEditEvent(e, event)}>
-                  Edit Event
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => onDeleteEvent(e, event)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete Event</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Badge variant="outline" className="bg-primary/10 text-primary">
+            {event.type}
+          </Badge>
         </div>
         <CardTitle className="mt-2">{event.name}</CardTitle>
         <p className="text-muted-foreground text-sm">

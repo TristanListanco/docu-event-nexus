@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,20 +47,32 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
   useEffect(() => {
-    setFormData({
-      name: staff.name,
-      role: staff.role,
-      email: staff.email || "",
-    });
-    
-    setSchedules(staff.schedules.map(schedule => ({
-      dayOfWeek: schedule.dayOfWeek,
-      startTime: schedule.startTime,
-      endTime: schedule.endTime,
-      subject: schedule.subject
-    })));
-    
-    setLeaveDates(staff.leaveDates || []);
+    if (open && staff) {
+      console.log('Staff leave dates from props:', staff.leaveDates);
+      
+      setFormData({
+        name: staff.name,
+        role: staff.role,
+        email: staff.email || "",
+      });
+      
+      setSchedules(staff.schedules.map(schedule => ({
+        dayOfWeek: schedule.dayOfWeek,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        subject: schedule.subject
+      })));
+      
+      // Properly map leave dates ensuring they have the correct structure
+      const mappedLeaveDates: LeaveDate[] = (staff.leaveDates || []).map(leave => ({
+        id: leave.id || `temp-${Date.now()}-${Math.random()}`,
+        startDate: leave.startDate,
+        endDate: leave.endDate
+      }));
+      
+      console.log('Mapped leave dates:', mappedLeaveDates);
+      setLeaveDates(mappedLeaveDates);
+    }
   }, [staff, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +158,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
         toUpdate: [],
         toDelete: currentIds.filter(id => !schedules.some(s => 'id' in s && s.id === id))
       };
+      
+      console.log('Submitting leave dates:', leaveDates);
       
       const success = await updateStaffMember(staff.id, {
         name: formData.name,

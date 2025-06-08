@@ -1,9 +1,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar, Trash2, MoreVertical } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Event } from "@/types/models";
 
@@ -18,8 +16,6 @@ interface EventListItemProps {
 export default function EventListItem({ 
   event, 
   onEventClick, 
-  onEditEvent, 
-  onDeleteEvent, 
   getEventStatus 
 }: EventListItemProps) {
   const dynamicStatus = getEventStatus(event);
@@ -58,26 +54,6 @@ export default function EventListItem({
             `}>
               {dynamicStatus}
             </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <span className="sr-only">Open menu</span>
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={(e) => onEditEvent(e, event)}>
-                  Edit Event
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => onDeleteEvent(e, event)}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete Event</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
       </CardContent>
