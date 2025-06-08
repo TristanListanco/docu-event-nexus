@@ -1,4 +1,3 @@
-
 export type StaffRole = "Photographer" | "Videographer";
 
 export interface Schedule {
@@ -50,12 +49,13 @@ export interface Event {
   startTime: string;
   endTime: string;
   location: string;
+  organizer?: string;
   type: EventType;
   status: EventStatus;
-  videographers: StaffAssignment[];
-  photographers: StaffAssignment[];
+  videographers?: StaffAssignment[];
+  photographers?: StaffAssignment[];
   ignoreScheduleConflicts: boolean;
+  ccsOnlyEvent: boolean;
   isBigEvent: boolean;
   bigEventId?: string | null;
-  organizer?: string;
 }

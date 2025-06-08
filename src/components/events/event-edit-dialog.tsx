@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Clock, GraduationCap } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/use-events";
 import { Event, EventStatus, EventType, StaffMember } from "@/types/models";
@@ -39,6 +39,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   const [type, setType] = useState<EventType>(event.type);
   const [status, setStatus] = useState<EventStatus>(event.status);
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(event.ignoreScheduleConflicts);
+  const [ccsOnlyEvent, setCcsOnlyEvent] = useState(event.ccsOnlyEvent);
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
@@ -62,6 +63,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setType(event.type);
       setStatus(event.status);
       setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
+      setCcsOnlyEvent(event.ccsOnlyEvent);
       
       // Initialize selected staff from event
       const assignedVideographers = event.videographers?.map(v => v.staffId) || [];
@@ -72,7 +74,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     }
   }, [event, open]);
   
-  // Calculate available staff when date, time, or conflicts setting changes
+  // Calculate available staff when date, time, conflicts setting, or CCS-only setting changes
   useEffect(() => {
     if (date && startTime && endTime && staff.length > 0) {
       const formattedDate = format(date, 'yyyy-MM-dd');
@@ -80,7 +82,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         formattedDate,
         startTime,
         endTime,
-        ignoreScheduleConflicts
+        ignoreScheduleConflicts,
+        ccsOnlyEvent
       );
       
       // Always include currently assigned staff even if they're not available
@@ -115,7 +118,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, event.videographers, event.photographers]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, ccsOnlyEvent, staff, getAvailableStaff, event.videographers, event.photographers]);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -144,6 +147,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
           type,
           status,
           ignoreScheduleConflicts,
+          ccsOnlyEvent,
         },
         selectedVideographers,
         selectedPhotographers
@@ -311,6 +315,19 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
           </div>
           
+          {/* CCS-only Event */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="ccsOnlyEvent"
+              checked={ccsOnlyEvent}
+              onCheckedChange={(checked) => setCcsOnlyEvent(!!checked)}
+            />
+            <Label htmlFor="ccsOnlyEvent" className="flex items-center">
+              <GraduationCap className="h-4 w-4 mr-2" />
+              CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
+            </Label>
+          </div>
+          
           {/* Staff Assignment */}
           <div className="grid gap-4 pt-2">
             <h3 className="text-sm font-semibold">Staff Assignment</h3>
@@ -319,6 +336,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
               <p className="text-xs text-muted-foreground">
                 {ignoreScheduleConflicts 
                   ? "Showing all staff members (schedule conflicts ignored)" 
+                  : ccsOnlyEvent
+                  ? "Showing staff members available for the selected time slot (CCS classes suspended)"
                   : "Showing only staff members available for the selected time slot"}
               </p>
             )}

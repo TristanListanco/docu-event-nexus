@@ -15,7 +15,7 @@ import { useStaff } from "@/hooks/use-staff";
 import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Mail } from "lucide-react";
+import { CalendarIcon, Clock, Mail, GraduationCap } from "lucide-react";
 import MultiStaffSelector from "@/components/events/multi-staff-selector";
 
 export default function AddEventPage() {
@@ -28,6 +28,7 @@ export default function AddEventPage() {
   const [organizer, setOrganizer] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
+  const [ccsOnlyEvent, setCcsOnlyEvent] = useState(false);
   const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
@@ -42,7 +43,7 @@ export default function AddEventPage() {
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
 
-  // Check availability whenever date/time/ignoreScheduleConflicts changes
+  // Check availability whenever date/time/ignoreScheduleConflicts/ccsOnlyEvent changes
   useEffect(() => {
     if (date && startTime && endTime) {
       const formattedDate = format(date, 'yyyy-MM-dd');
@@ -50,7 +51,8 @@ export default function AddEventPage() {
         formattedDate,
         startTime,
         endTime,
-        ignoreScheduleConflicts
+        ignoreScheduleConflicts,
+        ccsOnlyEvent
       );
       
       setAvailableVideographers(videographers);
@@ -78,7 +80,7 @@ export default function AddEventPage() {
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, ccsOnlyEvent, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -132,6 +134,7 @@ export default function AddEventPage() {
           type,
           status: "Upcoming", // Default status for new events
           ignoreScheduleConflicts,
+          ccsOnlyEvent,
           isBigEvent: false,
           bigEventId: null // Ensure this is null not empty string
         },
@@ -305,6 +308,19 @@ export default function AddEventPage() {
                     <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
                   </div>
                   
+                  {/* CCS-only Event checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="ccsOnlyEvent"
+                      checked={ccsOnlyEvent}
+                      onCheckedChange={(checked) => setCcsOnlyEvent(!!checked)}
+                    />
+                    <Label htmlFor="ccsOnlyEvent" className="flex items-center">
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
+                    </Label>
+                  </div>
+                  
                   {/* Send Email Notifications checkbox */}
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -333,6 +349,8 @@ export default function AddEventPage() {
                       <p className="text-sm text-muted-foreground">
                         {ignoreScheduleConflicts 
                           ? "Showing all staff members (schedule conflicts ignored)" 
+                          : ccsOnlyEvent
+                          ? "Showing staff members available for the selected time slot (CCS classes suspended)"
                           : "Showing only staff members available for the selected time slot"}
                       </p>
                     )}

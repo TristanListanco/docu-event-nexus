@@ -98,6 +98,7 @@ export function useEvents() {
               attendanceStatus: p.attendance_status as AttendanceStatus
             })),
             ignoreScheduleConflicts: event.ignore_schedule_conflicts,
+            ccsOnlyEvent: event.ccs_only_event || false,
             isBigEvent: event.is_big_event,
             bigEventId: event.big_event_id
           };
@@ -145,6 +146,7 @@ export function useEvents() {
           type: eventData.type,
           status: "Upcoming",
           ignore_schedule_conflicts: eventData.ignoreScheduleConflicts,
+          ccs_only_event: eventData.ccsOnlyEvent || false,
           is_big_event: eventData.isBigEvent || false,
           big_event_id: eventData.bigEventId || null,
           user_id: user.id
@@ -385,6 +387,7 @@ export function useEvents() {
           attendanceStatus: p.attendance_status as AttendanceStatus
         })),
         ignoreScheduleConflicts: data.ignore_schedule_conflicts,
+        ccsOnlyEvent: data.ccs_only_event || false,
         isBigEvent: data.is_big_event,
         bigEventId: data.big_event_id
       };
@@ -458,6 +461,9 @@ export function useEvents() {
       if (eventData.status) updateData.status = eventData.status;
       if (eventData.ignoreScheduleConflicts !== undefined) {
         updateData.ignore_schedule_conflicts = eventData.ignoreScheduleConflicts;
+      }
+      if (eventData.ccsOnlyEvent !== undefined) {
+        updateData.ccs_only_event = eventData.ccsOnlyEvent;
       }
       if (eventData.isBigEvent !== undefined) {
         updateData.is_big_event = eventData.isBigEvent;
