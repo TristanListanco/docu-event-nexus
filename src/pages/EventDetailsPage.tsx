@@ -19,6 +19,7 @@ import { useStaff } from "@/hooks/use-staff";
 import { Event, StaffMember } from "@/types/models";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
+import SendInvitationButton from "@/components/events/send-invitation-button";
 import { format } from "date-fns";
 
 export default function EventDetailsPage() {
@@ -199,20 +200,58 @@ export default function EventDetailsPage() {
                     {assignedVideographers.map((videographer) => (
                       <div 
                         key={`videographer-${videographer.id}`}
-                        className="flex items-center p-2 bg-muted/50 rounded-md"
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
                       >
-                        <Video className="h-4 w-4 mr-2 text-primary" />
-                        <span className="text-sm">{videographer.name}</span>
+                        <div className="flex items-center">
+                          <Video className="h-4 w-4 mr-2 text-primary" />
+                          <span className="text-sm">{videographer.name}</span>
+                        </div>
+                        <SendInvitationButton
+                          eventId={event.id}
+                          staffMember={{
+                            id: videographer.id,
+                            name: videographer.name,
+                            email: videographer.email,
+                            role: "Videographer"
+                          }}
+                          eventData={{
+                            name: event.name,
+                            date: event.date,
+                            startTime: event.startTime,
+                            endTime: event.endTime,
+                            location: event.location,
+                            type: event.type
+                          }}
+                        />
                       </div>
                     ))}
                     
                     {assignedPhotographers.map((photographer) => (
                       <div 
                         key={`photographer-${photographer.id}`}
-                        className="flex items-center p-2 bg-muted/50 rounded-md"
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
                       >
-                        <Camera className="h-4 w-4 mr-2 text-primary" />
-                        <span className="text-sm">{photographer.name}</span>
+                        <div className="flex items-center">
+                          <Camera className="h-4 w-4 mr-2 text-primary" />
+                          <span className="text-sm">{photographer.name}</span>
+                        </div>
+                        <SendInvitationButton
+                          eventId={event.id}
+                          staffMember={{
+                            id: photographer.id,
+                            name: photographer.name,
+                            email: photographer.email,
+                            role: "Photographer"
+                          }}
+                          eventData={{
+                            name: event.name,
+                            date: event.date,
+                            startTime: event.startTime,
+                            endTime: event.endTime,
+                            location: event.location,
+                            type: event.type
+                          }}
+                        />
                       </div>
                     ))}
                     
