@@ -15,7 +15,6 @@ export default function StaffPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "card">("list");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
@@ -80,8 +79,6 @@ export default function StaffPage() {
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto p-6">
           <StaffViewControls
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
             sortBy={sortBy}
             onSortByChange={setSortBy}
             sortOrder={sortOrder}

@@ -10,6 +10,7 @@ import EventsEmptyState from "@/components/events/events-empty-state";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import { Event, EventType, EventStatus } from "@/types/models";
+import { format } from "date-fns";
 
 export default function EventsPage() {
   const navigate = useNavigate();
@@ -37,6 +38,16 @@ export default function EventsPage() {
           return new Date(a.date).getTime() - new Date(b.date).getTime();
       }
     });
+
+  // Group events by month
+  const groupedEvents = filteredAndSortedEvents.reduce((groups, event) => {
+    const monthYear = format(new Date(event.date), 'MMMM yyyy');
+    if (!groups[monthYear]) {
+      groups[monthYear] = [];
+    }
+    groups[monthYear].push(event);
+    return groups;
+  }, {} as Record<string, Event[]>);
 
   const handleEdit = (event: Event) => {
     setSelectedEvent(event);
@@ -111,25 +122,34 @@ export default function EventsPage() {
           {events.length === 0 ? (
             <EventsEmptyState searchQuery={searchQuery} />
           ) : (
-            <>
-              {viewMode === "grid" ? (
-                <EventsGrid
-                  events={filteredAndSortedEvents}
-                  onEventClick={handleEventClick}
-                  onEditEvent={handleEditEvent}
-                  onDeleteEvent={handleDeleteEvent}
-                  getEventStatus={getEventStatus}
-                />
-              ) : (
-                <EventsList
-                  events={filteredAndSortedEvents}
-                  onEventClick={handleEventClick}
-                  onEditEvent={handleEditEvent}
-                  onDeleteEvent={handleDeleteEvent}
-                  getEventStatus={getEventStatus}
-                />
-              )}
-            </>
+            <div className="space-y-8">
+              {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
+                <div key={monthYear} className="space-y-4">
+                  <div className="border-b border-border pb-2">
+                    <h2 className="text-xl font-semibold text-foreground">{monthYear}</h2>
+                    <p className="text-sm text-muted-foreground">{monthEvents.length} event{monthEvents.length !== 1 ? 's' : ''}</p>
+                  </div>
+                  
+                  {viewMode === "grid" ? (
+                    <EventsGrid
+                      events={monthEvents}
+                      onEventClick={handleEventClick}
+                      onEditEvent={handleEditEvent}
+                      onDeleteEvent={handleDeleteEvent}
+                      getEventStatus={getEventStatus}
+                    />
+                  ) : (
+                    <EventsList
+                      events={monthEvents}
+                      onEventClick={handleEventClick}
+                      onEditEvent={handleEditEvent}
+                      onDeleteEvent={handleDeleteEvent}
+                      getEventStatus={getEventStatus}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>

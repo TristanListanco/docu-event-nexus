@@ -10,7 +10,8 @@ import {
   Camera,
   Edit,
   Trash2,
-  UserX
+  UserX,
+  ArrowLeft
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -125,6 +126,7 @@ export default function EventDetailsPage() {
             onClick={() => navigate("/events")}
             className="mt-4"
           >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Events
           </Button>
         </div>
@@ -155,17 +157,19 @@ export default function EventDetailsPage() {
     <div className="flex flex-col h-full">
       <div className="border-b">
         <div className="flex items-center justify-between p-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
-            <p className="text-muted-foreground">{event.logId}</p>
-          </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-4">
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => navigate("/events")}
+              className="p-2"
             >
-              Back to Events
+              <ArrowLeft className="h-4 w-4" />
             </Button>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
+              <p className="text-muted-foreground">{event.logId}</p>
+            </div>
           </div>
         </div>
       </div>

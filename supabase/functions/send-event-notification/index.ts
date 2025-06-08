@@ -35,21 +35,28 @@ interface NotificationRequest {
   };
 }
 
-// Function to generate .ics calendar file content
+// Function to generate .ics calendar file content with Philippine Standard Time (UTC+8)
 function generateICSContent(event: NotificationRequest): string {
-  const startDateTime = new Date(`${event.eventDate}T${event.startTime}`);
-  const endDateTime = new Date(`${event.eventDate}T${event.endTime}`);
+  // Create dates in Philippine Standard Time (UTC+8)
+  const startDateTime = new Date(`${event.eventDate}T${event.startTime}+08:00`);
+  const endDateTime = new Date(`${event.eventDate}T${event.endTime}+08:00`);
   
-  // Format dates for ICS (YYYYMMDDTHHMMSSZ)
+  // Format dates for ICS (YYYYMMDDTHHMMSS) with timezone
   const formatDateForICS = (date: Date) => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}${month}${day}T${hours}${minutes}${seconds}`;
   };
   
   const startFormatted = formatDateForICS(startDateTime);
   const endFormatted = formatDateForICS(endDateTime);
   const now = formatDateForICS(new Date());
   
-  // Calculate alarm times (6 hours and 1 hour before)
+  // Calculate alarm times (6 hours and 1 hour before) in Philippine time
   const alarm6HoursBefore = new Date(startDateTime.getTime() - (6 * 60 * 60 * 1000));
   const alarm1HourBefore = new Date(startDateTime.getTime() - (1 * 60 * 60 * 1000));
   
@@ -58,11 +65,20 @@ function generateICSContent(event: NotificationRequest): string {
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Event Management System//Event Notification//EN
+BEGIN:VTIMEZONE
+TZID:Asia/Manila
+BEGIN:STANDARD
+DTSTART:19701101T000000
+TZOFFSETFROM:+0800
+TZOFFSETTO:+0800
+TZNAME:PST
+END:STANDARD
+END:VTIMEZONE
 BEGIN:VEVENT
 UID:${event.eventId}@admin-ccsdocu.com
-DTSTAMP:${now}
-DTSTART:${startFormatted}
-DTEND:${endFormatted}
+DTSTAMP:${now}Z
+DTSTART;TZID=Asia/Manila:${startFormatted}
+DTEND;TZID=Asia/Manila:${endFormatted}
 SUMMARY:${event.eventName}
 DESCRIPTION:${event.isUpdate ? 'Event details have been updated.' : 'You have been assigned to this event.'} Event: ${event.eventName}${organizerInfo}
 LOCATION:${event.location}
@@ -125,7 +141,7 @@ async function sendEmailWithNodemailer(to: string, subject: string, html: string
   }
 
   // Create transporter using Nodemailer
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: 'gmail',
     auth: {
       user: gmailUser,
@@ -230,7 +246,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${organizerSection}
             <p><strong>Role:</strong> ${staff.role}</p>
             <p><strong>Date:</strong> ${eventDate}</p>
-            <p><strong>Time:</strong> ${notificationData.startTime} - ${notificationData.endTime}</p>
+            <p><strong>Time:</strong> ${notificationData.startTime} - ${notificationData.endTime} (Philippine Standard Time)</p>
             <p><strong>Location:</strong> ${notificationData.location}</p>
           </div>
           
@@ -243,7 +259,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
             <p style="margin: 0;"><strong>📅 Calendar File Attached</strong></p>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event.</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event (Philippine Standard Time).</p>
           </div>
           
           <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
