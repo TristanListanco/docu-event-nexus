@@ -1,12 +1,16 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, RefreshCw, Edit, Trash2, Video, Camera, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog"; 
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog"; 
+import StaffViewControls from "@/components/staff/staff-view-controls";
+import StaffListItem from "@/components/staff/staff-list-item";
 import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember } from "@/types/models";
@@ -20,6 +24,9 @@ import { isWithinInterval, parseISO } from "date-fns";
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const { staff, loading, loadStaff } = useStaff();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -41,11 +48,43 @@ export default function StaffPage() {
     });
   };
 
-  // Filter staff based on search query and role
-  const filteredStaff = staff.filter(member => 
+  // Sort staff members
+  const sortStaff = (staffList: StaffMember[]) => {
+    return [...staffList].sort((a, b) => {
+      let aValue = '';
+      let bValue = '';
+      
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'role':
+          aValue = a.role.toLowerCase();
+          bValue = b.role.toLowerCase();
+          break;
+        case 'email':
+          aValue = (a.email || '').toLowerCase();
+          bValue = (b.email || '').toLowerCase();
+          break;
+        default:
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
+    });
+  };
+
+  // Filter and sort staff based on search query and role
+  const filteredStaff = sortStaff(staff.filter(member => 
     member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  ));
   
   const videographers = filteredStaff.filter(member => member.role === "Videographer");
   const photographers = filteredStaff.filter(member => member.role === "Photographer");
@@ -58,6 +97,46 @@ export default function StaffPage() {
   const handleDeleteStaff = (staff: StaffMember) => {
     setSelectedStaff(staff);
     setDeleteDialogOpen(true);
+  };
+
+  const renderStaffContent = (staffList: StaffMember[]) => {
+    if (staffList.length === 0) {
+      return <EmptyStateMessage searchQuery={searchQuery} />;
+    }
+
+    if (viewMode === 'list') {
+      return (
+        <ScrollArea className="h-[calc(100vh-300px)]">
+          <div className="space-y-3">
+            {staffList.map(member => (
+              <StaffListItem
+                key={member.id}
+                staff={member}
+                onEdit={() => handleEditStaff(member)}
+                onDelete={() => handleDeleteStaff(member)}
+                isOnLeave={isStaffOnLeave(member)}
+              />
+            ))}
+          </div>
+        </ScrollArea>
+      );
+    }
+
+    return (
+      <ScrollArea className="h-[calc(100vh-300px)]">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {staffList.map(member => (
+            <StaffCard 
+              key={member.id} 
+              staff={member} 
+              onEdit={() => handleEditStaff(member)}
+              onDelete={() => handleDeleteStaff(member)}
+              isOnLeave={isStaffOnLeave(member)}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+    );
   };
 
   return (
@@ -78,13 +157,21 @@ export default function StaffPage() {
         </div>
       </div>
       
-      <div className="p-4 flex flex-col space-y-4">
-        <div className="flex items-center space-x-2">
+      <div className="p-4 flex flex-col space-y-4 flex-1">
+        <div className="flex items-center justify-between space-x-4">
           <Input
             placeholder="Search staff..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="max-w-sm"
+          />
+          <StaffViewControls
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
           />
         </div>
 
@@ -96,62 +183,20 @@ export default function StaffPage() {
             </div>
           </div>
         ) : staff.length > 0 ? (
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs defaultValue="all" className="w-full flex-1 flex flex-col">
             <TabsList>
               <TabsTrigger value="all">All Staff ({filteredStaff.length})</TabsTrigger>
               <TabsTrigger value="videographers">Videographers ({videographers.length})</TabsTrigger>
               <TabsTrigger value="photographers">Photographers ({photographers.length})</TabsTrigger>
             </TabsList>
-            <TabsContent value="all" className="mt-4">
-              {filteredStaff.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredStaff.map(member => (
-                    <StaffCard 
-                      key={member.id} 
-                      staff={member} 
-                      onEdit={() => handleEditStaff(member)}
-                      onDelete={() => handleDeleteStaff(member)}
-                      isOnLeave={isStaffOnLeave(member)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyStateMessage searchQuery={searchQuery} />
-              )}
+            <TabsContent value="all" className="mt-4 flex-1">
+              {renderStaffContent(filteredStaff)}
             </TabsContent>
-            <TabsContent value="videographers" className="mt-4">
-              {videographers.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {videographers.map(member => (
-                    <StaffCard 
-                      key={member.id} 
-                      staff={member} 
-                      onEdit={() => handleEditStaff(member)}
-                      onDelete={() => handleDeleteStaff(member)}
-                      isOnLeave={isStaffOnLeave(member)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyStateMessage searchQuery={searchQuery} role="Videographers" />
-              )}
+            <TabsContent value="videographers" className="mt-4 flex-1">
+              {renderStaffContent(videographers)}
             </TabsContent>
-            <TabsContent value="photographers" className="mt-4">
-              {photographers.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {photographers.map(member => (
-                    <StaffCard 
-                      key={member.id} 
-                      staff={member} 
-                      onEdit={() => handleEditStaff(member)}
-                      onDelete={() => handleDeleteStaff(member)}
-                      isOnLeave={isStaffOnLeave(member)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyStateMessage searchQuery={searchQuery} role="Photographers" />
-              )}
+            <TabsContent value="photographers" className="mt-4 flex-1">
+              {renderStaffContent(photographers)}
             </TabsContent>
           </Tabs>
         ) : (
