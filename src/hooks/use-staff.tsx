@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
 import { StaffMember, Schedule, StaffRole, LeaveDate } from "@/types/models";
 import { toast } from "./use-toast";
-import { isWithinInterval, parseISO } from "date-fns";
+import { isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
 
 export function useStaff() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -375,53 +375,62 @@ export function useStaff() {
   };
 
   // Enhanced function to check for schedule conflicts and leave dates
-  const getAvailableStaff = (date: string, startTime: string, endTime: string, ignoreScheduleConflicts: boolean = false) => {
-    // Helper function to check if staff is on leave for the given date
-    const isStaffOnLeave = (staff: StaffMember, eventDate: string) => {
-      if (!staff.leaveDates || staff.leaveDates.length === 0) return false;
-      
-      const eventDateObj = parseISO(eventDate);
-      
-      return staff.leaveDates.some(leave => {
-        const startDate = parseISO(leave.startDate);
-        const endDate = parseISO(leave.endDate);
-        endDate.setHours(23, 59, 59, 999); // End of day
-        
-        return isWithinInterval(eventDateObj, { start: startDate, end: endDate });
+  const getAvailableStaff = useCallback((
+    eventDate: string,
+    startTime: string,
+    endTime: string,
+    ignoreScheduleConflicts: boolean = false
+  ) => {
+    console.log('Getting available staff for:', { eventDate, startTime, endTime, ignoreScheduleConflicts });
+    
+    const filteredStaff = staff.filter(member => {
+      // First check if staff is on leave - this always excludes them
+      const isOnLeave = member.leaveDates?.some(leave => {
+        const leaveStart = parseISO(leave.startDate);
+        const leaveEnd = parseISO(leave.endDate);
+        const eventDateObj = parseISO(eventDate);
+        return isWithinInterval(eventDateObj, { start: leaveStart, end: leaveEnd });
       });
-    };
+      
+      if (isOnLeave) {
+        console.log(`${member.name} is on leave, excluding from available staff`);
+        return false;
+      }
 
-    // Filter out staff members who are on leave
-    const staffNotOnLeave = staff.filter(member => !isStaffOnLeave(member, date));
+      // If ignoring schedule conflicts, staff is available (since they're not on leave)
+      if (ignoreScheduleConflicts) {
+        return true;
+      }
+
+      // Check schedule conflicts for staff not on leave
+      const eventDay = getDay(parseISO(eventDate));
+      
+      const hasScheduleConflict = member.schedules.some(schedule => {
+        if (schedule.dayOfWeek !== eventDay) return false;
+        
+        const scheduleStart = parseISO(`${eventDate}T${schedule.startTime}`);
+        const scheduleEnd = parseISO(`${eventDate}T${schedule.endTime}`);
+        const eventStart = parseISO(`${eventDate}T${startTime}`);
+        const eventEnd = parseISO(`${eventDate}T${endTime}`);
+        
+        return (
+          isBefore(eventStart, scheduleEnd) && 
+          isAfter(eventEnd, scheduleStart)
+        );
+      });
+      
+      return !hasScheduleConflict;
+    });
+
+    const videographers = filteredStaff.filter(member => member.role === 'Videographer');
+    const photographers = filteredStaff.filter(member => member.role === 'Photographer');
     
-    // If ignoring conflicts, return all staff who are not on leave
-    if (ignoreScheduleConflicts) {
-      return {
-        videographers: staffNotOnLeave.filter(member => member.role === "Videographer"),
-        photographers: staffNotOnLeave.filter(member => member.role === "Photographer")
-      };
-    }
+    console.log('Available videographers:', videographers.map(v => v.name));
+    console.log('Available photographers:', photographers.map(p => p.name));
     
-    // Convert event times to numbers for comparison (e.g., "09:00" -> 9.0, "14:30" -> 14.5)
-    const eventStartHour = parseTimeToDecimal(startTime);
-    const eventEndHour = parseTimeToDecimal(endTime);
-    const dayOfWeek = new Date(date).getDay(); // 0 for Sunday, 1 for Monday, etc.
-    
-    // Filter staff based on schedule availability and leave status
-    const availableVideographers = staffNotOnLeave
-      .filter(member => member.role === "Videographer")
-      .filter(member => isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour));
-    
-    const availablePhotographers = staffNotOnLeave
-      .filter(member => member.role === "Photographer")
-      .filter(member => isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour));
-    
-    return {
-      videographers: availableVideographers,
-      photographers: availablePhotographers
-    };
-  };
-  
+    return { videographers, photographers };
+  }, [staff]);
+
   // Helper to parse time string to decimal hour (for easier comparison)
   const parseTimeToDecimal = (timeStr: string): number => {
     const [hours, minutes] = timeStr.split(':').map(Number);

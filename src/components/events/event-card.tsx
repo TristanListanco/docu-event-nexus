@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar, Edit, Trash2 } from "lucide-react";
+import { Calendar, Trash2, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { Event } from "@/types/models";
 
@@ -42,13 +42,12 @@ export default function EventCard({
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <span className="sr-only">Open menu</span>
-                  <Edit className="h-4 w-4" />
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => onEditEvent(e, event)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  <span>Edit Event</span>
+                  Edit Event
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => onDeleteEvent(e, event)}
@@ -69,7 +68,7 @@ export default function EventCard({
       <CardContent>
         <p className="text-sm">📍 {event.location}</p>
         <p className="text-sm">🕒 {event.startTime} - {event.endTime}</p>
-        <div className="flex justify-between mt-2">
+        <div className="flex justify-start mt-2">
           <Badge className={`
             ${dynamicStatus === 'Upcoming' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 
              dynamicStatus === 'On Going' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100' :
@@ -78,9 +77,6 @@ export default function EventCard({
           `}>
             {dynamicStatus}
           </Badge>
-          <span className="text-xs text-muted-foreground">
-            Log ID: {event.logId}
-          </span>
         </div>
       </CardContent>
     </Card>
