@@ -53,20 +53,54 @@ export default function EventListItem({
       onClick={() => onEventClick(event)}
     >
       <CardContent className="p-4">
-        <div className="flex items-center justify-between">
+        {/* Mobile Layout */}
+        <div className="flex flex-col space-y-3 sm:hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium truncate">{event.name}</h3>
+              </div>
+            </div>
+            <Badge className={getStatusBadgeColor(dynamicStatus)}>
+              {dynamicStatus}
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
+              {event.type}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <span className="flex items-center">📍 <span className="ml-1 truncate">{event.location}</span></span>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden sm:flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
             <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0">
               <Calendar className="h-4 w-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 mb-1">
                 <h3 className="font-medium truncate">{event.name}</h3>
                 <Badge variant="outline" className="bg-primary/10 text-primary text-xs flex-shrink-0">
                   {event.type}
                 </Badge>
               </div>
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1 flex-wrap">
-                <span className="flex items-center">📍 <span className="ml-1 truncate">{event.location}</span></span>
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground flex-wrap gap-y-1">
+                <span className="flex items-center">📍 <span className="ml-1 truncate max-w-[200px] lg:max-w-none">{event.location}</span></span>
                 <span className="flex-shrink-0">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
                 <span className="flex-shrink-0">{event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
               </div>

@@ -20,7 +20,7 @@ export default function EventsList({
 }: EventsListProps) {
   return (
     <ScrollArea className="h-[calc(100vh-300px)]">
-      <div className="space-y-3">
+      <div className="space-y-3 px-1">
         {events.map(event => (
           <EventListItem
             key={event.id}
