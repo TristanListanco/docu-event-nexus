@@ -1,31 +1,16 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Plus, RefreshCw, Edit, Trash2 } from "lucide-react";
-import { List, LayoutGrid } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
-import { EventType, Event } from "@/types/models";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue 
-} from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Event } from "@/types/models";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import EventEditDialog from "@/components/events/event-edit-dialog";
+import EventsHeader from "@/components/events/events-header";
+import EventsFilters from "@/components/events/events-filters";
+import EventsGrid from "@/components/events/events-grid";
+import EventsList from "@/components/events/events-list";
+import EventsEmptyState from "@/components/events/events-empty-state";
 
 type ViewMode = "card" | "list";
 type SortOption = "name" | "date" | "status";
@@ -39,6 +24,22 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Function to get dynamic event status based on current time
+  const getEventStatus = (event: Event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    const startTime = new Date(`${event.date}T${event.startTime}`);
+    const endTime = new Date(`${event.date}T${event.endTime}`);
+
+    if (now > endTime) {
+      return "Elapsed";
+    } else if (now >= startTime && now <= endTime) {
+      return "On Going";
+    } else {
+      return event.status; // Keep original status for future events
+    }
+  };
 
   // Filter and sort events
   const filteredAndSortedEvents = events
@@ -78,213 +79,19 @@ export default function EventsPage() {
     setDeleteDialogOpen(true);
   };
 
-  // Function to get dynamic event status based on current time
-  const getEventStatus = (event: Event) => {
-    const now = new Date();
-    const eventDate = new Date(event.date);
-    const startTime = new Date(`${event.date}T${event.startTime}`);
-    const endTime = new Date(`${event.date}T${event.endTime}`);
-
-    if (now > endTime) {
-      return "Elapsed";
-    } else if (now >= startTime && now <= endTime) {
-      return "On Going";
-    } else {
-      return event.status; // Keep original status for future events
-    }
-  };
-
-  const renderCardView = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-      {filteredAndSortedEvents.map(event => {
-        const dynamicStatus = getEventStatus(event);
-        return (
-          <Card 
-            key={event.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleEventClick(event)}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex justify-between">
-                <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex space-x-1">
-                  <Badge variant="outline" className="bg-primary/10 text-primary">
-                    {event.type}
-                  </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <span className="sr-only">Open menu</span>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => handleEditEvent(e, event)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span>Edit Event</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={(e) => handleDeleteEvent(e, event)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete Event</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-              <CardTitle className="mt-2">{event.name}</CardTitle>
-              <p className="text-muted-foreground text-sm">
-                {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm">📍 {event.location}</p>
-              <p className="text-sm">🕒 {event.startTime} - {event.endTime}</p>
-              <div className="flex justify-between mt-2">
-                <Badge className={`
-                  ${dynamicStatus === 'Upcoming' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 
-                   dynamicStatus === 'On Going' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100' :
-                   dynamicStatus === 'Elapsed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' :
-                   'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'}
-                `}>
-                  {dynamicStatus}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  Log ID: {event.logId}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
-  const renderListView = () => (
-    <div className="space-y-2">
-      {filteredAndSortedEvents.map(event => {
-        const dynamicStatus = getEventStatus(event);
-        return (
-          <Card 
-            key={event.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleEventClick(event)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center">
-                    <Calendar className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-medium">{event.name}</h3>
-                      <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
-                        {event.type}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mt-1">
-                      <span>📍 {event.location}</span>
-                      <span>🕒 {event.startTime} - {event.endTime}</span>
-                      <span>{event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className={`
-                    ${dynamicStatus === 'Upcoming' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 
-                     dynamicStatus === 'On Going' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100' :
-                     dynamicStatus === 'Elapsed' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' :
-                     'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'}
-                  `}>
-                    {dynamicStatus}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    Log ID: {event.logId}
-                  </span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <span className="sr-only">Open menu</span>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={(e) => handleEditEvent(e, event)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        <span>Edit Event</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={(e) => handleDeleteEvent(e, event)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete Event</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b">
-        <div className="flex items-center justify-between p-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-            <p className="text-muted-foreground">Manage your scheduled events</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => loadEvents()} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button onClick={() => navigate("/events/new")}>
-              <Plus className="mr-2 h-4 w-4" /> Add Event
-            </Button>
-          </div>
-        </div>
-      </div>
+      <EventsHeader loading={loading} onRefresh={loadEvents} />
       
       <div className="p-4 flex flex-col space-y-4">
-        <div className="flex items-center justify-between space-x-4">
-          <div className="flex items-center space-x-4 flex-1">
-            <Input
-              placeholder="Search events..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
-            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Sort by Date</SelectItem>
-                <SelectItem value="name">Sort by Name</SelectItem>
-                <SelectItem value="status">Sort by Status</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(value: ViewMode) => value && setViewMode(value)}>
-            <ToggleGroupItem value="card" aria-label="Card view">
-              <LayoutGrid className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="List view">
-              <List className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </div>
+        <EventsFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
         
         {loading ? (
           <div className="flex items-center justify-center p-12">
@@ -294,22 +101,25 @@ export default function EventsPage() {
             </div>
           </div>
         ) : filteredAndSortedEvents.length > 0 ? (
-          viewMode === "card" ? renderCardView() : renderListView()
+          viewMode === "card" ? (
+            <EventsGrid
+              events={filteredAndSortedEvents}
+              onEventClick={handleEventClick}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={handleDeleteEvent}
+              getEventStatus={getEventStatus}
+            />
+          ) : (
+            <EventsList
+              events={filteredAndSortedEvents}
+              onEventClick={handleEventClick}
+              onEditEvent={handleEditEvent}
+              onDeleteEvent={handleDeleteEvent}
+              getEventStatus={getEventStatus}
+            />
+          )
         ) : (
-          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg">
-            <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No events found</h3>
-            <p className="text-muted-foreground text-center mt-2">
-              {searchQuery ? 
-                "No events match your search criteria. Try a different search term." : 
-                "You haven't created any events yet. Click the 'Add Event' button to get started."}
-            </p>
-            {!searchQuery && (
-              <Button onClick={() => navigate("/events/new")} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" /> Create Your First Event
-              </Button>
-            )}
-          </div>
+          <EventsEmptyState searchQuery={searchQuery} />
         )}
       </div>
 
