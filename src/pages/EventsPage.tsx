@@ -16,23 +16,20 @@ export default function EventsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterType, setFilterType] = useState<EventType | "All">("All");
-  const [filterStatus, setFilterStatus] = useState<EventStatus | "All">("All");
-  const [sortBy, setSortBy] = useState<"date" | "name" | "type">("date");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
 
   // Filter and sort events based on selected criteria
   const filteredAndSortedEvents = events
     .filter((event) => {
-      if (filterType !== "All" && event.type !== filterType) return false;
-      if (filterStatus !== "All" && event.status !== filterStatus) return false;
-      return true;
+      return event.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name);
-        case "type":
-          return a.type.localeCompare(b.type);
+        case "status":
+          return a.status.localeCompare(b.status);
         case "date":
         default:
           return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -47,6 +44,36 @@ export default function EventsPage() {
   const handleDelete = (event: Event) => {
     setSelectedEvent(event);
     setDeleteDialogOpen(true);
+  };
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    handleEdit(event);
+  };
+
+  const handleDeleteEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    handleDelete(event);
+  };
+
+  const getEventStatus = (event: Event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    const eventStart = new Date(`${event.date}T${event.startTime}`);
+    const eventEnd = new Date(`${event.date}T${event.endTime}`);
+
+    if (now < eventStart) {
+      return "Upcoming";
+    } else if (now >= eventStart && now <= eventEnd) {
+      return "On Going";
+    } else {
+      return "Elapsed";
+    }
   };
 
   const handleEventUpdated = () => {
@@ -72,31 +99,33 @@ export default function EventsPage() {
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto p-6">
           <EventsFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            filterType={filterType}
-            onFilterTypeChange={setFilterType}
-            filterStatus={filterStatus}
-            onFilterStatusChange={setFilterStatus}
-            sortBy={sortBy}
-            onSortByChange={setSortBy}
           />
 
           {events.length === 0 ? (
-            <EventsEmptyState searchQuery="" />
+            <EventsEmptyState searchQuery={searchQuery} />
           ) : (
             <>
               {viewMode === "grid" ? (
                 <EventsGrid
                   events={filteredAndSortedEvents}
-                  onEventEdit={handleEdit}
-                  onEventDelete={handleDelete}
+                  onEventClick={handleEventClick}
+                  onEditEvent={handleEditEvent}
+                  onDeleteEvent={handleDeleteEvent}
+                  getEventStatus={getEventStatus}
                 />
               ) : (
                 <EventsList
                   events={filteredAndSortedEvents}
-                  onEventEdit={handleEdit}
-                  onEventDelete={handleDelete}
+                  onEventClick={handleEventClick}
+                  onEditEvent={handleEditEvent}
+                  onDeleteEvent={handleDeleteEvent}
+                  getEventStatus={getEventStatus}
                 />
               )}
             </>

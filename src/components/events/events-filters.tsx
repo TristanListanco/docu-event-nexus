@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { List, LayoutGrid } from "lucide-react";
 
-type ViewMode = "card" | "list";
+type ViewMode = "grid" | "list";
 type SortOption = "name" | "date" | "status";
 
 interface EventsFiltersProps {
@@ -25,7 +25,7 @@ export default function EventsFilters({
   onViewModeChange
 }: EventsFiltersProps) {
   return (
-    <div className="flex items-center justify-between space-x-4">
+    <div className="flex items-center justify-between space-x-4 mb-6">
       <div className="flex items-center space-x-4 flex-1">
         <Input
           placeholder="Search events..."
@@ -45,7 +45,7 @@ export default function EventsFilters({
         </Select>
       </div>
       <ToggleGroup type="single" value={viewMode} onValueChange={(value: ViewMode) => value && onViewModeChange(value)}>
-        <ToggleGroupItem value="card" aria-label="Card view">
+        <ToggleGroupItem value="grid" aria-label="Grid view">
           <LayoutGrid className="h-4 w-4" />
         </ToggleGroupItem>
         <ToggleGroupItem value="list" aria-label="List view">

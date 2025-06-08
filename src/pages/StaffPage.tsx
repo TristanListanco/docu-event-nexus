@@ -16,14 +16,26 @@ export default function StaffPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "card">("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState<"All" | "Photographer" | "Videographer">("All");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // Filter staff based on search and role
-  const filteredStaff = staff.filter((member) => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = filterRole === "All" || member.roles?.includes(filterRole as any);
-    return matchesSearch && matchesRole;
+  // Sort staff based on selected criteria
+  const sortedStaff = staff.sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case "name":
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case "role":
+        comparison = a.roles.join(", ").localeCompare(b.roles.join(", "));
+        break;
+      case "email":
+        comparison = (a.email || "").localeCompare(b.email || "");
+        break;
+      default:
+        comparison = 0;
+    }
+    return sortOrder === "asc" ? comparison : -comparison;
   });
 
   const handleEdit = (staffMember: StaffMember) => {
@@ -38,6 +50,14 @@ export default function StaffPage() {
 
   const handleStaffUpdated = () => {
     // Staff list will auto-refresh through the hook
+  };
+
+  // Check if staff member is on leave today
+  const isStaffOnLeave = (staffMember: StaffMember) => {
+    const today = new Date().toISOString().split('T')[0];
+    return staffMember.leaveDates.some(leave => 
+      today >= leave.startDate && today <= leave.endDate
+    );
   };
 
   if (loading) {
@@ -57,24 +77,25 @@ export default function StaffPage() {
           <StaffViewControls
             viewMode={viewMode}
             onViewModeChange={setViewMode}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            filterRole={filterRole}
-            onFilterRoleChange={setFilterRole}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
           />
 
           <div className="space-y-4">
-            {filteredStaff.map((member) => (
+            {sortedStaff.map((member) => (
               <StaffListItem
                 key={member.id}
                 staff={member}
                 onEdit={() => handleEdit(member)}
                 onDelete={() => handleDelete(member)}
+                isOnLeave={isStaffOnLeave(member)}
               />
             ))}
           </div>
 
-          {filteredStaff.length === 0 && (
+          {sortedStaff.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No staff members found.</p>
             </div>
