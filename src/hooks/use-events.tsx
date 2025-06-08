@@ -50,28 +50,50 @@ export function useEvents() {
       // We need to fetch staff assignments separately and filter by role
       const events: Event[] = await Promise.all(
         data.map(async (event) => {
-          // Query for all staff assignments for this event
-          const { data: allAssignments, error: assignmentsError } = await supabase
+          // Get all staff assignments for this event
+          const { data: assignments, error: assignmentsError } = await supabase
             .from("staff_assignments")
-            .select(`
-              staff_id, 
-              attendance_status,
-              staff_members!inner(role)
-            `)
+            .select("staff_id, attendance_status")
             .eq("event_id", event.id);
 
           if (assignmentsError) {
             console.error("Error fetching staff assignments:", assignmentsError);
           }
 
-          // Filter assignments by role
-          const videographerAssignments = allAssignments?.filter(a => 
-            a.staff_members?.role === "Videographer"
-          ) || [];
-          
-          const photographerAssignments = allAssignments?.filter(a => 
-            a.staff_members?.role === "Photographer"
-          ) || [];
+          const videographers: StaffAssignment[] = [];
+          const photographers: StaffAssignment[] = [];
+
+          // For each assignment, check the staff member's roles
+          if (assignments) {
+            for (const assignment of assignments) {
+              const { data: staffRoles, error: rolesError } = await supabase
+                .from("staff_roles")
+                .select("role")
+                .eq("staff_id", assignment.staff_id);
+
+              if (rolesError) {
+                console.error("Error fetching staff roles:", rolesError);
+                continue;
+              }
+
+              const hasVideographerRole = staffRoles?.some(r => r.role === "Videographer");
+              const hasPhotographerRole = staffRoles?.some(r => r.role === "Photographer");
+
+              if (hasVideographerRole) {
+                videographers.push({
+                  staffId: assignment.staff_id,
+                  attendanceStatus: assignment.attendance_status as AttendanceStatus
+                });
+              }
+
+              if (hasPhotographerRole) {
+                photographers.push({
+                  staffId: assignment.staff_id,
+                  attendanceStatus: assignment.attendance_status as AttendanceStatus
+                });
+              }
+            }
+          }
 
           return {
             id: event.id,
@@ -83,14 +105,8 @@ export function useEvents() {
             location: event.location,
             type: event.type as EventType,
             status: event.status as EventStatus,
-            videographers: videographerAssignments.map(v => ({ 
-              staffId: v.staff_id,
-              attendanceStatus: v.attendance_status as AttendanceStatus
-            })),
-            photographers: photographerAssignments.map(p => ({ 
-              staffId: p.staff_id,
-              attendanceStatus: p.attendance_status as AttendanceStatus
-            })),
+            videographers,
+            photographers,
             ignoreScheduleConflicts: event.ignore_schedule_conflicts,
             isBigEvent: event.is_big_event,
             bigEventId: event.big_event_id
@@ -192,7 +208,7 @@ export function useEvents() {
           // Get staff details for email notifications
           const { data: staffData, error: staffError } = await supabase
             .from("staff_members")
-            .select("id, name, email, role")
+            .select("id, name, email")
             .in("id", allAssignedStaffIds);
 
           if (staffError) {
@@ -211,8 +227,7 @@ export function useEvents() {
                 assignedStaff: staffData.map(staff => ({
                   id: staff.id,
                   name: staff.name,
-                  email: staff.email,
-                  role: staff.role
+                  email: staff.email
                 }))
               }
             });
@@ -330,28 +345,50 @@ export function useEvents() {
         return null;
       }
 
-      // Fetch staff assignments with role information
-      const { data: allAssignments, error: assignmentsError } = await supabase
+      // Get all staff assignments for this event
+      const { data: assignments, error: assignmentsError } = await supabase
         .from("staff_assignments")
-        .select(`
-          staff_id, 
-          attendance_status,
-          staff_members!inner(role)
-        `)
+        .select("staff_id, attendance_status")
         .eq("event_id", eventId);
 
       if (assignmentsError) {
         console.error("Error fetching staff assignments:", assignmentsError);
       }
 
-      // Filter assignments by role
-      const videographerAssignments = allAssignments?.filter(a => 
-        a.staff_members?.role === "Videographer"
-      ) || [];
-      
-      const photographerAssignments = allAssignments?.filter(a => 
-        a.staff_members?.role === "Photographer"
-      ) || [];
+      const videographers: StaffAssignment[] = [];
+      const photographers: StaffAssignment[] = [];
+
+      // For each assignment, check the staff member's roles
+      if (assignments) {
+        for (const assignment of assignments) {
+          const { data: staffRoles, error: rolesError } = await supabase
+            .from("staff_roles")
+            .select("role")
+            .eq("staff_id", assignment.staff_id);
+
+          if (rolesError) {
+            console.error("Error fetching staff roles:", rolesError);
+            continue;
+          }
+
+          const hasVideographerRole = staffRoles?.some(r => r.role === "Videographer");
+          const hasPhotographerRole = staffRoles?.some(r => r.role === "Photographer");
+
+          if (hasVideographerRole) {
+            videographers.push({
+              staffId: assignment.staff_id,
+              attendanceStatus: assignment.attendance_status as AttendanceStatus
+            });
+          }
+
+          if (hasPhotographerRole) {
+            photographers.push({
+              staffId: assignment.staff_id,
+              attendanceStatus: assignment.attendance_status as AttendanceStatus
+            });
+          }
+        }
+      }
 
       const event: Event = {
         id: data.id,
@@ -363,14 +400,8 @@ export function useEvents() {
         location: data.location,
         type: data.type as EventType,
         status: data.status as EventStatus,
-        videographers: videographerAssignments.map(v => ({ 
-          staffId: v.staff_id,
-          attendanceStatus: v.attendance_status as AttendanceStatus
-        })),
-        photographers: photographerAssignments.map(p => ({ 
-          staffId: p.staff_id,
-          attendanceStatus: p.attendance_status as AttendanceStatus
-        })),
+        videographers,
+        photographers,
         ignoreScheduleConflicts: data.ignore_schedule_conflicts,
         isBigEvent: data.is_big_event,
         bigEventId: data.big_event_id
