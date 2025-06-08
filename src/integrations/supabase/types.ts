@@ -92,6 +92,33 @@ export type Database = {
           },
         ]
       }
+      leave_dates: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          staff_id: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          staff_id: string
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          staff_id?: string
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

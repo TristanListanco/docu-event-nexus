@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, X, Plus } from "lucide-react";
-import { format, isAfter, isBefore, isValid } from "date-fns";
+import { format, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LeaveDate } from "@/types/models";
 
@@ -24,14 +24,18 @@ export default function LeaveDatesManager({ leaveDates, onLeaveDatesChange }: Le
     if (!startDate || !endDate) return;
     
     // Ensure start date is before or equal to end date
+    let finalStartDate = startDate;
+    let finalEndDate = endDate;
+    
     if (isAfter(startDate, endDate)) {
-      [startDate, endDate] = [endDate, startDate];
+      finalStartDate = endDate;
+      finalEndDate = startDate;
     }
 
     const newLeaveDate: LeaveDate = {
       id: `temp-${Date.now()}`, // Temporary ID for new entries
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd")
+      startDate: format(finalStartDate, "yyyy-MM-dd"),
+      endDate: format(finalEndDate, "yyyy-MM-dd")
     };
 
     onLeaveDatesChange([...leaveDates, newLeaveDate]);

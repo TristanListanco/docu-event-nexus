@@ -42,8 +42,8 @@ export function useStaff() {
             console.error("Error loading schedules:", schedulesError.message);
           }
 
-          // Fetch leave dates (assuming we have a leave_dates table)
-          const { data: leaveDatesData, error: leaveDatesError } = await supabase
+          // Fetch leave dates - using any type to bypass TypeScript issues until types are updated
+          const { data: leaveDatesData, error: leaveDatesError } = await (supabase as any)
             .from("leave_dates")
             .select("*")
             .eq("staff_id", member.id);
@@ -66,7 +66,7 @@ export function useStaff() {
               endTime: schedule.end_time,
               subject: schedule.subject,
             })) as Schedule[] : [],
-            leaveDates: leaveDatesData ? leaveDatesData.map((leave) => ({
+            leaveDates: leaveDatesData ? leaveDatesData.map((leave: any) => ({
               id: leave.id,
               startDate: leave.start_date,
               endDate: leave.end_date,
@@ -251,7 +251,7 @@ export function useStaff() {
       // Handle leave dates if provided
       if (updates.leaveDates !== undefined) {
         // First, delete all existing leave dates for this staff member
-        const { error: deleteLeaveError } = await supabase
+        const { error: deleteLeaveError } = await (supabase as any)
           .from("leave_dates")
           .delete()
           .eq("staff_id", id);
@@ -269,7 +269,7 @@ export function useStaff() {
             end_date: leave.endDate,
           }));
 
-          const { error: insertLeaveError } = await supabase
+          const { error: insertLeaveError } = await (supabase as any)
             .from("leave_dates")
             .insert(leaveDatesToInsert);
 
@@ -316,7 +316,7 @@ export function useStaff() {
       }
 
       // Delete all leave dates for this staff member
-      const { error: leaveError } = await supabase
+      const { error: leaveError } = await (supabase as any)
         .from("leave_dates")
         .delete()
         .eq("staff_id", id);
