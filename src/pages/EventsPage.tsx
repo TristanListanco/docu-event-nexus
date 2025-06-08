@@ -22,19 +22,9 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
-
-  // Set default view mode based on device type
-  useEffect(() => {
-    if (isMobile) {
-      setViewMode("grid"); // Mobile default to grid (tile view)
-    } else {
-      setViewMode("list"); // Desktop/tablet default to list view
-    }
-  }, [isMobile]);
 
   const getEventStatus = (event: Event) => {
     const now = new Date();
@@ -140,8 +130,6 @@ export default function EventsPage() {
             onSearchChange={setSearchQuery}
             sortBy={sortBy}
             onSortChange={setSortBy}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
             filterBy={filterBy}
             onFilterChange={setFilterBy}
           />
@@ -157,7 +145,8 @@ export default function EventsPage() {
                     <p className="text-sm text-muted-foreground">{monthEvents.length} event{monthEvents.length !== 1 ? 's' : ''}</p>
                   </div>
                   
-                  {viewMode === "grid" ? (
+                  {/* Mobile uses grid view, desktop/tablet uses list view */}
+                  {isMobile ? (
                     <EventsGrid
                       events={monthEvents}
                       onEventClick={handleEventClick}

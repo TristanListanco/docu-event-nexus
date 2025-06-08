@@ -58,11 +58,6 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
               <h3 className="font-medium truncate">{name}</h3>
-              {roles.includes("Working Com") && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                  Working Com
-                </Badge>
-              )}
             </div>
             <div className="flex flex-col space-y-1">
               <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>
@@ -75,11 +70,18 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
             </div>
           </div>
           
-          {isOnLeave && (
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs flex-shrink-0">
-              On Leave
-            </Badge>
-          )}
+          <div className="flex flex-col space-y-1 flex-shrink-0">
+            {roles.includes("Working Com") && (
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                Working Com
+              </Badge>
+            )}
+            {isOnLeave && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                On Leave
+              </Badge>
+            )}
+          </div>
         </div>
         
         <DropdownMenu>
