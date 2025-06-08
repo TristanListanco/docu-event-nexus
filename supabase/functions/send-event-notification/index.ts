@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as nodemailer from "npm:nodemailer@6.9.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,8 +59,8 @@ END:VEVENT
 END:VCALENDAR`;
 }
 
-// Function to send email using Gmail SMTP
-async function sendEmailWithGmail(to: string, subject: string, html: string, icsContent?: string) {
+// Function to send email using Nodemailer with Gmail
+async function sendEmailWithNodemailer(to: string, subject: string, html: string, icsContent?: string) {
   const gmailUser = Deno.env.get("GMAIL_USER");
   const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
 
@@ -67,122 +68,43 @@ async function sendEmailWithGmail(to: string, subject: string, html: string, ics
     throw new Error("Gmail credentials not configured");
   }
 
-  // Create the email payload
-  const boundary = `boundary-${Date.now()}`;
-  let emailBody = `From: CCS Event Management <${gmailUser}>
-To: ${to}
-Subject: ${subject}
-MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="${boundary}"
+  // Create transporter using Nodemailer
+  const transporter = nodemailer.createTransporter({
+    service: 'gmail',
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+  });
 
---${boundary}
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
-${html}`;
+  // Prepare email options
+  const mailOptions: any = {
+    from: `"CCS Event Management" <${gmailUser}>`,
+    to: to,
+    subject: subject,
+    html: html,
+  };
 
   // Add ICS attachment if provided
   if (icsContent) {
-    const icsBase64 = btoa(icsContent);
-    emailBody += `
-
---${boundary}
-Content-Type: text/calendar; charset=UTF-8
-Content-Disposition: attachment; filename="event.ics"
-Content-Transfer-Encoding: base64
-
-${icsBase64}`;
+    mailOptions.attachments = [
+      {
+        filename: 'event.ics',
+        content: icsContent,
+        contentType: 'text/calendar',
+      },
+    ];
   }
 
-  emailBody += `
-
---${boundary}--`;
-
-  // Send email using Gmail SMTP
-  const response = await fetch("https://smtp.gmail.com:587", {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/plain",
-    },
-    body: emailBody,
-  });
-
-  // For Gmail SMTP, we'll use a different approach with nodemailer-like functionality
-  // Since we can't directly use nodemailer in Deno, we'll use the Gmail API
-  const emailData = {
-    to,
-    subject,
-    html,
-    attachments: icsContent ? [{
-      filename: "event.ics",
-      content: btoa(icsContent),
-      contentType: "text/calendar"
-    }] : undefined
-  };
-
-  // Use Gmail API to send email
-  const gmailApiResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${await getGmailAccessToken()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      raw: btoa(emailBody).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    }),
-  });
-
-  if (!gmailApiResponse.ok) {
-    const errorText = await gmailApiResponse.text();
-    throw new Error(`Gmail API error: ${errorText}`);
-  }
-
-  return await gmailApiResponse.json();
-}
-
-// Simple implementation for Gmail SMTP using basic auth
-async function sendEmailSimple(to: string, subject: string, html: string, icsContent?: string) {
-  const gmailUser = Deno.env.get("GMAIL_USER");
-  const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
-
-  if (!gmailUser || !gmailAppPassword) {
-    throw new Error("Gmail credentials not configured");
-  }
-
-  // Create a simple email message
-  const boundary = `boundary-${Date.now()}`;
-  let message = `From: "CCS Event Management" <${gmailUser}>
-To: ${to}
-Subject: ${subject}
-MIME-Version: 1.0
-Content-Type: multipart/mixed; boundary="${boundary}"
-
---${boundary}
-Content-Type: text/html; charset=UTF-8
-
-${html}`;
-
-  if (icsContent) {
-    const icsBase64 = btoa(icsContent);
-    message += `
-
---${boundary}
-Content-Type: text/calendar; name="event.ics"
-Content-Disposition: attachment; filename="event.ics"
-Content-Transfer-Encoding: base64
-
-${icsBase64}`;
-  }
-
-  message += `
-
---${boundary}--`;
-
-  // For now, we'll use a webhook service or direct SMTP connection
-  // This is a simplified version - in production you'd want proper SMTP handling
-  console.log("Email would be sent:", { to, subject, from: gmailUser });
+  // Send email
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`Email sent to ${to}:`, info.messageId);
   
-  return { success: true, messageId: `mock-${Date.now()}` };
+  return {
+    success: true,
+    messageId: info.messageId,
+    response: info.response,
+  };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -219,7 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
       day: 'numeric'
     });
 
-    // Send emails to all assigned staff using Gmail
+    // Send emails to all assigned staff using Nodemailer
     const emailPromises = notificationData.assignedStaff.map(async (staff) => {
       if (!staff.email) {
         console.log(`Skipping ${staff.name} - no email provided`);
@@ -257,7 +179,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       try {
-        const emailResponse = await sendEmailSimple(
+        const emailResponse = await sendEmailWithNodemailer(
           staff.email,
           `Event Assignment: ${notificationData.eventName}`,
           emailHtml,
