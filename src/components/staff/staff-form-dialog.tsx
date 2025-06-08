@@ -40,10 +40,31 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
   });
   
   const [subjectSchedules, setSubjectSchedules] = useState<SubjectSchedule[]>([]);
+  const [emailError, setEmailError] = useState("");
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      setEmailError("");
+      return true;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+      return false;
+    }
+    
+    setEmailError("");
+    return true;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    if (name === "email") {
+      validateEmail(value);
+    }
   };
 
   const handleRoleChange = (role: StaffRole, checked: boolean) => {
@@ -62,13 +83,17 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
       return; // Require at least one role
     }
     
+    if (formData.email && !validateEmail(formData.email)) {
+      return; // Don't submit if email is invalid
+    }
+    
     setLoading(true);
     
     try {
       const success = await addStaff({
         name: formData.name,
         roles: formData.roles,
-        email: formData.email,
+        email: formData.email || undefined,
         schedules: [],
         subjectSchedules: subjectSchedules,
         leaveDates: []
@@ -82,6 +107,7 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
           roles: []
         });
         setSubjectSchedules([]);
+        setEmailError("");
         
         // Call the onStaffAdded callback which should refresh the list and close the dialog
         if (onStaffAdded) {
@@ -133,15 +159,20 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
               <Label htmlFor="email" className="text-right">
                 Email
               </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="col-span-3"
-                placeholder="john.doe@example.com"
-              />
+              <div className="col-span-3">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={`w-full ${emailError ? "border-red-500" : ""}`}
+                  placeholder="john.doe@example.com"
+                />
+                {emailError && (
+                  <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">
@@ -177,7 +208,10 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || formData.roles.length === 0}>
+            <Button 
+              type="submit" 
+              disabled={loading || formData.roles.length === 0 || !!emailError}
+            >
               {loading ? "Adding..." : "Add Staff"}
             </Button>
           </DialogFooter>

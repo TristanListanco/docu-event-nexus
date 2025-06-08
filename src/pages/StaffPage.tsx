@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember } from "@/types/models";
@@ -17,25 +16,33 @@ export default function StaffPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Sort staff based on selected criteria
-  const sortedStaff = staff.sort((a, b) => {
-    let comparison = 0;
-    switch (sortBy) {
-      case "name":
-        comparison = a.name.localeCompare(b.name);
-        break;
-      case "role":
-        comparison = a.roles.join(", ").localeCompare(b.roles.join(", "));
-        break;
-      case "email":
-        comparison = (a.email || "").localeCompare(b.email || "");
-        break;
-      default:
-        comparison = 0;
-    }
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+  // Filter and sort staff based on search and selected criteria
+  const filteredAndSortedStaff = staff
+    .filter((member) => {
+      const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        member.roles.some(role => role.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "role":
+          comparison = a.roles.join(", ").localeCompare(b.roles.join(", "));
+          break;
+        case "email":
+          comparison = (a.email || "").localeCompare(b.email || "");
+          break;
+        default:
+          comparison = 0;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
   const handleEdit = (staffMember: StaffMember) => {
     setSelectedStaff(staffMember);
@@ -83,10 +90,12 @@ export default function StaffPage() {
             onSortByChange={setSortBy}
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
 
           <div className="space-y-4">
-            {sortedStaff.map((member) => (
+            {filteredAndSortedStaff.map((member) => (
               <StaffListItem
                 key={member.id}
                 staff={member}
@@ -97,9 +106,11 @@ export default function StaffPage() {
             ))}
           </div>
 
-          {sortedStaff.length === 0 && (
+          {filteredAndSortedStaff.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No staff members found.</p>
+              <p className="text-muted-foreground">
+                {searchQuery ? "No staff members found matching your search." : "No staff members found."}
+              </p>
             </div>
           )}
         </div>

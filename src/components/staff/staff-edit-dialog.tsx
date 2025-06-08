@@ -36,6 +36,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   
   const [leaveDates, setLeaveDates] = useState<LeaveDate[]>([]);
   const [subjectSchedules, setSubjectSchedules] = useState<SubjectSchedule[]>([]);
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     if (open && staff) {
@@ -59,12 +60,33 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       
       // Set subject schedules
       setSubjectSchedules(staff.subjectSchedules || []);
+      setEmailError("");
     }
   }, [staff, open]);
+
+  const validateEmail = (email: string) => {
+    if (!email) {
+      setEmailError("");
+      return true;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+      return false;
+    }
+    
+    setEmailError("");
+    return true;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    if (name === "email") {
+      validateEmail(value);
+    }
   };
 
   const handleRoleChange = (role: StaffRole, checked: boolean) => {
@@ -78,6 +100,11 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.email && !validateEmail(formData.email)) {
+      return; // Don't submit if email is invalid
+    }
+    
     setLoading(true);
     
     try {
@@ -133,15 +160,20 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
               <Label htmlFor="email" className="text-right">
                 Email
               </Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="col-span-3"
-                placeholder="Optional"
-              />
+              <div className="col-span-3">
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className={`w-full ${emailError ? "border-red-500" : ""}`}
+                  placeholder="Optional"
+                />
+                {emailError && (
+                  <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                )}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">
@@ -184,7 +216,10 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || formData.roles.length === 0}>
+            <Button 
+              type="submit" 
+              disabled={loading || formData.roles.length === 0 || !!emailError}
+            >
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
