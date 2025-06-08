@@ -27,7 +27,7 @@ interface StaffFormDialogProps {
 export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: StaffFormDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { addStaffMember } = useStaff();
+  const { addStaff } = useStaff();
   
   // Use external open state if provided, otherwise use internal state
   const isOpen = open !== undefined ? open : internalOpen;
@@ -65,14 +65,14 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
     setLoading(true);
     
     try {
-      const success = await addStaffMember(
-        formData.name,
-        formData.roles,
-        undefined, // photoUrl
-        [], // legacy schedules
-        formData.email,
-        subjectSchedules
-      );
+      const success = await addStaff({
+        name: formData.name,
+        roles: formData.roles,
+        email: formData.email,
+        schedules: [],
+        subjectSchedules: subjectSchedules,
+        leaveDates: []
+      });
       
       if (success) {
         // Reset form

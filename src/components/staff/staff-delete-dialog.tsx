@@ -35,7 +35,7 @@ export default function StaffDeleteDialog({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { deleteStaffMember } = useStaff();
+  const { deleteStaff } = useStaff();
 
   const handleDelete = async () => {
     if (!password.trim()) {
@@ -47,7 +47,7 @@ export default function StaffDeleteDialog({
     setError(null);
 
     try {
-      const success = await deleteStaffMember(staff.id);
+      const success = await deleteStaff(staff.id);
       if (success) {
         toast({
           title: "Staff Deleted",

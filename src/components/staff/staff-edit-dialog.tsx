@@ -26,7 +26,7 @@ interface StaffEditDialogProps {
 
 export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpdated }: StaffEditDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { updateStaffMember } = useStaff();
+  const { updateStaff } = useStaff();
   
   const [formData, setFormData] = useState({
     name: staff.name,
@@ -84,7 +84,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       console.log('Submitting leave dates:', leaveDates);
       console.log('Submitting subject schedules:', subjectSchedules);
       
-      const success = await updateStaffMember(staff.id, {
+      const success = await updateStaff(staff.id, {
         name: formData.name,
         roles: formData.roles,
         email: formData.email || undefined,
