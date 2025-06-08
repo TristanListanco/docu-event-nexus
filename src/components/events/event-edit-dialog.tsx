@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -15,12 +14,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Camera, Video } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/use-events";
 import { Event, EventStatus, EventType, StaffMember } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import MultiStaffSelector from "./multi-staff-selector";
 
 export interface EventEditDialogProps {
   open: boolean;
@@ -38,8 +38,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   const [type, setType] = useState<EventType>(event.type);
   const [status, setStatus] = useState<EventStatus>(event.status);
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(event.ignoreScheduleConflicts);
-  const [selectedVideographer, setSelectedVideographer] = useState<string>("");
-  const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
+  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
+  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
@@ -62,15 +62,11 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
       
       // Initialize selected staff from event
-      const assignedVideographer = event.videographers && event.videographers.length > 0 
-        ? event.videographers[0].staffId 
-        : "none";
-      const assignedPhotographer = event.photographers && event.photographers.length > 0 
-        ? event.photographers[0].staffId 
-        : "none";
+      const assignedVideographers = event.videographers?.map(v => v.staffId) || [];
+      const assignedPhotographers = event.photographers?.map(p => p.staffId) || [];
       
-      setSelectedVideographer(assignedVideographer);
-      setSelectedPhotographer(assignedPhotographer);
+      setSelectedVideographers(assignedVideographers);
+      setSelectedPhotographers(assignedPhotographers);
     }
   }, [event, open]);
   
@@ -89,20 +85,24 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       let allVideographers = [...videographers];
       let allPhotographers = [...photographers];
       
-      // Add current videographer if not in available list
+      // Add current videographers if not in available list
       if (event.videographers && event.videographers.length > 0) {
-        const currentVideographer = staff.find(s => s.id === event.videographers[0].staffId);
-        if (currentVideographer && !allVideographers.some(v => v.id === currentVideographer.id)) {
-          allVideographers.push(currentVideographer);
-        }
+        event.videographers.forEach(assignment => {
+          const currentVideographer = staff.find(s => s.id === assignment.staffId);
+          if (currentVideographer && !allVideographers.some(v => v.id === currentVideographer.id)) {
+            allVideographers.push(currentVideographer);
+          }
+        });
       }
       
-      // Add current photographer if not in available list
+      // Add current photographers if not in available list
       if (event.photographers && event.photographers.length > 0) {
-        const currentPhotographer = staff.find(s => s.id === event.photographers[0].staffId);
-        if (currentPhotographer && !allPhotographers.some(p => p.id === currentPhotographer.id)) {
-          allPhotographers.push(currentPhotographer);
-        }
+        event.photographers.forEach(assignment => {
+          const currentPhotographer = staff.find(s => s.id === assignment.staffId);
+          if (currentPhotographer && !allPhotographers.some(p => p.id === currentPhotographer.id)) {
+            allPhotographers.push(currentPhotographer);
+          }
+        });
       }
       
       setAvailableVideographers(allVideographers);
@@ -130,10 +130,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     }
     
     try {
-      // Create arrays with selected staff IDs
-      const videographerIds = selectedVideographer && selectedVideographer !== "none" ? [selectedVideographer] : [];
-      const photographerIds = selectedPhotographer && selectedPhotographer !== "none" ? [selectedPhotographer] : [];
-      
       const success = await updateEvent(
         event.id,
         {
@@ -146,8 +142,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
           status,
           ignoreScheduleConflicts,
         },
-        videographerIds,
-        photographerIds
+        selectedVideographers,
+        selectedPhotographers
       );
       
       if (success) {
@@ -314,53 +310,21 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             )}
             
             <div className="space-y-4">
-              {/* Videographer selection */}
-              <div>
-                <Label htmlFor="videographer" className="flex items-center">
-                  <Video className="h-4 w-4 mr-2 text-primary" />
-                  Videographer
-                </Label>
-                <Select 
-                  value={selectedVideographer} 
-                  onValueChange={setSelectedVideographer}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a videographer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {availableVideographers.map((videographer) => (
-                      <SelectItem key={videographer.id} value={videographer.id}>
-                        {videographer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <MultiStaffSelector
+                role="Videographer"
+                availableStaff={availableVideographers}
+                selectedStaffIds={selectedVideographers}
+                onSelectionChange={setSelectedVideographers}
+                disabled={!scheduleCalculated}
+              />
               
-              {/* Photographer selection */}
-              <div>
-                <Label htmlFor="photographer" className="flex items-center">
-                  <Camera className="h-4 w-4 mr-2 text-primary" />
-                  Photographer
-                </Label>
-                <Select 
-                  value={selectedPhotographer} 
-                  onValueChange={setSelectedPhotographer}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a photographer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {availablePhotographers.map((photographer) => (
-                      <SelectItem key={photographer.id} value={photographer.id}>
-                        {photographer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <MultiStaffSelector
+                role="Photographer"
+                availableStaff={availablePhotographers}
+                selectedStaffIds={selectedPhotographers}
+                onSelectionChange={setSelectedPhotographers}
+                disabled={!scheduleCalculated}
+              />
             </div>
           </div>
           

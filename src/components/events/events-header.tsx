@@ -1,14 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Calendar, Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface EventsHeaderProps {
-  loading: boolean;
-  onRefresh: () => void;
+  // Remove loading and onRefresh props as they're no longer needed
 }
 
-export default function EventsHeader({ loading, onRefresh }: EventsHeaderProps) {
+export default function EventsHeader({}: EventsHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -19,9 +18,6 @@ export default function EventsHeader({ loading, onRefresh }: EventsHeaderProps) 
           <p className="text-muted-foreground">Manage your scheduled events</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={onRefresh} disabled={loading} size="icon">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
           <Button onClick={() => navigate("/events/new")} size="icon">
             <Plus className="h-4 w-4" />
           </Button>

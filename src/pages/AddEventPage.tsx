@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +16,7 @@ import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Mail } from "lucide-react";
+import MultiStaffSelector from "@/components/events/multi-staff-selector";
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -28,8 +28,8 @@ export default function AddEventPage() {
   const [type, setType] = useState<EventType>("General");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
   const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
-  const [selectedVideographer, setSelectedVideographer] = useState<string>("");
-  const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
+  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
+  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const { addEvent } = useEvents();
   const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
@@ -57,15 +57,19 @@ export default function AddEventPage() {
       setScheduleCalculated(true);
       
       // Reset selections if the previously selected staff members are no longer available
-      const videographerStillAvailable = videographers.some(v => v.id === selectedVideographer);
-      const photographerStillAvailable = photographers.some(p => p.id === selectedPhotographer);
+      const videographersStillAvailable = selectedVideographers.filter(id => 
+        videographers.some(v => v.id === id)
+      );
+      const photographersStillAvailable = selectedPhotographers.filter(id => 
+        photographers.some(p => p.id === id)
+      );
       
-      if (!videographerStillAvailable) {
-        setSelectedVideographer("");
+      if (videographersStillAvailable.length !== selectedVideographers.length) {
+        setSelectedVideographers(videographersStillAvailable);
       }
       
-      if (!photographerStillAvailable) {
-        setSelectedPhotographer("");
+      if (photographersStillAvailable.length !== selectedPhotographers.length) {
+        setSelectedPhotographers(photographersStillAvailable);
       }
     } else {
       // Reset if necessary inputs are missing
@@ -73,7 +77,7 @@ export default function AddEventPage() {
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -113,12 +117,8 @@ export default function AddEventPage() {
         setSubmitting(false);
         return;
       }
-      
-      // Create arrays with selected staff IDs (single selection)
-      const videographerIds = selectedVideographer ? [selectedVideographer] : [];
-      const photographerIds = selectedPhotographer ? [selectedPhotographer] : [];
 
-      // Save the event
+      // Save the event with multiple staff assignments
       const eventId = await addEvent(
         {
           name,
@@ -133,8 +133,8 @@ export default function AddEventPage() {
           isBigEvent: false,
           bigEventId: null // Ensure this is null not empty string
         },
-        videographerIds,
-        photographerIds,
+        selectedVideographers,
+        selectedPhotographers,
         sendEmailNotifications
       );
 
@@ -308,7 +308,6 @@ export default function AddEventPage() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Staff Assignment</h3>
                   <div className="bg-muted/20 p-4 rounded-lg border space-y-4">
-                    {/* Instructions */}
                     {!scheduleCalculated && (
                       <p className="text-sm text-muted-foreground">
                         Please select date and time to see available staff
@@ -323,71 +322,22 @@ export default function AddEventPage() {
                       </p>
                     )}
                     
-                    {/* Staff Selection Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Videographer Selection */}
-                      <div className="space-y-2">
-                        <Label htmlFor="videographer">Videographer</Label>
-                        <Select 
-                          value={selectedVideographer} 
-                          onValueChange={setSelectedVideographer}
-                          disabled={!scheduleCalculated}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a videographer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableVideographers.length > 0 ? (
-                              availableVideographers.map((videographer) => (
-                                <SelectItem key={videographer.id} value={videographer.id}>
-                                  {videographer.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-videographers-available" disabled>
-                                No videographers available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {availableVideographers.length === 0 && scheduleCalculated && (
-                          <p className="text-sm text-amber-500">
-                            No videographers available for this time slot
-                          </p>
-                        )}
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <MultiStaffSelector
+                        role="Videographer"
+                        availableStaff={availableVideographers}
+                        selectedStaffIds={selectedVideographers}
+                        onSelectionChange={setSelectedVideographers}
+                        disabled={!scheduleCalculated}
+                      />
                       
-                      {/* Photographer Selection */}
-                      <div className="space-y-2">
-                        <Label htmlFor="photographer">Photographer</Label>
-                        <Select 
-                          value={selectedPhotographer} 
-                          onValueChange={setSelectedPhotographer}
-                          disabled={!scheduleCalculated}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a photographer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availablePhotographers.length > 0 ? (
-                              availablePhotographers.map((photographer) => (
-                                <SelectItem key={photographer.id} value={photographer.id}>
-                                  {photographer.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-photographers-available" disabled>
-                                No photographers available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {availablePhotographers.length === 0 && scheduleCalculated && (
-                          <p className="text-sm text-amber-500">
-                            No photographers available for this time slot
-                          </p>
-                        )}
-                      </div>
+                      <MultiStaffSelector
+                        role="Photographer"
+                        availableStaff={availablePhotographers}
+                        selectedStaffIds={selectedPhotographers}
+                        onSelectionChange={setSelectedPhotographers}
+                        disabled={!scheduleCalculated}
+                      />
                     </div>
                   </div>
                 </div>
