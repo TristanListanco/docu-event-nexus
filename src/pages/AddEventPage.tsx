@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -200,7 +199,7 @@ export default function AddEventPage() {
                       selected={date}
                       onSelect={setDate}
                       disabled={(date) =>
-                        date < new Date()
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
                       }
                       initialFocus
                       className={cn("p-3 pointer-events-auto")}

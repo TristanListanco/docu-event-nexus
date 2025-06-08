@@ -72,6 +72,22 @@ export default function EventDetailsPage() {
     navigate("/events");
   };
 
+  // Function to get dynamic event status based on current time
+  const getEventStatus = (event: Event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    const startTime = new Date(`${event.date}T${event.startTime}`);
+    const endTime = new Date(`${event.date}T${event.endTime}`);
+
+    if (now > endTime) {
+      return "Elapsed";
+    } else if (now >= startTime && now <= endTime) {
+      return "On Going";
+    } else {
+      return event.status; // Keep original status for future events
+    }
+  };
+
   if (loading || staffLoading) {
     return (
       <div className="flex items-center justify-center p-12 h-screen">
@@ -101,12 +117,16 @@ export default function EventDetailsPage() {
     );
   }
 
+  const dynamicStatus = getEventStatus(event);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Upcoming":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-      case "Ongoing":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "On Going":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+      case "Elapsed":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       case "Completed":
         return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
       default:
@@ -131,10 +151,6 @@ export default function EventDetailsPage() {
             >
               Back to Events
             </Button>
-            <Button onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Event
-            </Button>
           </div>
         </div>
       </div>
@@ -149,8 +165,8 @@ export default function EventDetailsPage() {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
                   <div className="flex items-center">
-                    <Badge className={`${getStatusColor(event.status)} mr-2`}>
-                      {event.status}
+                    <Badge className={`${getStatusColor(dynamicStatus)} mr-2`}>
+                      {dynamicStatus}
                     </Badge>
                     <Badge variant="outline">{event.type}</Badge>
                   </div>

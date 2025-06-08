@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -53,9 +52,13 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   useEffect(() => {
     if (event.videographers && event.videographers.length > 0) {
       setSelectedVideographer(event.videographers[0].staffId);
+    } else {
+      setSelectedVideographer("none");
     }
     if (event.photographers && event.photographers.length > 0) {
       setSelectedPhotographer(event.photographers[0].staffId);
+    } else {
+      setSelectedPhotographer("none");
     }
     
     // Reset form values when event changes
@@ -80,14 +83,33 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         ignoreScheduleConflicts
       );
       
-      setAvailableVideographers(videographers);
-      setAvailablePhotographers(photographers);
+      // Always include currently assigned staff even if they're not available
+      let allVideographers = [...videographers];
+      let allPhotographers = [...photographers];
+      
+      // Add current videographer if not in available list
+      if (event.videographers && event.videographers.length > 0) {
+        const currentVideographer = staff.find(s => s.id === event.videographers[0].staffId);
+        if (currentVideographer && !allVideographers.some(v => v.id === currentVideographer.id)) {
+          allVideographers.push(currentVideographer);
+        }
+      }
+      
+      // Add current photographer if not in available list
+      if (event.photographers && event.photographers.length > 0) {
+        const currentPhotographer = staff.find(s => s.id === event.photographers[0].staffId);
+        if (currentPhotographer && !allPhotographers.some(p => p.id === currentPhotographer.id)) {
+          allPhotographers.push(currentPhotographer);
+        }
+      }
+      
+      setAvailableVideographers(allVideographers);
+      setAvailablePhotographers(allPhotographers);
       setScheduleCalculated(true);
       
-      // Reset selections if the previously selected staff members are no longer available
-      // but only if they aren't from the current event
-      const videographerStillAvailable = videographers.some(v => v.id === selectedVideographer);
-      const photographerStillAvailable = photographers.some(p => p.id === selectedPhotographer);
+      // Only reset selections if they are not the current event staff and not available
+      const videographerStillAvailable = allVideographers.some(v => v.id === selectedVideographer);
+      const photographerStillAvailable = allPhotographers.some(p => p.id === selectedPhotographer);
       
       // Check if the currently selected videographer is the one from the event
       const isCurrentEventVideographer = event.videographers && 
@@ -101,18 +123,18 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       
       // Only reset if not available AND not the current event staff member
       if (!videographerStillAvailable && !isCurrentEventVideographer) {
-        setSelectedVideographer("");
+        setSelectedVideographer("none");
       }
       
       if (!photographerStillAvailable && !isCurrentEventPhotographer) {
-        setSelectedPhotographer("");
+        setSelectedPhotographer("none");
       }
     } else {
       setAvailableVideographers([]);
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, event.videographers, event.photographers]);
+  }, [date, startTime, endTime, ignoreScheduleConflicts, staff, getAvailableStaff, event.videographers, event.photographers, selectedVideographer, selectedPhotographer]);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -130,8 +152,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     
     try {
       // Create arrays with selected staff IDs
-      const videographerIds = selectedVideographer ? [selectedVideographer] : [];
-      const photographerIds = selectedPhotographer ? [selectedPhotographer] : [];
+      const videographerIds = selectedVideographer && selectedVideographer !== "none" ? [selectedVideographer] : [];
+      const photographerIds = selectedPhotographer && selectedPhotographer !== "none" ? [selectedPhotographer] : [];
       
       const success = await updateEvent(
         event.id,
@@ -204,7 +226,11 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                   mode="single"
                   selected={date}
                   onSelect={(date) => date && setDate(date)}
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
                   initialFocus
+                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
@@ -324,7 +350,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     <SelectValue placeholder="Select a videographer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Fix: Changed empty string to "none" */}
                     <SelectItem value="none">None</SelectItem>
                     {availableVideographers.length > 0 ? (
                       availableVideographers.map((videographer) => (
@@ -355,7 +380,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     <SelectValue placeholder="Select a photographer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Fix: Changed empty string to "none" */}
                     <SelectItem value="none">None</SelectItem>
                     {availablePhotographers.length > 0 ? (
                       availablePhotographers.map((photographer) => (
