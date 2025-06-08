@@ -27,7 +27,7 @@ interface StaffFormDialogProps {
 export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: StaffFormDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { addStaffMember, loadStaff } = useStaff();
+  const { addStaffMember } = useStaff();
   
   // Use external open state if provided, otherwise use internal state
   const isOpen = open !== undefined ? open : internalOpen;
@@ -75,7 +75,7 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
       );
       
       if (success) {
-        setIsOpen(false);
+        // Reset form
         setFormData({
           name: "",
           email: "",
@@ -83,10 +83,11 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
         });
         setSubjectSchedules([]);
         
+        // Call the onStaffAdded callback which should refresh the list and close the dialog
         if (onStaffAdded) {
           await onStaffAdded();
         } else {
-          await loadStaff();
+          setIsOpen(false);
         }
       }
     } catch (error) {

@@ -10,7 +10,7 @@ import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
 
 export default function StaffPage() {
-  const { staff, loading } = useStaff();
+  const { staff, loading, loadStaff } = useStaff();
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -48,8 +48,13 @@ export default function StaffPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleStaffUpdated = () => {
-    // Staff list will auto-refresh through the hook
+  const handleStaffAdded = async () => {
+    await loadStaff();
+    setAddDialogOpen(false);
+  };
+
+  const handleStaffUpdated = async () => {
+    await loadStaff();
   };
 
   // Check if staff member is on leave today
@@ -106,7 +111,7 @@ export default function StaffPage() {
       <StaffFormDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        onStaffAdded={handleStaffUpdated}
+        onStaffAdded={handleStaffAdded}
       />
 
       {selectedStaff && (
