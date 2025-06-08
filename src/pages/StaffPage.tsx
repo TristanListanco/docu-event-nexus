@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,22 +175,22 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
     <Card className="cursor-pointer hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center space-x-4 min-w-0 flex-1">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               {role === "Videographer" ? (
                 <Video className="h-6 w-6 text-primary" />
               ) : (
                 <Camera className="h-6 w-6 text-primary" />
               )}
             </div>
-            <div>
-              <CardTitle className="text-lg">{name}</CardTitle>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-lg truncate">{name}</CardTitle>
               <div className="flex flex-col space-y-1">
                 <span className="text-sm text-muted-foreground">{role}</span>
                 {email && (
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Mail className="h-3 w-3 mr-1" />
-                    <span>{email}</span>
+                  <div className="flex items-center text-xs text-muted-foreground min-w-0">
+                    <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
+                    <span className="truncate" title={email}>{email}</span>
                   </div>
                 )}
               </div>
@@ -198,7 +199,7 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
                 <span className="sr-only">Open menu</span>
                 <Edit className="h-4 w-4" />
               </Button>

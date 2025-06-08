@@ -29,6 +29,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   const [formData, setFormData] = useState({
     name: staff.name,
     role: staff.role,
+    email: staff.email || "",
   });
   
   const [schedules, setSchedules] = useState<Omit<Schedule, "id">[]>([]);
@@ -46,6 +47,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     setFormData({
       name: staff.name,
       role: staff.role,
+      email: staff.email || "",
     });
     
     setSchedules(staff.schedules.map(schedule => ({
@@ -143,6 +145,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       const success = await updateStaffMember(staff.id, {
         name: formData.name,
         role: formData.role,
+        email: formData.email || undefined,
         schedules: schedulesToUpdate
       });
       
@@ -183,6 +186,20 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
                 onChange={handleChange}
                 className="col-span-3"
                 required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="col-span-3"
+                placeholder="Optional"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

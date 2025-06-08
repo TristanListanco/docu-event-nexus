@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
@@ -152,6 +151,7 @@ export function useStaff() {
       name?: string;
       role?: StaffRole;
       photoUrl?: string;
+      email?: string;
       schedules?: {
         toAdd: Omit<Schedule, "id">[];
         toUpdate: Schedule[];
@@ -169,6 +169,7 @@ export function useStaff() {
       if (updates.name) staffUpdates.name = updates.name;
       if (updates.role) staffUpdates.role = updates.role;
       if (updates.photoUrl !== undefined) staffUpdates.photo_url = updates.photoUrl;
+      if (updates.email !== undefined) staffUpdates.email = updates.email || null;
 
       if (Object.keys(staffUpdates).length > 0) {
         const { error } = await supabase

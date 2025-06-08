@@ -31,24 +31,6 @@ export default function AboutPage() {
             <p>Created by: Tristan E. Listanco</p>
             
             <Separator className="my-8" />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center justify-items-center mt-8">
-              <img 
-                src="/lovable-uploads/a6f19e57-1dbd-44c2-9f09-b4b29ede0248.png" 
-                alt="CCS Executive Council" 
-                className="max-h-32 w-auto" 
-              />
-              <img 
-                src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
-                alt="Documentation Committee" 
-                className="max-h-32 w-auto" 
-              />
-              <img 
-                src="/lovable-uploads/959e6f4e-63c8-4143-a4a7-2c897fde2aa5.png" 
-                alt="MSU-IIT" 
-                className="max-h-32 w-auto" 
-              />
-            </div>
           </CardContent>
         </Card>
         
