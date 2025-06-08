@@ -17,15 +17,25 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { StaffRole, Schedule } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 
-export default function StaffFormDialog() {
-  const [open, setOpen] = useState(false);
+interface StaffFormDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onStaffAdded?: () => void;
+}
+
+export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: StaffFormDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { addStaffMember, loadStaff } = useStaff();
+  
+  // Use external open state if provided, otherwise use internal state
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
   
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    roles: [] as StaffRole[], // Changed to array of roles
+    roles: [] as StaffRole[],
   });
   
   const [schedules, setSchedules] = useState<Omit<Schedule, "id">[]>([]);
@@ -88,14 +98,14 @@ export default function StaffFormDialog() {
     try {
       const success = await addStaffMember(
         formData.name,
-        formData.roles, // Pass array of roles
+        formData.roles,
         undefined, // photoUrl
         schedules,
         formData.email
       );
       
       if (success) {
-        setOpen(false);
+        setIsOpen(false);
         setFormData({
           name: "",
           email: "",
@@ -103,7 +113,11 @@ export default function StaffFormDialog() {
         });
         setSchedules([]);
         
-        await loadStaff();
+        if (onStaffAdded) {
+          await onStaffAdded();
+        } else {
+          await loadStaff();
+        }
       }
     } catch (error) {
       console.error("Error adding staff:", error);
@@ -115,12 +129,14 @@ export default function StaffFormDialog() {
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" /> Add Staff Member
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      {open === undefined && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Add Staff Member
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>Add Staff Member</DialogTitle>
