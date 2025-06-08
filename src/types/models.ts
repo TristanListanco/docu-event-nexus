@@ -1,5 +1,4 @@
-
-export type StaffRole = "Photographer" | "Videographer";
+export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 
 export interface Schedule {
   id: string;

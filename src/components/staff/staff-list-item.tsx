@@ -2,7 +2,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Video, Camera, Edit, Trash2 } from "lucide-react";
+import { Video, Camera, Edit, Trash2, Users } from "lucide-react";
 import { StaffMember } from "@/types/models";
 import { 
   DropdownMenu,
@@ -21,26 +21,48 @@ interface StaffListItemProps {
 export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: StaffListItemProps) {
   const { name, roles, subjectSchedules } = staff;
   
+  // Get icon based on roles
+  const getIcon = () => {
+    const hasPhotographer = roles.includes("Photographer");
+    const hasVideographer = roles.includes("Videographer");
+    const hasWorkingCom = roles.includes("Working Com");
+    
+    if (hasWorkingCom) {
+      return <Users className="h-5 w-5 text-primary" />;
+    }
+    
+    if (hasPhotographer && hasVideographer) {
+      return (
+        <div className="flex">
+          <Video className="h-3 w-3 text-primary mr-1" />
+          <Camera className="h-3 w-3 text-primary" />
+        </div>
+      );
+    }
+    
+    if (hasVideographer) {
+      return <Video className="h-5 w-5 text-primary" />;
+    }
+    
+    return <Camera className="h-5 w-5 text-primary" />;
+  };
+  
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4 min-w-0 flex-1">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            {roles.includes("Videographer") && roles.includes("Photographer") ? (
-              <div className="flex">
-                <Video className="h-3 w-3 text-primary mr-1" />
-                <Camera className="h-3 w-3 text-primary" />
-              </div>
-            ) : roles.includes("Videographer") ? (
-              <Video className="h-5 w-5 text-primary" />
-            ) : (
-              <Camera className="h-5 w-5 text-primary" />
-            )}
+            {getIcon()}
           </div>
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
               <h3 className="font-medium truncate">{name}</h3>
+              {roles.includes("Working Com") && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                  Working Com
+                </Badge>
+              )}
             </div>
             <div className="flex flex-col space-y-1">
               <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>

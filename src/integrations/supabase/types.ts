@@ -319,7 +319,7 @@ export type Database = {
       attendance_status: "Pending" | "Completed" | "Absent" | "Excused"
       event_status: "Upcoming" | "Ongoing" | "Completed"
       event_type: "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General"
-      staff_role: "Videographer" | "Photographer"
+      staff_role: "Videographer" | "Photographer" | "Working Com"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -438,7 +438,7 @@ export const Constants = {
       attendance_status: ["Pending", "Completed", "Absent", "Excused"],
       event_status: ["Upcoming", "Ongoing", "Completed"],
       event_type: ["SPECOM", "LITCOM", "CUACOM", "SPODACOM", "General"],
-      staff_role: ["Videographer", "Photographer"],
+      staff_role: ["Videographer", "Photographer", "Working Com"],
     },
   },
 } as const

@@ -195,6 +195,14 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
                   />
                   <Label htmlFor="videographer">Videographer</Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="working-com"
+                    checked={formData.roles.includes("Working Com")}
+                    onCheckedChange={(checked) => handleRoleChange("Working Com", !!checked)}
+                  />
+                  <Label htmlFor="working-com">Working Com</Label>
+                </div>
               </div>
             </div>
             
