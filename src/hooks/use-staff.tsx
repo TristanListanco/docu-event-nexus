@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { StaffMember, Schedule, Role } from "@/types/models";
+import { StaffMember, Schedule, StaffRole } from "@/types/models";
 import { toast } from "./use-toast";
 
 export function useStaff() {
@@ -29,10 +30,10 @@ export function useStaff() {
         id: staffMember.id,
         name: staffMember.name,
         email: staffMember.email,
-        roles: staffMember.roles as Role[],
-        schedules: staffMember.schedules as Schedule[],
-        leaveDates: staffMember.leave_dates || [],
-        userId: staffMember.user_id,
+        roles: [staffMember.role] as StaffRole[],
+        schedules: [],
+        subjectSchedules: [],
+        leaveDates: [],
       }));
 
       setStaff(staffMembers);
@@ -48,7 +49,7 @@ export function useStaff() {
     }
   };
 
-  const addStaff = async (staffData: Omit<StaffMember, "id" | "userId">) => {
+  const addStaff = async (staffData: Omit<StaffMember, "id">) => {
     try {
       if (!user) {
         throw new Error("User not authenticated");
@@ -59,9 +60,7 @@ export function useStaff() {
         .insert({
           name: staffData.name,
           email: staffData.email,
-          roles: staffData.roles,
-          schedules: staffData.schedules,
-          leave_dates: staffData.leaveDates,
+          role: staffData.roles[0],
           user_id: user.id,
         })
         .select()
@@ -93,7 +92,7 @@ export function useStaff() {
 
   const updateStaff = async (
     staffId: string,
-    staffData: Partial<Omit<StaffMember, "id" | "userId">>
+    staffData: Partial<Omit<StaffMember, "id">>
   ) => {
     try {
       if (!user) {
@@ -105,9 +104,7 @@ export function useStaff() {
         .update({
           name: staffData.name,
           email: staffData.email,
-          roles: staffData.roles,
-          schedules: staffData.schedules,
-          leave_dates: staffData.leaveDates,
+          role: staffData.roles?.[0],
         })
         .eq("id", staffId)
         .eq("user_id", user.id)

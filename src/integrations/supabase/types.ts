@@ -36,6 +36,7 @@ export type Database = {
       events: {
         Row: {
           big_event_id: string | null
+          ccs_only_event: boolean
           created_at: string
           date: string
           end_time: string
@@ -53,6 +54,7 @@ export type Database = {
         }
         Insert: {
           big_event_id?: string | null
+          ccs_only_event?: boolean
           created_at?: string
           date: string
           end_time: string
@@ -70,6 +72,7 @@ export type Database = {
         }
         Update: {
           big_event_id?: string | null
+          ccs_only_event?: boolean
           created_at?: string
           date?: string
           end_time?: string

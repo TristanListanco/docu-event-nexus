@@ -1,3 +1,4 @@
+
 export type StaffRole = "Photographer" | "Videographer";
 
 export interface Schedule {
@@ -6,6 +7,7 @@ export interface Schedule {
   startTime: string; // "HH:MM" format
   endTime: string; // "HH:MM" format
   subjectScheduleId: string; // Reference to subject_schedules table
+  subject?: string; // Subject code for CCS-only event logic
 }
 
 export interface SubjectSchedule {
