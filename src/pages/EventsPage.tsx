@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
 import EventsHeader from "@/components/events/events-header";
 import EventsFilters from "@/components/events/events-filters";
@@ -11,6 +12,7 @@ import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import { Event, EventType, EventStatus } from "@/types/models";
 
 export default function EventsPage() {
+  const navigate = useNavigate();
   const { events, loading } = useEvents();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -47,8 +49,7 @@ export default function EventsPage() {
   };
 
   const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
-    setEditDialogOpen(true);
+    navigate(`/events/${event.id}`);
   };
 
   const handleEditEvent = (e: React.MouseEvent, event: Event) => {
