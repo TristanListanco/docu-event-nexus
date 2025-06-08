@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Users, RefreshCw, Edit, Trash2, Video, Camera, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { isWithinInterval, parseISO } from "date-fns";
 
 export default function StaffPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,6 +24,22 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Function to check if staff is currently on leave
+  const isStaffOnLeave = (member: StaffMember) => {
+    if (!member.leaveDates || member.leaveDates.length === 0) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return member.leaveDates.some(leave => {
+      const startDate = parseISO(leave.startDate);
+      const endDate = parseISO(leave.endDate);
+      endDate.setHours(23, 59, 59, 999); // End of day
+      
+      return isWithinInterval(today, { start: startDate, end: endDate });
+    });
+  };
 
   // Filter staff based on search query and role
   const filteredStaff = staff.filter(member => 
@@ -94,6 +111,7 @@ export default function StaffPage() {
                       staff={member} 
                       onEdit={() => handleEditStaff(member)}
                       onDelete={() => handleDeleteStaff(member)}
+                      isOnLeave={isStaffOnLeave(member)}
                     />
                   ))}
                 </div>
@@ -110,6 +128,7 @@ export default function StaffPage() {
                       staff={member} 
                       onEdit={() => handleEditStaff(member)}
                       onDelete={() => handleDeleteStaff(member)}
+                      isOnLeave={isStaffOnLeave(member)}
                     />
                   ))}
                 </div>
@@ -126,6 +145,7 @@ export default function StaffPage() {
                       staff={member} 
                       onEdit={() => handleEditStaff(member)}
                       onDelete={() => handleDeleteStaff(member)}
+                      isOnLeave={isStaffOnLeave(member)}
                     />
                   ))}
                 </div>
@@ -166,9 +186,10 @@ interface StaffCardProps {
   staff: StaffMember;
   onEdit: () => void;
   onDelete: () => void;
+  isOnLeave: boolean;
 }
 
-function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
+function StaffCard({ staff, onEdit, onDelete, isOnLeave }: StaffCardProps) {
   const { name, role, email, photoUrl, schedules } = staff;
   
   return (
@@ -184,7 +205,14 @@ function StaffCard({ staff, onEdit, onDelete }: StaffCardProps) {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="text-lg truncate">{name}</CardTitle>
+              <div className="flex items-center space-x-2">
+                <CardTitle className="text-lg truncate">{name}</CardTitle>
+                {isOnLeave && (
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                    On Leave
+                  </Badge>
+                )}
+              </div>
               <div className="flex flex-col space-y-1">
                 <span className="text-sm text-muted-foreground">{role}</span>
                 {email && (

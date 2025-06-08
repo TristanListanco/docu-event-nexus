@@ -9,6 +9,12 @@ export interface Schedule {
   subject: string;
 }
 
+export interface LeaveDate {
+  id: string;
+  startDate: string; // "YYYY-MM-DD" format
+  endDate: string; // "YYYY-MM-DD" format
+}
+
 export interface StaffMember {
   id: string;
   name: string;
@@ -16,6 +22,7 @@ export interface StaffMember {
   photoUrl?: string;
   email?: string;
   schedules: Schedule[];
+  leaveDates: LeaveDate[];
 }
 
 export type EventType = "General" | "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM";

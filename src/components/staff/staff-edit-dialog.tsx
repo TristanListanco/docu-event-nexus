@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Clock, Plus, Edit } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StaffRole, Schedule, StaffMember } from "@/types/models";
+import { StaffRole, Schedule, StaffMember, LeaveDate } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
+import LeaveDatesManager from "./leave-dates-manager";
 
 interface StaffEditDialogProps {
   open: boolean;
@@ -33,6 +34,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   });
   
   const [schedules, setSchedules] = useState<Omit<Schedule, "id">[]>([]);
+  const [leaveDates, setLeaveDates] = useState<LeaveDate[]>([]);
   const [currentSchedule, setCurrentSchedule] = useState({
     dayOfWeek: 1,
     startTime: "09:00",
@@ -56,6 +58,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       endTime: schedule.endTime,
       subject: schedule.subject
     })));
+    
+    setLeaveDates(staff.leaveDates || []);
   }, [staff, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,7 +150,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
         name: formData.name,
         role: formData.role,
         email: formData.email || undefined,
-        schedules: schedulesToUpdate
+        schedules: schedulesToUpdate,
+        leaveDates: leaveDates
       });
       
       if (success) {
@@ -166,7 +171,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Staff Member</DialogTitle>
           <DialogDescription>
@@ -218,6 +223,14 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
                   <SelectItem value="Videographer">Videographer</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="border-t pt-4 mt-2">
+              <h3 className="font-medium mb-3">Leave Dates</h3>
+              <LeaveDatesManager 
+                leaveDates={leaveDates}
+                onLeaveDatesChange={setLeaveDates}
+              />
             </div>
             
             <div className="border-t pt-4 mt-2">

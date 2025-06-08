@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { StaffMember, Schedule, StaffRole } from "@/types/models";
+import { StaffMember, Schedule, StaffRole, LeaveDate } from "@/types/models";
 import { toast } from "./use-toast";
+import { isWithinInterval, parseISO } from "date-fns";
 
 export function useStaff() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -29,7 +30,7 @@ export function useStaff() {
       // Log staff data to debug
       console.log("Staff data from database:", staffData);
 
-      // Fetch schedules for each staff member
+      // Fetch schedules and leave dates for each staff member
       const staffMembers: StaffMember[] = await Promise.all(
         staffData.map(async (member) => {
           const { data: schedulesData, error: schedulesError } = await supabase
@@ -39,10 +40,16 @@ export function useStaff() {
 
           if (schedulesError) {
             console.error("Error loading schedules:", schedulesError.message);
-            return {
-              ...member,
-              schedules: [],
-            } as StaffMember;
+          }
+
+          // Fetch leave dates (assuming we have a leave_dates table)
+          const { data: leaveDatesData, error: leaveDatesError } = await supabase
+            .from("leave_dates")
+            .select("*")
+            .eq("staff_id", member.id);
+
+          if (leaveDatesError) {
+            console.error("Error loading leave dates:", leaveDatesError.message);
           }
 
           // Create the staff member object with proper handling of email
@@ -51,14 +58,19 @@ export function useStaff() {
             name: member.name,
             role: member.role as StaffRole,
             photoUrl: member.photo_url,
-            email: member.email || undefined, // Handle null email values
-            schedules: schedulesData.map((schedule) => ({
+            email: member.email || undefined,
+            schedules: schedulesData ? schedulesData.map((schedule) => ({
               id: schedule.id,
               dayOfWeek: schedule.day_of_week,
               startTime: schedule.start_time,
               endTime: schedule.end_time,
               subject: schedule.subject,
-            })) as Schedule[],
+            })) as Schedule[] : [],
+            leaveDates: leaveDatesData ? leaveDatesData.map((leave) => ({
+              id: leave.id,
+              startDate: leave.start_date,
+              endDate: leave.end_date,
+            })) as LeaveDate[] : [],
           } as StaffMember;
         })
       );
@@ -81,7 +93,7 @@ export function useStaff() {
     role: StaffRole,
     photoUrl?: string,
     schedules: Omit<Schedule, "id">[] = [],
-    email?: string // Add email parameter
+    email?: string
   ) => {
     try {
       if (!user) {
@@ -96,7 +108,7 @@ export function useStaff() {
           role,
           photo_url: photoUrl,
           user_id: user.id,
-          email: email, // Add email to the insert
+          email: email,
         })
         .select()
         .single();
@@ -157,6 +169,7 @@ export function useStaff() {
         toUpdate: Schedule[];
         toDelete: string[];
       };
+      leaveDates?: LeaveDate[];
     }
   ) => {
     try {
@@ -235,6 +248,37 @@ export function useStaff() {
         }
       }
 
+      // Handle leave dates if provided
+      if (updates.leaveDates !== undefined) {
+        // First, delete all existing leave dates for this staff member
+        const { error: deleteLeaveError } = await supabase
+          .from("leave_dates")
+          .delete()
+          .eq("staff_id", id);
+
+        if (deleteLeaveError) {
+          throw deleteLeaveError;
+        }
+
+        // Then, insert the new leave dates (excluding temporary IDs)
+        if (updates.leaveDates.length > 0) {
+          const leaveDatesToInsert = updates.leaveDates.map((leave) => ({
+            staff_id: id,
+            user_id: user.id,
+            start_date: leave.startDate,
+            end_date: leave.endDate,
+          }));
+
+          const { error: insertLeaveError } = await supabase
+            .from("leave_dates")
+            .insert(leaveDatesToInsert);
+
+          if (insertLeaveError) {
+            throw insertLeaveError;
+          }
+        }
+      }
+
       // Reload staff to get the updated list with schedules
       await loadStaff();
 
@@ -269,6 +313,16 @@ export function useStaff() {
 
       if (scheduleError) {
         throw scheduleError;
+      }
+
+      // Delete all leave dates for this staff member
+      const { error: leaveError } = await supabase
+        .from("leave_dates")
+        .delete()
+        .eq("staff_id", id);
+
+      if (leaveError) {
+        throw leaveError;
       }
 
       // Then, delete all staff assignments for this staff member
@@ -320,13 +374,31 @@ export function useStaff() {
     return staff.find((member) => member.id === id) || null;
   };
 
-  // Enhanced function to check for schedule conflicts
+  // Enhanced function to check for schedule conflicts and leave dates
   const getAvailableStaff = (date: string, startTime: string, endTime: string, ignoreScheduleConflicts: boolean = false) => {
-    // If ignoring conflicts, return all staff
+    // Helper function to check if staff is on leave for the given date
+    const isStaffOnLeave = (staff: StaffMember, eventDate: string) => {
+      if (!staff.leaveDates || staff.leaveDates.length === 0) return false;
+      
+      const eventDateObj = parseISO(eventDate);
+      
+      return staff.leaveDates.some(leave => {
+        const startDate = parseISO(leave.startDate);
+        const endDate = parseISO(leave.endDate);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        
+        return isWithinInterval(eventDateObj, { start: startDate, end: endDate });
+      });
+    };
+
+    // Filter out staff members who are on leave
+    const staffNotOnLeave = staff.filter(member => !isStaffOnLeave(member, date));
+    
+    // If ignoring conflicts, return all staff who are not on leave
     if (ignoreScheduleConflicts) {
       return {
-        videographers: getStaffByRole("Videographer"),
-        photographers: getStaffByRole("Photographer")
+        videographers: staffNotOnLeave.filter(member => member.role === "Videographer"),
+        photographers: staffNotOnLeave.filter(member => member.role === "Photographer")
       };
     }
     
@@ -335,14 +407,14 @@ export function useStaff() {
     const eventEndHour = parseTimeToDecimal(endTime);
     const dayOfWeek = new Date(date).getDay(); // 0 for Sunday, 1 for Monday, etc.
     
-    // Filter staff based on schedule availability
-    const availableVideographers = getStaffByRole("Videographer").filter(member => 
-      isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour)
-    );
+    // Filter staff based on schedule availability and leave status
+    const availableVideographers = staffNotOnLeave
+      .filter(member => member.role === "Videographer")
+      .filter(member => isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour));
     
-    const availablePhotographers = getStaffByRole("Photographer").filter(member => 
-      isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour)
-    );
+    const availablePhotographers = staffNotOnLeave
+      .filter(member => member.role === "Photographer")
+      .filter(member => isStaffAvailable(member, dayOfWeek, eventStartHour, eventEndHour));
     
     return {
       videographers: availableVideographers,

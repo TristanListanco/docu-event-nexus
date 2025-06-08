@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember } from "@/types/models";
 import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 interface StaffDeleteDialogProps {
   open: boolean;
@@ -30,6 +32,7 @@ export default function StaffDeleteDialog({
   onStaffDeleted
 }: StaffDeleteDialogProps) {
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { deleteStaffMember } = useStaff();
@@ -82,15 +85,31 @@ export default function StaffDeleteDialog({
           <Label htmlFor="password" className="text-sm font-medium">
             Enter your password to confirm deletion
           </Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1"
-            placeholder="Your password"
-            required
-          />
+          <div className="relative mt-1">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Your password"
+              required
+              className="pr-10"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={loading}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
           {error && (
             <p className="text-sm text-destructive mt-2">{error}</p>
           )}
