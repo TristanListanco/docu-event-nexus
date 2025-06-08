@@ -22,6 +22,15 @@ interface NotificationRequest {
     email: string;
     role: string;
   }>;
+  isUpdate?: boolean;
+  changes?: {
+    name?: { old: string; new: string };
+    date?: { old: string; new: string };
+    startTime?: { old: string; new: string };
+    endTime?: { old: string; new: string };
+    location?: { old: string; new: string };
+    type?: { old: string; new: string };
+  };
 }
 
 // Function to generate .ics calendar file content
@@ -47,7 +56,7 @@ DTSTAMP:${now}
 DTSTART:${startFormatted}
 DTEND:${endFormatted}
 SUMMARY:${event.eventName}
-DESCRIPTION:You have been assigned to this ${event.type} event as part of the team.
+DESCRIPTION:${event.isUpdate ? 'Event details have been updated.' : 'You have been assigned to this event.'} Event: ${event.eventName}
 LOCATION:${event.location}
 STATUS:CONFIRMED
 BEGIN:VALARM
@@ -57,6 +66,37 @@ DESCRIPTION:Event reminder: ${event.eventName}
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
+}
+
+// Function to generate changes summary HTML
+function generateChangesHtml(changes: any): string {
+  if (!changes) return '';
+  
+  let changesHtml = '<div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #ffc107;"><h4 style="color: #856404; margin-top: 0;">📝 What Changed:</h4><ul style="margin: 10px 0 0 20px; color: #856404;">';
+  
+  if (changes.name) {
+    changesHtml += `<li><strong>Event Name:</strong> "${changes.name.old}" → "${changes.name.new}"</li>`;
+  }
+  if (changes.date) {
+    const oldDate = new Date(changes.date.old).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const newDate = new Date(changes.date.new).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    changesHtml += `<li><strong>Date:</strong> ${oldDate} → ${newDate}</li>`;
+  }
+  if (changes.startTime) {
+    changesHtml += `<li><strong>Start Time:</strong> ${changes.startTime.old} → ${changes.startTime.new}</li>`;
+  }
+  if (changes.endTime) {
+    changesHtml += `<li><strong>End Time:</strong> ${changes.endTime.old} → ${changes.endTime.new}</li>`;
+  }
+  if (changes.location) {
+    changesHtml += `<li><strong>Location:</strong> "${changes.location.old}" → "${changes.location.new}"</li>`;
+  }
+  if (changes.type) {
+    changesHtml += `<li><strong>Event Type:</strong> ${changes.type.old} → ${changes.type.new}</li>`;
+  }
+  
+  changesHtml += '</ul></div>';
+  return changesHtml;
 }
 
 // Function to send email using Nodemailer with Gmail
@@ -69,7 +109,7 @@ async function sendEmailWithNodemailer(to: string, subject: string, html: string
   }
 
   // Create transporter using Nodemailer
-  const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransporter({
     service: 'gmail',
     auth: {
       user: gmailUser,
@@ -121,6 +161,8 @@ const handler = async (req: Request): Promise<Response> => {
     const notificationData: NotificationRequest = await req.json();
     
     console.log("Processing event notification for:", notificationData.eventName);
+    console.log("Is update:", notificationData.isUpdate);
+    console.log("Changes:", notificationData.changes);
     console.log("Assigned staff:", notificationData.assignedStaff);
 
     if (!notificationData.assignedStaff || notificationData.assignedStaff.length === 0) {
@@ -141,6 +183,9 @@ const handler = async (req: Request): Promise<Response> => {
       day: 'numeric'
     });
 
+    // Generate changes HTML if this is an update
+    const changesHtml = notificationData.isUpdate ? generateChangesHtml(notificationData.changes) : '';
+
     // Send emails to all assigned staff using Nodemailer
     const emailPromises = notificationData.assignedStaff.map(async (staff) => {
       if (!staff.email) {
@@ -148,12 +193,18 @@ const handler = async (req: Request): Promise<Response> => {
         return null;
       }
 
+      const isUpdate = notificationData.isUpdate;
+      const emailTitle = isUpdate ? 'Event Updated!' : "You've Been Assigned to an Event!";
+      const emailSubject = isUpdate ? `Event Update: ${notificationData.eventName}` : `Event Assignment: ${notificationData.eventName}`;
+      
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">You've Been Assigned to an Event!</h2>
+          <h2 style="color: #333;">${emailTitle}</h2>
+          
+          ${changesHtml}
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #2563eb; margin-top: 0;">Event Details</h3>
+            <h3 style="color: #2563eb; margin-top: 0;">${isUpdate ? 'Updated Event Details' : 'Event Details'}</h3>
             <p><strong>Event:</strong> ${notificationData.eventName}</p>
             <p><strong>Type:</strong> ${notificationData.type}</p>
             <p><strong>Role:</strong> ${staff.role}</p>
@@ -163,12 +214,15 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           
           <p>Hi ${staff.name},</p>
-          <p>You have been assigned as the <strong>${staff.role}</strong> for the upcoming event: <strong>${notificationData.eventName}</strong>.</p>
-          <p>Please add this event to your calendar using the attached .ics file, and make sure you're available at the scheduled time.</p>
+          ${isUpdate 
+            ? `<p>The event <strong>${notificationData.eventName}</strong> has been updated. Please review the changes above and update your calendar accordingly.</p>`
+            : `<p>You have been assigned as the <strong>${staff.role}</strong> for the upcoming event: <strong>${notificationData.eventName}</strong>.</p>`
+          }
+          <p>Please add this ${isUpdate ? 'updated ' : ''}event to your calendar using the attached .ics file, and make sure you're available at the scheduled time.</p>
           
           <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
             <p style="margin: 0;"><strong>📅 Calendar File Attached</strong></p>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to add this event directly to your calendar.</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar.</p>
           </div>
           
           <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
@@ -181,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         const emailResponse = await sendEmailWithNodemailer(
           staff.email,
-          `Event Assignment: ${notificationData.eventName}`,
+          emailSubject,
           emailHtml,
           icsContent
         );
@@ -200,9 +254,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Email notifications sent: ${successful} successful, ${failed} failed`);
 
+    const message = notificationData.isUpdate 
+      ? `Event update notifications sent successfully`
+      : `Event assignment notifications sent successfully`;
+
     return new Response(
       JSON.stringify({ 
-        message: `Email notifications sent successfully`,
+        message,
         stats: { successful, failed, total: notificationData.assignedStaff.length }
       }),
       {

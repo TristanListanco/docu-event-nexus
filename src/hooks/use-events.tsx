@@ -399,6 +399,36 @@ export function useEvents() {
         throw new Error("User not authenticated");
       }
 
+      // Get current event data to track changes
+      const currentEvent = events.find(e => e.id === eventId);
+      if (!currentEvent) {
+        throw new Error("Event not found");
+      }
+
+      // Track changes
+      const changes: any = {};
+      if (eventData.name && eventData.name !== currentEvent.name) {
+        changes.name = { old: currentEvent.name, new: eventData.name };
+      }
+      if (eventData.date && eventData.date !== currentEvent.date) {
+        changes.date = { old: currentEvent.date, new: eventData.date };
+      }
+      if (eventData.startTime && eventData.startTime !== currentEvent.startTime) {
+        changes.startTime = { old: currentEvent.startTime, new: eventData.startTime };
+      }
+      if (eventData.endTime && eventData.endTime !== currentEvent.endTime) {
+        changes.endTime = { old: currentEvent.endTime, new: eventData.endTime };
+      }
+      if (eventData.location && eventData.location !== currentEvent.location) {
+        changes.location = { old: currentEvent.location, new: eventData.location };
+      }
+      if (eventData.type && eventData.type !== currentEvent.type) {
+        changes.type = { old: currentEvent.type, new: eventData.type };
+      }
+
+      // Check if there are meaningful changes to notify about
+      const hasChanges = Object.keys(changes).length > 0;
+
       // Update the event
       const updateData: any = {};
       if (eventData.name) updateData.name = eventData.name;
@@ -427,7 +457,7 @@ export function useEvents() {
         throw error;
       }
 
-      // If staff assignments were provided
+      // Handle staff assignments if provided
       if (videographerIds || photographerIds) {
         // Delete existing staff assignments
         const { error: deleteError } = await supabase
@@ -441,7 +471,6 @@ export function useEvents() {
 
         // Add new videographer assignments
         if (videographerIds && videographerIds.length > 0) {
-          // Filter out "none" value
           const validVideographers = videographerIds.filter(id => id !== "none");
           
           if (validVideographers.length > 0) {
@@ -464,7 +493,6 @@ export function useEvents() {
 
         // Add new photographer assignments
         if (photographerIds && photographerIds.length > 0) {
-          // Filter out "none" value
           const validPhotographers = photographerIds.filter(id => id !== "none");
           
           if (validPhotographers.length > 0) {
@@ -486,13 +514,95 @@ export function useEvents() {
         }
       }
 
+      // Send update notifications if there are meaningful changes and assigned staff
+      if (hasChanges) {
+        try {
+          // Get current assigned staff for notifications
+          const allAssignedIds = [
+            ...(videographerIds ? videographerIds.filter(id => id !== "none") : 
+               currentEvent.videographers?.map(v => v.staffId) || []),
+            ...(photographerIds ? photographerIds.filter(id => id !== "none") : 
+               currentEvent.photographers?.map(p => p.staffId) || [])
+          ];
+
+          if (allAssignedIds.length > 0) {
+            // Get staff details for notifications
+            const { data: staffData, error: staffError } = await supabase
+              .from("staff_members")
+              .select("id, name, email, role")
+              .in("id", allAssignedIds);
+
+            if (staffError) {
+              console.error("Error fetching staff for update notifications:", staffError);
+            } else if (staffData && staffData.length > 0) {
+              // Use updated event data for notification
+              const updatedEventData = {
+                name: eventData.name || currentEvent.name,
+                date: eventData.date || currentEvent.date,
+                startTime: eventData.startTime || currentEvent.startTime,
+                endTime: eventData.endTime || currentEvent.endTime,
+                location: eventData.location || currentEvent.location,
+                type: eventData.type || currentEvent.type
+              };
+
+              // Send update notification emails
+              const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
+                body: {
+                  eventId: eventId,
+                  eventName: updatedEventData.name,
+                  eventDate: updatedEventData.date,
+                  startTime: updatedEventData.startTime,
+                  endTime: updatedEventData.endTime,
+                  location: updatedEventData.location,
+                  type: updatedEventData.type,
+                  isUpdate: true,
+                  changes: changes,
+                  assignedStaff: staffData.map(staff => ({
+                    id: staff.id,
+                    name: staff.name,
+                    email: staff.email,
+                    role: staff.role
+                  }))
+                }
+              });
+
+              if (notificationError) {
+                console.error("Error sending update notifications:", notificationError);
+                toast({
+                  title: "Event Updated",
+                  description: "Event updated successfully, but update notifications failed to send.",
+                  variant: "default",
+                });
+              } else {
+                toast({
+                  title: "Event Updated",
+                  description: "Event updated successfully and update notifications sent to assigned staff.",
+                });
+              }
+            }
+          } else {
+            toast({
+              title: "Event Updated",
+              description: "The event has been successfully updated.",
+            });
+          }
+        } catch (notificationError) {
+          console.error("Error with update notifications:", notificationError);
+          toast({
+            title: "Event Updated",
+            description: "Event updated successfully, but update notifications failed to send.",
+            variant: "default",
+          });
+        }
+      } else {
+        toast({
+          title: "Event Updated",
+          description: "The event has been successfully updated.",
+        });
+      }
+
       // Refresh the events list
       await loadEvents();
-
-      toast({
-        title: "Event Updated",
-        description: "The event has been successfully updated.",
-      });
 
       return true;
     } catch (error: any) {
