@@ -10,6 +10,7 @@ import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog"; 
 import StaffViewControls from "@/components/staff/staff-view-controls";
 import StaffListItem from "@/components/staff/staff-list-item";
+import StaffHeader from "@/components/staff/staff-header";
 import { Button } from "@/components/ui/button";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember } from "@/types/models";
@@ -30,6 +31,7 @@ export default function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [staffFormDialogOpen, setStaffFormDialogOpen] = useState(false);
 
   // Function to check if staff is currently on leave
   const isStaffOnLeave = (member: StaffMember) => {
@@ -140,21 +142,11 @@ export default function StaffPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b">
-        <div className="flex items-center justify-between p-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Staff</h1>
-            <p className="text-muted-foreground">Manage your team members</p>
-          </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => loadStaff()} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <StaffFormDialog />
-          </div>
-        </div>
-      </div>
+      <StaffHeader 
+        loading={loading}
+        onRefresh={loadStaff}
+        onAddStaff={() => setStaffFormDialogOpen(true)}
+      />
       
       <div className="p-4 flex flex-col space-y-4 flex-1">
         <div className="flex items-center justify-between space-x-4">
@@ -202,6 +194,13 @@ export default function StaffPage() {
           <EmptyStateMessage searchQuery={searchQuery} />
         )}
       </div>
+
+      {/* Staff Form Dialog */}
+      <StaffFormDialog 
+        open={staffFormDialogOpen}
+        onOpenChange={setStaffFormDialogOpen}
+        onStaffAdded={loadStaff}
+      />
 
       {/* Edit Staff Dialog */}
       {selectedStaff && (

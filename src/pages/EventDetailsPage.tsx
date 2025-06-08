@@ -47,14 +47,18 @@ export default function EventDetailsPage() {
         
         // Find assigned staff when both event and staff data are available
         if (staff.length > 0) {
-          // Find assigned videographers
+          // Find assigned videographers - only those who have videographer role
           const videographers = staff.filter(s => 
-            foundEvent.videographers && foundEvent.videographers.some(v => v.staffId === s.id)
+            foundEvent.videographers && 
+            foundEvent.videographers.some(v => v.staffId === s.id) &&
+            s.roles.includes("Videographer")
           );
           
-          // Find assigned photographers
+          // Find assigned photographers - only those who have photographer role
           const photographers = staff.filter(s => 
-            foundEvent.photographers && foundEvent.photographers.some(p => p.staffId === s.id)
+            foundEvent.photographers && 
+            foundEvent.photographers.some(p => p.staffId === s.id) &&
+            s.roles.includes("Photographer")
           );
           
           setAssignedVideographers(videographers);
@@ -192,23 +196,25 @@ export default function EventDetailsPage() {
                 <div>
                   <h3 className="text-sm font-medium mb-2">Assigned Staff</h3>
                   <div className="space-y-3">
-                    {assignedVideographers.length > 0 && (
+                    {assignedVideographers.map((videographer) => (
                       <div 
+                        key={`videographer-${videographer.id}`}
                         className="flex items-center p-2 bg-muted/50 rounded-md"
                       >
                         <Video className="h-4 w-4 mr-2 text-primary" />
-                        <span className="text-sm">{assignedVideographers[0].name}</span>
+                        <span className="text-sm">{videographer.name}</span>
                       </div>
-                    )}
+                    ))}
                     
-                    {assignedPhotographers.length > 0 && (
+                    {assignedPhotographers.map((photographer) => (
                       <div 
+                        key={`photographer-${photographer.id}`}
                         className="flex items-center p-2 bg-muted/50 rounded-md"
                       >
                         <Camera className="h-4 w-4 mr-2 text-primary" />
-                        <span className="text-sm">{assignedPhotographers[0].name}</span>
+                        <span className="text-sm">{photographer.name}</span>
                       </div>
-                    )}
+                    ))}
                     
                     {assignedVideographers.length === 0 && assignedPhotographers.length === 0 && (
                       <p className="text-sm text-muted-foreground italic">No staff assigned</p>
