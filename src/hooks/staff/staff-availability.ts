@@ -31,7 +31,7 @@ export const getAvailableStaff = (
       return true;
     }
 
-    // Check schedule conflicts
+    // Check schedule conflicts using the new structure
     const hasConflict = member.schedules.some(schedule => {
       if (schedule.dayOfWeek !== eventDay) {
         return false;
