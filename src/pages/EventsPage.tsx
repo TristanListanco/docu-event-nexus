@@ -1,7 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
+import { useIsMobile } from "@/hooks/use-mobile";
 import EventsHeader from "@/components/events/events-header";
 import EventsFilters from "@/components/events/events-filters";
 import EventsGrid from "@/components/events/events-grid";
@@ -12,27 +13,66 @@ import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import { Event, EventType, EventStatus } from "@/types/models";
 import { format } from "date-fns";
 
+type FilterOption = "all" | "upcoming" | "ongoing" | "elapsed" | "completed" | "cancelled";
+
 export default function EventsPage() {
   const navigate = useNavigate();
   const { events, loading } = useEvents();
+  const isMobile = useIsMobile();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
+  const [filterBy, setFilterBy] = useState<FilterOption>("all");
+
+  // Set default view mode based on device type
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode("grid"); // Mobile default to grid (tile view)
+    } else {
+      setViewMode("list"); // Desktop/tablet default to list view
+    }
+  }, [isMobile]);
+
+  const getEventStatus = (event: Event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    const eventStart = new Date(`${event.date}T${event.startTime}`);
+    const eventEnd = new Date(`${event.date}T${event.endTime}`);
+
+    if (now < eventStart) {
+      return "Upcoming";
+    } else if (now >= eventStart && now <= eventEnd) {
+      return "On Going";
+    } else {
+      return "Elapsed";
+    }
+  };
 
   // Filter and sort events based on selected criteria
   const filteredAndSortedEvents = events
     .filter((event) => {
-      return event.name.toLowerCase().includes(searchQuery.toLowerCase());
+      // Search filter
+      const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Status filter
+      if (filterBy === "all") {
+        return matchesSearch;
+      }
+      
+      const eventStatus = getEventStatus(event).toLowerCase().replace(" ", "");
+      const filterStatus = filterBy.toLowerCase().replace(" ", "");
+      
+      return matchesSearch && eventStatus === filterStatus;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name);
         case "status":
-          return a.status.localeCompare(b.status);
+          return getEventStatus(a).localeCompare(getEventStatus(b));
         case "date":
         default:
           return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -73,21 +113,6 @@ export default function EventsPage() {
     handleDelete(event);
   };
 
-  const getEventStatus = (event: Event) => {
-    const now = new Date();
-    const eventDate = new Date(event.date);
-    const eventStart = new Date(`${event.date}T${event.startTime}`);
-    const eventEnd = new Date(`${event.date}T${event.endTime}`);
-
-    if (now < eventStart) {
-      return "Upcoming";
-    } else if (now >= eventStart && now <= eventEnd) {
-      return "On Going";
-    } else {
-      return "Elapsed";
-    }
-  };
-
   const handleEventUpdated = () => {
     // Events list will auto-refresh through the hook
   };
@@ -117,9 +142,11 @@ export default function EventsPage() {
             onSortChange={setSortBy}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            filterBy={filterBy}
+            onFilterChange={setFilterBy}
           />
 
-          {events.length === 0 ? (
+          {filteredAndSortedEvents.length === 0 ? (
             <EventsEmptyState searchQuery={searchQuery} />
           ) : (
             <div className="space-y-8">
