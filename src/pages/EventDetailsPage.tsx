@@ -23,6 +23,15 @@ import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
 import { format } from "date-fns";
 
+// Helper function to convert 24-hour time to 12-hour format
+const formatTime12Hour = (time24: string) => {
+  const [hours, minutes] = time24.split(':');
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
+};
+
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -100,7 +109,7 @@ export default function EventDetailsPage() {
     } else if (now >= startTime && now <= endTime) {
       return "On Going";
     } else {
-      return event.status; // Keep original status for future events
+      return "Upcoming";
     }
   };
 
@@ -143,9 +152,11 @@ export default function EventDetailsPage() {
       case "On Going":
         return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
       case "Elapsed":
-        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
       case "Completed":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "Cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
     }
@@ -195,7 +206,7 @@ export default function EventDetailsPage() {
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <Clock className="h-4 w-4 mr-2" />
-                    {event.startTime} - {event.endTime}
+                    {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}
                   </div>
                 </div>
                 
