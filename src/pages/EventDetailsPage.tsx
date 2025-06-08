@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,8 @@ import {
   Video,
   Camera,
   Edit,
-  Trash2
+  Trash2,
+  UserX
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -46,21 +46,31 @@ export default function EventDetailsPage() {
       if (foundEvent) {
         setEvent(foundEvent);
         
+        // Debug logging
+        console.log("Found event:", foundEvent);
+        console.log("Event videographers:", foundEvent.videographers);
+        console.log("Event photographers:", foundEvent.photographers);
+        
         // Find assigned staff when both event and staff data are available
         if (staff.length > 0) {
-          // Find assigned videographers - only those who have videographer role
-          const videographers = staff.filter(s => 
-            foundEvent.videographers && 
-            foundEvent.videographers.some(v => v.staffId === s.id) &&
-            s.roles.includes("Videographer")
-          );
+          // Find assigned videographers - get staff members who are assigned as videographers AND have videographer role
+          const videographers = staff.filter(s => {
+            const isAssignedAsVideographer = foundEvent.videographers && 
+              foundEvent.videographers.some(v => v.staffId === s.id);
+            const hasVideographerRole = s.roles.includes("Videographer");
+            return isAssignedAsVideographer && hasVideographerRole;
+          });
           
-          // Find assigned photographers - only those who have photographer role
-          const photographers = staff.filter(s => 
-            foundEvent.photographers && 
-            foundEvent.photographers.some(p => p.staffId === s.id) &&
-            s.roles.includes("Photographer")
-          );
+          // Find assigned photographers - get staff members who are assigned as photographers AND have photographer role
+          const photographers = staff.filter(s => {
+            const isAssignedAsPhotographer = foundEvent.photographers && 
+              foundEvent.photographers.some(p => p.staffId === s.id);
+            const hasPhotographerRole = s.roles.includes("Photographer");
+            return isAssignedAsPhotographer && hasPhotographerRole;
+          });
+          
+          console.log("Filtered videographers:", videographers);
+          console.log("Filtered photographers:", photographers);
           
           setAssignedVideographers(videographers);
           setAssignedPhotographers(photographers);
@@ -191,73 +201,106 @@ export default function EventDetailsPage() {
                     <span>{event.location}</span>
                   </div>
                 </div>
+
+                {event.organizer && (
+                  <div>
+                    <div className="flex items-center text-sm">
+                      <span className="font-medium mr-2">Organizer/s:</span>
+                      <span>{event.organizer}</span>
+                    </div>
+                  </div>
+                )}
                 
                 <Separator />
                 
                 <div>
                   <h3 className="text-sm font-medium mb-2">Assigned Staff</h3>
                   <div className="space-y-3">
-                    {assignedVideographers.map((videographer) => (
-                      <div 
-                        key={`videographer-${videographer.id}`}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
-                      >
-                        <div className="flex items-center">
-                          <Video className="h-4 w-4 mr-2 text-primary" />
-                          <span className="text-sm">{videographer.name}</span>
+                    {/* Videographers Section */}
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                        <Video className="h-3 w-3 mr-1" />
+                        Videographers
+                      </h4>
+                      {assignedVideographers.length > 0 ? (
+                        assignedVideographers.map((videographer) => (
+                          <div 
+                            key={`videographer-${videographer.id}`}
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                          >
+                            <div className="flex items-center">
+                              <Video className="h-4 w-4 mr-2 text-primary" />
+                              <span className="text-sm">{videographer.name}</span>
+                            </div>
+                            <SendInvitationButton
+                              eventId={event.id}
+                              staffMember={{
+                                id: videographer.id,
+                                name: videographer.name,
+                                email: videographer.email,
+                                role: "Videographer"
+                              }}
+                              eventData={{
+                                name: event.name,
+                                date: event.date,
+                                startTime: event.startTime,
+                                endTime: event.endTime,
+                                location: event.location,
+                                type: event.type
+                              }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-center p-2 bg-muted/30 rounded-md">
+                          <UserX className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground italic">No Videographer Selected</span>
                         </div>
-                        <SendInvitationButton
-                          eventId={event.id}
-                          staffMember={{
-                            id: videographer.id,
-                            name: videographer.name,
-                            email: videographer.email,
-                            role: "Videographer"
-                          }}
-                          eventData={{
-                            name: event.name,
-                            date: event.date,
-                            startTime: event.startTime,
-                            endTime: event.endTime,
-                            location: event.location,
-                            type: event.type
-                          }}
-                        />
-                      </div>
-                    ))}
-                    
-                    {assignedPhotographers.map((photographer) => (
-                      <div 
-                        key={`photographer-${photographer.id}`}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
-                      >
-                        <div className="flex items-center">
-                          <Camera className="h-4 w-4 mr-2 text-primary" />
-                          <span className="text-sm">{photographer.name}</span>
+                      )}
+                    </div>
+
+                    {/* Photographers Section */}
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                        <Camera className="h-3 w-3 mr-1" />
+                        Photographers
+                      </h4>
+                      {assignedPhotographers.length > 0 ? (
+                        assignedPhotographers.map((photographer) => (
+                          <div 
+                            key={`photographer-${photographer.id}`}
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                          >
+                            <div className="flex items-center">
+                              <Camera className="h-4 w-4 mr-2 text-primary" />
+                              <span className="text-sm">{photographer.name}</span>
+                            </div>
+                            <SendInvitationButton
+                              eventId={event.id}
+                              staffMember={{
+                                id: photographer.id,
+                                name: photographer.name,
+                                email: photographer.email,
+                                role: "Photographer"
+                              }}
+                              eventData={{
+                                name: event.name,
+                                date: event.date,
+                                startTime: event.startTime,
+                                endTime: event.endTime,
+                                location: event.location,
+                                type: event.type
+                              }}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-center p-2 bg-muted/30 rounded-md">
+                          <UserX className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground italic">No Photographer Selected</span>
                         </div>
-                        <SendInvitationButton
-                          eventId={event.id}
-                          staffMember={{
-                            id: photographer.id,
-                            name: photographer.name,
-                            email: photographer.email,
-                            role: "Photographer"
-                          }}
-                          eventData={{
-                            name: event.name,
-                            date: event.date,
-                            startTime: event.startTime,
-                            endTime: event.endTime,
-                            location: event.location,
-                            type: event.type
-                          }}
-                        />
-                      </div>
-                    ))}
-                    
-                    {assignedVideographers.length === 0 && assignedPhotographers.length === 0 && (
-                      <p className="text-sm text-muted-foreground italic">No staff assigned</p>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

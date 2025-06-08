@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
@@ -51,13 +50,13 @@ export function useEvents() {
       // We need to fetch staff assignments separately and filter by role
       const events: Event[] = await Promise.all(
         data.map(async (event) => {
-          // Query for all staff assignments for this event
+          // Query for all staff assignments for this event with staff member details
           const { data: allAssignments, error: assignmentsError } = await supabase
             .from("staff_assignments")
             .select(`
               staff_id, 
               attendance_status,
-              staff_members!inner(role)
+              staff_members!inner(id, name, role)
             `)
             .eq("event_id", event.id);
 
@@ -65,7 +64,9 @@ export function useEvents() {
             console.error("Error fetching staff assignments:", assignmentsError);
           }
 
-          // Filter assignments by role
+          console.log(`Staff assignments for event ${event.name}:`, allAssignments);
+
+          // Filter assignments by role - ensure we're checking the actual staff member's role
           const videographerAssignments = allAssignments?.filter(a => 
             a.staff_members?.role === "Videographer"
           ) || [];
@@ -73,6 +74,9 @@ export function useEvents() {
           const photographerAssignments = allAssignments?.filter(a => 
             a.staff_members?.role === "Photographer"
           ) || [];
+
+          console.log(`Videographer assignments for ${event.name}:`, videographerAssignments);
+          console.log(`Photographer assignments for ${event.name}:`, photographerAssignments);
 
           return {
             id: event.id,
@@ -82,6 +86,7 @@ export function useEvents() {
             startTime: event.start_time,
             endTime: event.end_time,
             location: event.location,
+            organizer: event.organizer,
             type: event.type as EventType,
             status: event.status as EventStatus,
             videographers: videographerAssignments.map(v => ({ 
@@ -136,6 +141,7 @@ export function useEvents() {
           start_time: eventData.startTime,
           end_time: eventData.endTime,
           location: eventData.location,
+          organizer: eventData.organizer,
           type: eventData.type,
           status: "Upcoming",
           ignore_schedule_conflicts: eventData.ignoreScheduleConflicts,
@@ -209,6 +215,7 @@ export function useEvents() {
                 startTime: eventData.startTime,
                 endTime: eventData.endTime,
                 location: eventData.location,
+                organizer: eventData.organizer,
                 type: eventData.type,
                 assignedStaff: staffData.map(staff => ({
                   id: staff.id,
@@ -366,6 +373,7 @@ export function useEvents() {
         startTime: data.start_time,
         endTime: data.end_time,
         location: data.location,
+        organizer: data.organizer,
         type: data.type as EventType,
         status: data.status as EventStatus,
         videographers: videographerAssignments.map(v => ({ 
@@ -427,6 +435,9 @@ export function useEvents() {
       if (eventData.location && eventData.location !== currentEvent.location) {
         changes.location = { old: currentEvent.location, new: eventData.location };
       }
+      if (eventData.organizer && eventData.organizer !== currentEvent.organizer) {
+        changes.organizer = { old: currentEvent.organizer, new: eventData.organizer };
+      }
       if (eventData.type && eventData.type !== currentEvent.type) {
         changes.type = { old: currentEvent.type, new: eventData.type };
       }
@@ -442,6 +453,7 @@ export function useEvents() {
       if (eventData.startTime) updateData.start_time = eventData.startTime;
       if (eventData.endTime) updateData.end_time = eventData.endTime;
       if (eventData.location) updateData.location = eventData.location;
+      if (eventData.organizer !== undefined) updateData.organizer = eventData.organizer;
       if (eventData.type) updateData.type = eventData.type;
       if (eventData.status) updateData.status = eventData.status;
       if (eventData.ignoreScheduleConflicts !== undefined) {
@@ -463,7 +475,7 @@ export function useEvents() {
       }
 
       // Handle staff assignments if provided
-      if (videographerIds || photographerIds) {
+      if (videographerIds !== undefined || photographerIds !== undefined) {
         // Delete existing staff assignments
         const { error: deleteError } = await supabase
           .from("staff_assignments")
@@ -473,6 +485,8 @@ export function useEvents() {
         if (deleteError) {
           throw deleteError;
         }
+
+        console.log("Updating staff assignments:", { videographerIds, photographerIds });
 
         // Add new videographer assignments
         if (videographerIds && videographerIds.length > 0) {
@@ -486,11 +500,14 @@ export function useEvents() {
               attendance_status: "Pending" as AttendanceStatus
             }));
 
+            console.log("Inserting videographer assignments:", videographerAssignments);
+
             const { error: videographerError } = await supabase
               .from("staff_assignments")
               .insert(videographerAssignments);
 
             if (videographerError) {
+              console.error("Error inserting videographer assignments:", videographerError);
               throw videographerError;
             }
           }
@@ -508,11 +525,14 @@ export function useEvents() {
               attendance_status: "Pending" as AttendanceStatus
             }));
 
+            console.log("Inserting photographer assignments:", photographerAssignments);
+
             const { error: photographerError } = await supabase
               .from("staff_assignments")
               .insert(photographerAssignments);
 
             if (photographerError) {
+              console.error("Error inserting photographer assignments:", photographerError);
               throw photographerError;
             }
           }
@@ -547,6 +567,7 @@ export function useEvents() {
                 startTime: eventData.startTime || currentEvent.startTime,
                 endTime: eventData.endTime || currentEvent.endTime,
                 location: eventData.location || currentEvent.location,
+                organizer: eventData.organizer || currentEvent.organizer,
                 type: eventData.type || currentEvent.type
               };
 
@@ -559,6 +580,7 @@ export function useEvents() {
                   startTime: updatedEventData.startTime,
                   endTime: updatedEventData.endTime,
                   location: updatedEventData.location,
+                  organizer: updatedEventData.organizer,
                   type: updatedEventData.type,
                   isUpdate: true,
                   changes: changes,
