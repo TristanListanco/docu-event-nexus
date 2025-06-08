@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
 import { StaffMember, Schedule, StaffRole, LeaveDate } from "@/types/models";
 import { toast } from "./use-toast";
-import { isWithinInterval, parseISO, isBefore, isAfter } from "date-fns";
+import { isWithinInterval, parseISO, isBefore, isAfter, getDay } from "date-fns";
 
 export function useStaff() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
