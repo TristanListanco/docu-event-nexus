@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X, Clock, Plus, Edit } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StaffRole, Schedule, StaffMember, LeaveDate } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 import LeaveDatesManager from "./leave-dates-manager";
@@ -30,7 +30,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   
   const [formData, setFormData] = useState({
     name: staff.name,
-    role: staff.role,
+    roles: staff.roles || [],
     email: staff.email || "",
   });
   
@@ -52,7 +52,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       
       setFormData({
         name: staff.name,
-        role: staff.role,
+        roles: staff.roles || [],
         email: staff.email || "",
       });
       
@@ -80,8 +80,13 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleRoleChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, role: value as StaffRole }));
+  const handleRoleChange = (role: StaffRole, checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
+    }));
   };
   
   const handleScheduleChange = (field: keyof typeof currentSchedule, value: string | number) => {
@@ -163,7 +168,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       
       const success = await updateStaffMember(staff.id, {
         name: formData.name,
-        role: formData.role,
+        roles: formData.roles,
         email: formData.email || undefined,
         schedules: schedulesToUpdate,
         leaveDates: leaveDates
@@ -223,21 +228,27 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Role
+              <Label className="text-right">
+                Roles
               </Label>
-              <Select 
-                value={formData.role}
-                onValueChange={handleRoleChange}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Photographer">Photographer</SelectItem>
-                  <SelectItem value="Videographer">Videographer</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="col-span-3 space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="photographer"
+                    checked={formData.roles.includes("Photographer")}
+                    onCheckedChange={(checked) => handleRoleChange("Photographer", !!checked)}
+                  />
+                  <Label htmlFor="photographer">Photographer</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="videographer"
+                    checked={formData.roles.includes("Videographer")}
+                    onCheckedChange={(checked) => handleRoleChange("Videographer", !!checked)}
+                  />
+                  <Label htmlFor="videographer">Videographer</Label>
+                </div>
+              </div>
             </div>
             
             <div className="border-t pt-4 mt-2">
@@ -372,7 +383,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || formData.roles.length === 0}>
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

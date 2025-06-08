@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,8 +59,8 @@ export default function StaffPage() {
           bValue = b.name.toLowerCase();
           break;
         case 'role':
-          aValue = a.role.toLowerCase();
-          bValue = b.role.toLowerCase();
+          aValue = a.roles.join(', ').toLowerCase();
+          bValue = b.roles.join(', ').toLowerCase();
           break;
         case 'email':
           aValue = (a.email || '').toLowerCase();
@@ -86,8 +85,8 @@ export default function StaffPage() {
     (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()))
   ));
   
-  const videographers = filteredStaff.filter(member => member.role === "Videographer");
-  const photographers = filteredStaff.filter(member => member.role === "Photographer");
+  const videographers = filteredStaff.filter(member => member.roles.includes("Videographer"));
+  const photographers = filteredStaff.filter(member => member.roles.includes("Photographer"));
 
   const handleEditStaff = (staff: StaffMember) => {
     setSelectedStaff(staff);
