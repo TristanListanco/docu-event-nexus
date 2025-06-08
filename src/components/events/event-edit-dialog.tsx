@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { CalendarIcon, Clock, GraduationCap } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
@@ -38,8 +39,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
   const [organizer, setOrganizer] = useState(event.organizer || "");
   const [type, setType] = useState<EventType>(event.type);
   const [status, setStatus] = useState<EventStatus>(event.status);
-  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(event.ignoreScheduleConflicts);
-  const [ccsOnlyEvent, setCcsOnlyEvent] = useState(event.ccsOnlyEvent);
+  const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
@@ -62,8 +62,15 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setOrganizer(event.organizer || "");
       setType(event.type);
       setStatus(event.status);
-      setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
-      setCcsOnlyEvent(event.ccsOnlyEvent);
+      
+      // Set staff availability mode based on event properties
+      if (event.ignoreScheduleConflicts) {
+        setStaffAvailabilityMode("ignore");
+      } else if (event.ccsOnlyEvent) {
+        setStaffAvailabilityMode("ccs");
+      } else {
+        setStaffAvailabilityMode("normal");
+      }
       
       // Initialize selected staff from event
       const assignedVideographers = event.videographers?.map(v => v.staffId) || [];
@@ -74,10 +81,13 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     }
   }, [event, open]);
   
-  // Calculate available staff when date, time, conflicts setting, or CCS-only setting changes
+  // Calculate available staff when date, time, or staff availability mode changes
   useEffect(() => {
     if (date && startTime && endTime && staff.length > 0) {
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
+      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+      
       const { videographers, photographers } = getAvailableStaff(
         formattedDate,
         startTime,
@@ -118,7 +128,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, ccsOnlyEvent, staff, getAvailableStaff, event.videographers, event.photographers]);
+  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, event.videographers, event.photographers]);
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -135,6 +145,9 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     }
     
     try {
+      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
+      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+      
       const success = await updateEvent(
         event.id,
         {
@@ -168,6 +181,17 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setUpdating(false);
     }
   };
+
+  const getStaffAvailabilityDescription = () => {
+    switch (staffAvailabilityMode) {
+      case "ignore":
+        return "Showing all staff members (schedule conflicts ignored)";
+      case "ccs":
+        return "Showing staff members available for the selected time slot (CCS classes suspended)";
+      default:
+        return "Showing only staff members available for the selected time slot";
+    }
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,7 +211,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             />
           </div>
 
-          {/* Organizer field */}
           <div className="grid gap-2">
             <Label htmlFor="organizer">Organizer/s</Label>
             <Input
@@ -198,7 +221,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             />
           </div>
           
-          {/* Date field */}
           <div className="grid gap-2">
             <Label>Date</Label>
             <Popover>
@@ -229,7 +251,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             </Popover>
           </div>
           
-          {/* Time fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="startTime">Start Time</Label>
@@ -261,7 +282,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             </div>
           </div>
           
-          {/* Location field */}
           <div className="grid gap-2">
             <Label htmlFor="location">Location</Label>
             <Input
@@ -272,7 +292,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             />
           </div>
           
-          {/* Type and Status fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="type">Event Type</Label>
@@ -305,27 +324,34 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             </div>
           </div>
           
-          {/* Ignore Schedule Conflicts */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="ignoreConflicts"
-              checked={ignoreScheduleConflicts}
-              onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
-            />
-            <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
-          </div>
-          
-          {/* CCS-only Event */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="ccsOnlyEvent"
-              checked={ccsOnlyEvent}
-              onCheckedChange={(checked) => setCcsOnlyEvent(!!checked)}
-            />
-            <Label htmlFor="ccsOnlyEvent" className="flex items-center">
-              <GraduationCap className="h-4 w-4 mr-2" />
-              CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
-            </Label>
+          {/* Staff Availability Mode */}
+          <div className="grid gap-3">
+            <Label>Staff Availability</Label>
+            <RadioGroup
+              value={staffAvailabilityMode}
+              onValueChange={setStaffAvailabilityMode}
+              className="grid gap-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="normal" id="normal-edit" />
+                <Label htmlFor="normal-edit" className="font-normal">
+                  Normal (respect schedule conflicts)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ignore" id="ignore-edit" />
+                <Label htmlFor="ignore-edit" className="font-normal">
+                  Show all staff (ignore schedule conflicts)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ccs" id="ccs-edit" />
+                <Label htmlFor="ccs-edit" className="flex items-center font-normal">
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
           
           {/* Staff Assignment */}
@@ -334,11 +360,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
             
             {scheduleCalculated && (
               <p className="text-xs text-muted-foreground">
-                {ignoreScheduleConflicts 
-                  ? "Showing all staff members (schedule conflicts ignored)" 
-                  : ccsOnlyEvent
-                  ? "Showing staff members available for the selected time slot (CCS classes suspended)"
-                  : "Showing only staff members available for the selected time slot"}
+                {getStaffAvailabilityDescription()}
               </p>
             )}
             

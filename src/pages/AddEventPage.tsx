@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -27,8 +29,7 @@ export default function AddEventPage() {
   const [location, setLocation] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [type, setType] = useState<EventType>("General");
-  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
-  const [ccsOnlyEvent, setCcsOnlyEvent] = useState(false);
+  const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
   const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
@@ -43,10 +44,13 @@ export default function AddEventPage() {
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
 
-  // Check availability whenever date/time/ignoreScheduleConflicts/ccsOnlyEvent changes
+  // Check availability whenever date/time/staffAvailabilityMode changes
   useEffect(() => {
     if (date && startTime && endTime) {
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
+      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+      
       const { videographers, photographers } = getAvailableStaff(
         formattedDate,
         startTime,
@@ -80,7 +84,7 @@ export default function AddEventPage() {
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, ignoreScheduleConflicts, ccsOnlyEvent, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
+  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -121,6 +125,9 @@ export default function AddEventPage() {
         return;
       }
 
+      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
+      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+
       // Save the event with multiple staff assignments
       const eventId = await addEvent(
         {
@@ -151,6 +158,17 @@ export default function AddEventPage() {
       console.error("Error submitting form:", error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const getStaffAvailabilityDescription = () => {
+    switch (staffAvailabilityMode) {
+      case "ignore":
+        return "Showing all staff members (schedule conflicts ignored)";
+      case "ccs":
+        return "Showing staff members available for the selected time slot (CCS classes suspended)";
+      default:
+        return "Showing only staff members available for the selected time slot";
     }
   };
 
@@ -186,7 +204,6 @@ export default function AddEventPage() {
                   />
                 </div>
                 
-                {/* Organizer field */}
                 <div className="space-y-2">
                   <Label htmlFor="organizer">Organizer/s</Label>
                   <Input
@@ -199,7 +216,6 @@ export default function AddEventPage() {
                   />
                 </div>
                 
-                {/* Date and Time fields */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Event Date</Label>
@@ -263,7 +279,6 @@ export default function AddEventPage() {
                   </div>
                 </div>
                 
-                {/* Location field */}
                 <div className="space-y-2">
                   <Label htmlFor="location">Event Location</Label>
                   <Input
@@ -277,7 +292,6 @@ export default function AddEventPage() {
                   />
                 </div>
                 
-                {/* Event type field */}
                 <div className="space-y-2">
                   <Label htmlFor="type">Event Type</Label>
                   <Select value={type} onValueChange={(value) => setType(value as EventType)}>
@@ -298,27 +312,34 @@ export default function AddEventPage() {
                 <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
                   <h3 className="text-lg font-semibold">Options</h3>
                   
-                  {/* Ignore Schedule Conflicts checkbox */}
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="ignoreConflicts"
-                      checked={ignoreScheduleConflicts}
-                      onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
-                    />
-                    <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
-                  </div>
-                  
-                  {/* CCS-only Event checkbox */}
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="ccsOnlyEvent"
-                      checked={ccsOnlyEvent}
-                      onCheckedChange={(checked) => setCcsOnlyEvent(!!checked)}
-                    />
-                    <Label htmlFor="ccsOnlyEvent" className="flex items-center">
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
-                    </Label>
+                  {/* Staff Availability Mode */}
+                  <div className="space-y-3">
+                    <Label>Staff Availability</Label>
+                    <RadioGroup
+                      value={staffAvailabilityMode}
+                      onValueChange={setStaffAvailabilityMode}
+                      className="grid gap-3"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="normal" id="normal" />
+                        <Label htmlFor="normal" className="font-normal">
+                          Normal (respect schedule conflicts)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="ignore" id="ignore" />
+                        <Label htmlFor="ignore" className="font-normal">
+                          Show all staff (ignore schedule conflicts)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="ccs" id="ccs" />
+                        <Label htmlFor="ccs" className="flex items-center font-normal">
+                          <GraduationCap className="h-4 w-4 mr-2" />
+                          CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   
                   {/* Send Email Notifications checkbox */}
@@ -347,11 +368,7 @@ export default function AddEventPage() {
                     
                     {scheduleCalculated && (
                       <p className="text-sm text-muted-foreground">
-                        {ignoreScheduleConflicts 
-                          ? "Showing all staff members (schedule conflicts ignored)" 
-                          : ccsOnlyEvent
-                          ? "Showing staff members available for the selected time slot (CCS classes suspended)"
-                          : "Showing only staff members available for the selected time slot"}
+                        {getStaffAvailabilityDescription()}
                       </p>
                     )}
                     
