@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
@@ -114,7 +115,8 @@ export function useEvents() {
   const addEvent = async (
     eventData: Omit<Event, "id" | "videographers" | "photographers">,
     videographerIds: string[],
-    photographerIds: string[]
+    photographerIds: string[],
+    sendEmailNotifications: boolean = true
   ) => {
     try {
       if (!user) {
@@ -186,8 +188,8 @@ export function useEvents() {
         }
       }
 
-      // If there are assigned staff, send email notifications
-      if (allAssignedStaffIds.length > 0) {
+      // Send email notifications only if requested and there are assigned staff
+      if (sendEmailNotifications && allAssignedStaffIds.length > 0) {
         try {
           // Get staff details for email notifications
           const { data: staffData, error: staffError } = await supabase
@@ -219,7 +221,6 @@ export function useEvents() {
 
             if (notificationError) {
               console.error("Error sending notifications:", notificationError);
-              // Don't throw here - event creation was successful, just notification failed
               toast({
                 title: "Event Created",
                 description: `${eventData.name} has been created, but email notifications failed to send.`,
@@ -241,9 +242,13 @@ export function useEvents() {
           });
         }
       } else {
+        const message = sendEmailNotifications 
+          ? `${eventData.name} has been successfully created.`
+          : `${eventData.name} has been created without sending email notifications.`;
+        
         toast({
           title: "Event Created",
-          description: `${eventData.name} has been successfully created.`,
+          description: message,
         });
       }
 

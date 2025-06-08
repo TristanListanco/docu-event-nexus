@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Dialog, 
@@ -60,7 +61,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
       setStatus(event.status);
       setIgnoreScheduleConflicts(event.ignoreScheduleConflicts);
       
-      // Initialize selected staff from event - Fix the initialization logic
+      // Initialize selected staff from event
       const assignedVideographer = event.videographers && event.videographers.length > 0 
         ? event.videographers[0].staffId 
         : "none";
@@ -328,17 +329,11 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {availableVideographers.length > 0 ? (
-                      availableVideographers.map((videographer) => (
-                        <SelectItem key={videographer.id} value={videographer.id}>
-                          {videographer.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-videographers-available" disabled>
-                        No videographers available
+                    {availableVideographers.map((videographer) => (
+                      <SelectItem key={videographer.id} value={videographer.id}>
+                        {videographer.name}
                       </SelectItem>
-                    )}
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -358,17 +353,11 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {availablePhotographers.length > 0 ? (
-                      availablePhotographers.map((photographer) => (
-                        <SelectItem key={photographer.id} value={photographer.id}>
-                          {photographer.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-photographers-available" disabled>
-                        No photographers available
+                    {availablePhotographers.map((photographer) => (
+                      <SelectItem key={photographer.id} value={photographer.id}>
+                        {photographer.name}
                       </SelectItem>
-                    )}
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

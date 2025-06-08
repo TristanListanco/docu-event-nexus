@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +16,7 @@ import { useStaff } from "@/hooks/use-staff";
 import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Clock, Mail } from "lucide-react";
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -26,6 +27,7 @@ export default function AddEventPage() {
   const [location, setLocation] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
   const [selectedVideographer, setSelectedVideographer] = useState<string>("");
   const [selectedPhotographer, setSelectedPhotographer] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -132,7 +134,8 @@ export default function AddEventPage() {
           bigEventId: null // Ensure this is null not empty string
         },
         videographerIds,
-        photographerIds
+        photographerIds,
+        sendEmailNotifications
       );
 
       // If successful, redirect to the event details page
@@ -147,230 +150,259 @@ export default function AddEventPage() {
   };
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Add Event</h1>
-        <Button onClick={() => navigate("/events")} variant="outline">
-          Cancel
-        </Button>
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Add Event</h1>
+          <Button onClick={() => navigate("/events")} variant="outline">
+            Cancel
+          </Button>
+        </div>
+        <Separator className="mb-6" />
+        
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle>Event Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name field */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Event Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Event Name"
+                    required
+                    className="w-full"
+                  />
+                </div>
+                
+                {/* Date and Time fields */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Event Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="startTime">Start Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="startTime"
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="pl-8"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endTime">End Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="endTime"
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="pl-8"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Location field */}
+                <div className="space-y-2">
+                  <Label htmlFor="location">Event Location</Label>
+                  <Input
+                    id="location"
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Event Location"
+                    required
+                    className="w-full"
+                  />
+                </div>
+                
+                {/* Event type field */}
+                <div className="space-y-2">
+                  <Label htmlFor="type">Event Type</Label>
+                  <Select value={type} onValueChange={(value) => setType(value as EventType)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select event type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SPECOM">SPECOM</SelectItem>
+                      <SelectItem value="LITCOM">LITCOM</SelectItem>
+                      <SelectItem value="CUACOM">CUACOM</SelectItem>
+                      <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                      <SelectItem value="General">General</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Options Section */}
+                <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+                  <h3 className="text-lg font-semibold">Options</h3>
+                  
+                  {/* Ignore Schedule Conflicts checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="ignoreConflicts"
+                      checked={ignoreScheduleConflicts}
+                      onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
+                    />
+                    <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
+                  </div>
+                  
+                  {/* Send Email Notifications checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="sendEmails"
+                      checked={sendEmailNotifications}
+                      onCheckedChange={(checked) => setSendEmailNotifications(!!checked)}
+                    />
+                    <Label htmlFor="sendEmails" className="flex items-center">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send email notifications to assigned staff
+                    </Label>
+                  </div>
+                </div>
+                
+                {/* Staff Assignment Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Staff Assignment</h3>
+                  <div className="bg-muted/20 p-4 rounded-lg border space-y-4">
+                    {/* Instructions */}
+                    {!scheduleCalculated && (
+                      <p className="text-sm text-muted-foreground">
+                        Please select date and time to see available staff
+                      </p>
+                    )}
+                    
+                    {scheduleCalculated && (
+                      <p className="text-sm text-muted-foreground">
+                        {ignoreScheduleConflicts 
+                          ? "Showing all staff members (schedule conflicts ignored)" 
+                          : "Showing only staff members available for the selected time slot"}
+                      </p>
+                    )}
+                    
+                    {/* Staff Selection Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Videographer Selection */}
+                      <div className="space-y-2">
+                        <Label htmlFor="videographer">Videographer</Label>
+                        <Select 
+                          value={selectedVideographer} 
+                          onValueChange={setSelectedVideographer}
+                          disabled={!scheduleCalculated}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a videographer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableVideographers.length > 0 ? (
+                              availableVideographers.map((videographer) => (
+                                <SelectItem key={videographer.id} value={videographer.id}>
+                                  {videographer.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-videographers-available" disabled>
+                                No videographers available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {availableVideographers.length === 0 && scheduleCalculated && (
+                          <p className="text-sm text-amber-500">
+                            No videographers available for this time slot
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Photographer Selection */}
+                      <div className="space-y-2">
+                        <Label htmlFor="photographer">Photographer</Label>
+                        <Select 
+                          value={selectedPhotographer} 
+                          onValueChange={setSelectedPhotographer}
+                          disabled={!scheduleCalculated}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a photographer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availablePhotographers.length > 0 ? (
+                              availablePhotographers.map((photographer) => (
+                                <SelectItem key={photographer.id} value={photographer.id}>
+                                  {photographer.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-photographers-available" disabled>
+                                No photographers available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {availablePhotographers.length === 0 && scheduleCalculated && (
+                          <p className="text-sm text-amber-500">
+                            No photographers available for this time slot
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Submit button - Sticky at bottom */}
+                <div className="sticky bottom-0 bg-background pt-4 border-t">
+                  <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+                    {submitting ? "Creating Event..." : "Create Event"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      <Separator className="my-4" />
-      <Card>
-        <CardHeader>
-          <CardTitle>Event Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <div className="grid md:grid-cols-1 gap-4">
-              {/* Name field */}
-              <div>
-                <Label htmlFor="name">Event Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Event Name"
-                  required
-                />
-              </div>
-            </div>
-            
-            {/* Date and Time fields */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Event Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="center" side="bottom">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startTime">Start Time</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="pl-8"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="endTime">End Time</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="pl-8"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Location field */}
-            <div>
-              <Label htmlFor="location">Event Location</Label>
-              <Input
-                id="location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Event Location"
-                required
-              />
-            </div>
-            
-            {/* Event type field - removed event status */}
-            <div>
-              <Label htmlFor="type">Event Type</Label>
-              <Select value={type} onValueChange={(value) => setType(value as EventType)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SPECOM">SPECOM</SelectItem>
-                  <SelectItem value="LITCOM">LITCOM</SelectItem>
-                  <SelectItem value="CUACOM">CUACOM</SelectItem>
-                  <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Ignore Schedule Conflicts checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="ignoreConflicts"
-                checked={ignoreScheduleConflicts}
-                onCheckedChange={(checked) => setIgnoreScheduleConflicts(!!checked)}
-              />
-              <Label htmlFor="ignoreConflicts">Show all staff (ignore schedule conflicts)</Label>
-            </div>
-            
-            {/* Staff Assignment Section */}
-            <div className="pt-4">
-              <h3 className="text-lg font-semibold mb-2">Staff Assignment</h3>
-              <div className="bg-muted/50 p-4 rounded-lg space-y-4">
-                {/* Instructions */}
-                {!scheduleCalculated && (
-                  <p className="text-sm text-muted-foreground">
-                    Please select date and time to see available staff
-                  </p>
-                )}
-                
-                {scheduleCalculated && (
-                  <p className="text-sm text-muted-foreground">
-                    {ignoreScheduleConflicts 
-                      ? "Showing all staff members (schedule conflicts ignored)" 
-                      : "Showing only staff members available for the selected time slot"}
-                  </p>
-                )}
-                
-                {/* Videographer Selection */}
-                <div>
-                  <Label htmlFor="videographer">Videographer</Label>
-                  <Select 
-                    value={selectedVideographer} 
-                    onValueChange={setSelectedVideographer}
-                    disabled={!scheduleCalculated}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a videographer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableVideographers.length > 0 ? (
-                        availableVideographers.map((videographer) => (
-                          <SelectItem key={videographer.id} value={videographer.id}>
-                            {videographer.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-videographers-available" disabled>
-                          No videographers available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {availableVideographers.length === 0 && scheduleCalculated && (
-                    <p className="text-sm text-amber-500 mt-1">
-                      No videographers available for this time slot
-                    </p>
-                  )}
-                </div>
-                
-                {/* Photographer Selection */}
-                <div>
-                  <Label htmlFor="photographer">Photographer</Label>
-                  <Select 
-                    value={selectedPhotographer} 
-                    onValueChange={setSelectedPhotographer}
-                    disabled={!scheduleCalculated}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a photographer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePhotographers.length > 0 ? (
-                        availablePhotographers.map((photographer) => (
-                          <SelectItem key={photographer.id} value={photographer.id}>
-                            {photographer.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-photographers-available" disabled>
-                          No photographers available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {availablePhotographers.length === 0 && scheduleCalculated && (
-                    <p className="text-sm text-amber-500 mt-1">
-                      No photographers available for this time slot
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {/* Submit button */}
-            <Button type="submit" disabled={submitting} className="mt-4">
-              {submitting ? "Submitting..." : "Add Event"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
     </div>
   );
 }
