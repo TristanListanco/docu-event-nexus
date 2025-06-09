@@ -35,6 +35,12 @@ export const sendEventNotifications = async (
   }
 
   try {
+    // Get the current user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
     const { data: staffData, error: staffError } = await supabase
       .from("staff_members")
       .select("id, name, email")
@@ -57,6 +63,7 @@ export const sendEventNotifications = async (
           const { error: assignmentError } = await supabase
             .from("staff_assignments")
             .upsert({
+              user_id: user.id,
               event_id: notificationData.eventId,
               staff_id: staff.id,
               confirmation_token: confirmationToken,
