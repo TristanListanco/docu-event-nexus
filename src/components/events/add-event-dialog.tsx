@@ -399,6 +399,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     selectedStaffIds={selectedVideographers}
                     onSelectionChange={setSelectedVideographers}
                     disabled={!scheduleCalculated}
+                    excludeStaffIds={selectedPhotographers}
                   />
                   
                   <MultiStaffSelector
@@ -407,6 +408,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     selectedStaffIds={selectedPhotographers}
                     onSelectionChange={setSelectedPhotographers}
                     disabled={!scheduleCalculated}
+                    excludeStaffIds={selectedVideographers}
                   />
                 </div>
               </div>
