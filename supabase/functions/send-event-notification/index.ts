@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.8";
@@ -140,8 +139,8 @@ async function sendEmailWithNodemailer(to: string, subject: string, html: string
     throw new Error("Gmail credentials not configured");
   }
 
-  // Create transporter using Nodemailer
-  const transporter = nodemailer.createTransporter({
+  // Create transporter using Nodemailer - FIXED: changed createTransporter to createTransport
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: gmailUser,
