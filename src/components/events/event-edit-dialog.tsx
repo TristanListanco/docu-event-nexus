@@ -127,11 +127,6 @@ export default function EventEditDialog({
       // Convert date back to string format for Supabase
       const formattedDate = format(formData.date, 'yyyy-MM-dd');
 
-      console.log("Submitting event update with staff assignments:", {
-        videographers: selectedVideographers,
-        photographers: selectedPhotographers
-      });
-
       // Update event
       await updateEvent(
         event.id,
@@ -160,10 +155,6 @@ export default function EventEditDialog({
       setIsSubmitting(false);
     }
   };
-
-  // Filter staff by role for each selector
-  const videographerStaff = staff.filter(s => s.roles.includes("Videographer"));
-  const photographerStaff = staff.filter(s => s.roles.includes("Photographer"));
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -300,7 +291,7 @@ export default function EventEditDialog({
           <Label>Videographers</Label>
           <MultiStaffSelector
             role="Videographer"
-            availableStaff={videographerStaff}
+            availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
           />
@@ -310,7 +301,7 @@ export default function EventEditDialog({
           <Label>Photographers</Label>
           <MultiStaffSelector
             role="Photographer"
-            availableStaff={photographerStaff}
+            availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
           />
