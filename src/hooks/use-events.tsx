@@ -511,54 +511,89 @@ export function useEvents() {
           throw deleteError;
         }
 
-        console.log("Updating staff assignments:", { videographerIds, photographerIds });
+        console.log("Updating staff assignments with:", { videographerIds, photographerIds });
 
-        // Add new videographer assignments
-        if (videographerIds && videographerIds.length > 0) {
-          const validVideographers = videographerIds.filter(id => id !== "none");
-          
-          if (validVideographers.length > 0) {
-            const videographerAssignments = validVideographers.map(staffId => ({
-              user_id: user.id,
-              event_id: eventId,
-              staff_id: staffId,
-              attendance_status: "Pending" as AttendanceStatus
-            }));
+        // Get staff data to determine roles for each assignment
+        const allStaffIds = [
+          ...(videographerIds || []).filter(id => id !== "none"),
+          ...(photographerIds || []).filter(id => id !== "none")
+        ];
 
-            console.log("Inserting videographer assignments:", videographerAssignments);
+        if (allStaffIds.length > 0) {
+          const { data: staffData, error: staffError } = await supabase
+            .from("staff_members")
+            .select("id, role")
+            .in("id", allStaffIds);
 
-            const { error: videographerError } = await supabase
-              .from("staff_assignments")
-              .insert(videographerAssignments);
+          if (staffError) {
+            throw staffError;
+          }
 
-            if (videographerError) {
-              console.error("Error inserting videographer assignments:", videographerError);
-              throw videographerError;
+          const staffRoleMap = new Map(staffData?.map(s => [s.id, s.role]) || []);
+
+          // Add new videographer assignments
+          if (videographerIds && videographerIds.length > 0) {
+            const validVideographers = videographerIds.filter(id => id !== "none");
+            
+            if (validVideographers.length > 0) {
+              // Only assign staff members who have Videographer role
+              const videographerAssignments = validVideographers
+                .filter(staffId => {
+                  const role = staffRoleMap.get(staffId);
+                  return role === "Videographer" || role === "Both";
+                })
+                .map(staffId => ({
+                  user_id: user.id,
+                  event_id: eventId,
+                  staff_id: staffId,
+                  attendance_status: "Pending" as AttendanceStatus
+                }));
+
+              console.log("Inserting videographer assignments:", videographerAssignments);
+
+              if (videographerAssignments.length > 0) {
+                const { error: videographerError } = await supabase
+                  .from("staff_assignments")
+                  .insert(videographerAssignments);
+
+                if (videographerError) {
+                  console.error("Error inserting videographer assignments:", videographerError);
+                  throw videographerError;
+                }
+              }
             }
           }
-        }
 
-        // Add new photographer assignments
-        if (photographerIds && photographerIds.length > 0) {
-          const validPhotographers = photographerIds.filter(id => id !== "none");
-          
-          if (validPhotographers.length > 0) {
-            const photographerAssignments = validPhotographers.map(staffId => ({
-              user_id: user.id,
-              event_id: eventId,
-              staff_id: staffId,
-              attendance_status: "Pending" as AttendanceStatus
-            }));
+          // Add new photographer assignments
+          if (photographerIds && photographerIds.length > 0) {
+            const validPhotographers = photographerIds.filter(id => id !== "none");
+            
+            if (validPhotographers.length > 0) {
+              // Only assign staff members who have Photographer role
+              const photographerAssignments = validPhotographers
+                .filter(staffId => {
+                  const role = staffRoleMap.get(staffId);
+                  return role === "Photographer" || role === "Both";
+                })
+                .map(staffId => ({
+                  user_id: user.id,
+                  event_id: eventId,
+                  staff_id: staffId,
+                  attendance_status: "Pending" as AttendanceStatus
+                }));
 
-            console.log("Inserting photographer assignments:", photographerAssignments);
+              console.log("Inserting photographer assignments:", photographerAssignments);
 
-            const { error: photographerError } = await supabase
-              .from("staff_assignments")
-              .insert(photographerAssignments);
+              if (photographerAssignments.length > 0) {
+                const { error: photographerError } = await supabase
+                  .from("staff_assignments")
+                  .insert(photographerAssignments);
 
-            if (photographerError) {
-              console.error("Error inserting photographer assignments:", photographerError);
-              throw photographerError;
+                if (photographerError) {
+                  console.error("Error inserting photographer assignments:", photographerError);
+                  throw photographerError;
+                }
+              }
             }
           }
         }
