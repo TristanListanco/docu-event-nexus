@@ -171,7 +171,7 @@ export default function EventsPage() {
                         </div>
                       </CollapsibleTrigger>
                       
-                      <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
+                      <CollapsibleContent className="data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up overflow-hidden">
                         <div className="pt-2">
                           {/* Mobile uses grid view, desktop/tablet uses list view */}
                           {isMobile ? (
