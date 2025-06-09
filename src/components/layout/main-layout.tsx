@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -114,19 +115,9 @@ export default function MainLayout() {
         </Sidebar>
         
         <SidebarInset className="flex-1">
-          {/* Mobile header with sidebar trigger and logo */}
-          <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 sticky top-0 z-40">
-            <div className="flex items-center space-x-2">
-              <SidebarTrigger className="h-8 w-8" />
-              <div className="flex items-center space-x-2">
-                <img 
-                  src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
-                  alt="CCS DOCU Logo" 
-                  className="h-8 w-8 rounded-md object-cover"
-                />
-                <span className="font-bold text-sm">CCS DOCU</span>
-              </div>
-            </div>
+          {/* Mobile header with only sidebar trigger */}
+          <div className="md:hidden flex items-center border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 sticky top-0 z-40">
+            <SidebarTrigger className="h-8 w-8" />
           </div>
           
           <div className="flex-1 overflow-auto">
