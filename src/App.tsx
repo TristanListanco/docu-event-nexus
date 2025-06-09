@@ -20,6 +20,7 @@ import StaffPage from "./pages/StaffPage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import ConfirmAssignmentPage from "./pages/ConfirmAssignmentPage";
+import MainLayout from "./components/layout/main-layout";
 
 const queryClient = new QueryClient();
 
@@ -35,16 +36,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-}
-
-function MainLayout() {
-  return (
-    <div>
-      <main>
-        <Outlet />
-      </main>
-    </div>
-  );
 }
 
 function App() {
