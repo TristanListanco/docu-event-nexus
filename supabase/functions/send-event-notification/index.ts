@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import nodemailer from "npm:nodemailer@6.9.8";
@@ -279,6 +280,11 @@ const handler = async (req: Request): Promise<Response> => {
             <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
               Once confirmed, you'll be able to download the calendar file to add this event to your calendar.
             </p>
+            <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ffc107;">
+              <p style="font-size: 12px; color: #856404; margin: 0;">
+                ⏰ <strong>Important:</strong> This confirmation link will expire in 7 days. Please respond as soon as possible to secure your assignment.
+              </p>
+            </div>
           </div>
         `
         : '';
