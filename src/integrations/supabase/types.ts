@@ -194,6 +194,10 @@ export type Database = {
       staff_assignments: {
         Row: {
           attendance_status: Database["public"]["Enums"]["attendance_status"]
+          confirmation_status: string | null
+          confirmation_token: string | null
+          confirmed_at: string | null
+          declined_at: string | null
           event_id: string
           id: string
           staff_id: string
@@ -201,6 +205,10 @@ export type Database = {
         }
         Insert: {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          confirmation_status?: string | null
+          confirmation_token?: string | null
+          confirmed_at?: string | null
+          declined_at?: string | null
           event_id: string
           id?: string
           staff_id: string
@@ -208,6 +216,10 @@ export type Database = {
         }
         Update: {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
+          confirmation_status?: string | null
+          confirmation_token?: string | null
+          confirmed_at?: string | null
+          declined_at?: string | null
           event_id?: string
           id?: string
           staff_id?: string

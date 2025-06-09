@@ -40,6 +40,7 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
   const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
+  const [staffAssignments, setStaffAssignments] = useState<Record<string, any>>({});
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -49,6 +50,47 @@ export default function EventDetailsPage() {
       loadEvents();
     }
   }, []);
+
+  useEffect(() => {
+    const loadAssignmentStatuses = async () => {
+      if (!eventId) return;
+
+      try {
+        // Get assignment details including confirmation status
+        const { data: assignments, error } = await supabase
+          .from("staff_assignments")
+          .select(`
+            staff_id,
+            confirmation_status,
+            confirmed_at,
+            declined_at
+          `)
+          .eq("event_id", eventId);
+
+        if (error) {
+          console.error("Error loading assignment statuses:", error);
+          return;
+        }
+
+        const assignmentMap = assignments?.reduce((acc, assignment) => {
+          acc[assignment.staff_id] = {
+            confirmationStatus: assignment.confirmation_status,
+            confirmedAt: assignment.confirmed_at,
+            declinedAt: assignment.declined_at,
+          };
+          return acc;
+        }, {} as Record<string, any>) || {};
+
+        setStaffAssignments(assignmentMap);
+      } catch (error) {
+        console.error("Error loading assignment statuses:", error);
+      }
+    };
+
+    if (eventId) {
+      loadAssignmentStatuses();
+    }
+  }, [eventId]);
 
   useEffect(() => {
     if (events.length > 0 && eventId) {
@@ -63,7 +105,7 @@ export default function EventDetailsPage() {
         
         // Find assigned staff when both event and staff data are available
         if (staff.length > 0) {
-          // Find assigned videographers - get staff members who are assigned as videographers AND have videographer role
+          // Find assigned videographers
           const videographers = staff.filter(s => {
             const isAssignedAsVideographer = foundEvent.videographers && 
               foundEvent.videographers.some(v => v.staffId === s.id);
@@ -71,7 +113,7 @@ export default function EventDetailsPage() {
             return isAssignedAsVideographer && hasVideographerRole;
           });
           
-          // Find assigned photographers - get staff members who are assigned as photographers AND have photographer role
+          // Find assigned photographers
           const photographers = staff.filter(s => {
             const isAssignedAsPhotographer = foundEvent.photographers && 
               foundEvent.photographers.some(p => p.staffId === s.id);
@@ -95,6 +137,21 @@ export default function EventDetailsPage() {
 
   const handleAfterDelete = () => {
     navigate("/events");
+  };
+
+  const getConfirmationBadge = (staffId: string) => {
+    const assignment = staffAssignments[staffId];
+    if (!assignment) return null;
+
+    const status = assignment.confirmationStatus;
+    
+    if (status === 'confirmed') {
+      return <Badge variant="default" className="text-xs">Confirmed</Badge>;
+    } else if (status === 'declined') {
+      return <Badge variant="destructive" className="text-xs">Declined</Badge>;
+    } else {
+      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+    }
   };
 
   // Function to get dynamic event status based on current time
@@ -243,9 +300,10 @@ export default function EventDetailsPage() {
                             key={`videographer-${videographer.id}`}
                             className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
                           >
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-2">
                               <Video className="h-4 w-4 mr-2 text-primary" />
                               <span className="text-sm">{videographer.name}</span>
+                              {getConfirmationBadge(videographer.id)}
                             </div>
                             <SendInvitationButton
                               eventId={event.id}
@@ -286,9 +344,10 @@ export default function EventDetailsPage() {
                             key={`photographer-${photographer.id}`}
                             className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
                           >
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-2">
                               <Camera className="h-4 w-4 mr-2 text-primary" />
                               <span className="text-sm">{photographer.name}</span>
+                              {getConfirmationBadge(photographer.id)}
                             </div>
                             <SendInvitationButton
                               eventId={event.id}

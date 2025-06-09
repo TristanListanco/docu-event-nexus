@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./use-auth";
-import { Event, EventStatus, EventType, StaffAssignment, AttendanceStatus } from "@/types/models";
+import { Event, EventStatus, EventType, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { toast } from "./use-toast";
 import { format } from "date-fns";
 
@@ -47,15 +47,19 @@ export function useEvents() {
         throw error;
       }
 
-      // We need to fetch staff assignments separately and filter by role
+      // We need to fetch staff assignments separately with confirmation status
       const events: Event[] = await Promise.all(
         data.map(async (event) => {
-          // Query for all staff assignments for this event with staff member details
+          // Query for all staff assignments for this event with staff member details and confirmation status
           const { data: allAssignments, error: assignmentsError } = await supabase
             .from("staff_assignments")
             .select(`
               staff_id, 
               attendance_status,
+              confirmation_status,
+              confirmation_token,
+              confirmed_at,
+              declined_at,
               staff_members!inner(id, name, role)
             `)
             .eq("event_id", event.id);
@@ -64,9 +68,7 @@ export function useEvents() {
             console.error("Error fetching staff assignments:", assignmentsError);
           }
 
-          console.log(`Staff assignments for event ${event.name}:`, allAssignments);
-
-          // Filter assignments by role - ensure we're checking the actual staff member's role
+          // Filter assignments by role
           const videographerAssignments = allAssignments?.filter(a => 
             a.staff_members?.role === "Videographer"
           ) || [];
@@ -74,9 +76,6 @@ export function useEvents() {
           const photographerAssignments = allAssignments?.filter(a => 
             a.staff_members?.role === "Photographer"
           ) || [];
-
-          console.log(`Videographer assignments for ${event.name}:`, videographerAssignments);
-          console.log(`Photographer assignments for ${event.name}:`, photographerAssignments);
 
           return {
             id: event.id,
@@ -91,11 +90,19 @@ export function useEvents() {
             status: event.status as EventStatus,
             videographers: videographerAssignments.map(v => ({ 
               staffId: v.staff_id,
-              attendanceStatus: v.attendance_status as AttendanceStatus
+              attendanceStatus: v.attendance_status as AttendanceStatus,
+              confirmationStatus: v.confirmation_status as ConfirmationStatus,
+              confirmationToken: v.confirmation_token,
+              confirmedAt: v.confirmed_at,
+              declinedAt: v.declined_at
             })),
             photographers: photographerAssignments.map(p => ({ 
               staffId: p.staff_id,
-              attendanceStatus: p.attendance_status as AttendanceStatus
+              attendanceStatus: p.attendance_status as AttendanceStatus,
+              confirmationStatus: p.confirmation_status as ConfirmationStatus,
+              confirmationToken: p.confirmation_token,
+              confirmedAt: p.confirmed_at,
+              declinedAt: p.declined_at
             })),
             ignoreScheduleConflicts: event.ignore_schedule_conflicts,
             ccsOnlyEvent: event.ccs_only_event || false,
@@ -350,6 +357,10 @@ export function useEvents() {
         .select(`
           staff_id, 
           attendance_status,
+          confirmation_status,
+          confirmation_token,
+          confirmed_at,
+          declined_at,
           staff_members!inner(role)
         `)
         .eq("event_id", eventId);
@@ -380,11 +391,19 @@ export function useEvents() {
         status: data.status as EventStatus,
         videographers: videographerAssignments.map(v => ({ 
           staffId: v.staff_id,
-          attendanceStatus: v.attendance_status as AttendanceStatus
+          attendanceStatus: v.attendance_status as AttendanceStatus,
+          confirmationStatus: v.confirmation_status as ConfirmationStatus,
+          confirmationToken: v.confirmation_token,
+          confirmedAt: v.confirmed_at,
+          declinedAt: v.declined_at
         })),
         photographers: photographerAssignments.map(p => ({ 
           staffId: p.staff_id,
-          attendanceStatus: p.attendance_status as AttendanceStatus
+          attendanceStatus: p.attendance_status as AttendanceStatus,
+          confirmationStatus: p.confirmation_status as ConfirmationStatus,
+          confirmationToken: p.confirmation_token,
+          confirmedAt: p.confirmed_at,
+          declinedAt: p.declined_at
         })),
         ignoreScheduleConflicts: data.ignore_schedule_conflicts,
         ccsOnlyEvent: data.ccs_only_event || false,

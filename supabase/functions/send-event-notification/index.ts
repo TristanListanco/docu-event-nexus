@@ -32,6 +32,7 @@ interface NotificationRequest {
     organizer?: { old: string; new: string };
     type?: { old: string; new: string };
   };
+  downloadOnly?: boolean;
 }
 
 // Function to generate .ics calendar file content with Philippine Standard Time (UTC+8)
@@ -140,7 +141,7 @@ async function sendEmailWithNodemailer(to: string, subject: string, html: string
     throw new Error("Gmail credentials not configured");
   }
 
-  // Create transporter using Nodemailer - FIXED: changed createTransporter to createTransport
+  // Create transporter using Nodemailer
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -194,8 +195,19 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("Processing event notification for:", notificationData.eventName);
     console.log("Is update:", notificationData.isUpdate);
-    console.log("Changes:", notificationData.changes);
-    console.log("Assigned staff:", notificationData.assignedStaff);
+    console.log("Download only:", notificationData.downloadOnly);
+
+    // If this is a download-only request, just return the ICS content
+    if (notificationData.downloadOnly) {
+      const icsContent = generateICSContent(notificationData);
+      return new Response(
+        JSON.stringify({ icsContent }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     if (!notificationData.assignedStaff || notificationData.assignedStaff.length === 0) {
       return new Response(
@@ -218,8 +230,28 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate changes HTML if this is an update
     const changesHtml = notificationData.isUpdate ? generateChangesHtml(notificationData.changes) : '';
 
+    // Get confirmation tokens for each staff assignment
+    const staffWithTokens = await Promise.all(
+      notificationData.assignedStaff.map(async (staff) => {
+        // Get the confirmation token for this staff assignment
+        const { data: assignmentData, error } = await supabase
+          .from("staff_assignments")
+          .select("confirmation_token")
+          .eq("event_id", notificationData.eventId)
+          .eq("staff_id", staff.id)
+          .single();
+
+        if (error) {
+          console.error(`Error getting confirmation token for ${staff.name}:`, error);
+          return { ...staff, confirmationToken: null };
+        }
+
+        return { ...staff, confirmationToken: assignmentData?.confirmation_token };
+      })
+    );
+
     // Send emails to all assigned staff using Nodemailer
-    const emailPromises = notificationData.assignedStaff.map(async (staff) => {
+    const emailPromises = staffWithTokens.map(async (staff) => {
       if (!staff.email) {
         console.log(`Skipping ${staff.name} - no email provided`);
         return null;
@@ -231,6 +263,23 @@ const handler = async (req: Request): Promise<Response> => {
       
       const organizerSection = notificationData.organizer 
         ? `<p><strong>Organizer:</strong> ${notificationData.organizer}</p>`
+        : '';
+
+      // Generate confirmation link if we have a token and it's not an update
+      const confirmationSection = staff.confirmationToken && !isUpdate
+        ? `
+          <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <h3 style="color: #2563eb; margin-top: 0;">📋 Please Confirm Your Assignment</h3>
+            <p style="margin: 10px 0;">Click the button below to confirm or decline this assignment:</p>
+            <a href="${Deno.env.get("SUPABASE_URL")?.replace("/rest/v1", "")}/confirm/${staff.confirmationToken}" 
+               style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
+              Confirm Assignment
+            </a>
+            <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
+              Once confirmed, you'll be able to download the calendar file to add this event to your calendar.
+            </p>
+          </div>
+        `
         : '';
       
       const emailHtml = `
@@ -255,12 +304,15 @@ const handler = async (req: Request): Promise<Response> => {
             ? `<p>The event <strong>${notificationData.eventName}</strong> has been updated. Please review the changes above and update your calendar accordingly.</p>`
             : `<p>You have been assigned as the <strong>${staff.role}</strong> for the upcoming event: <strong>${notificationData.eventName}</strong>.</p>`
           }
-          <p>Please add this ${isUpdate ? 'updated ' : ''}event to your calendar using the attached .ics file, and make sure you're available at the scheduled time.</p>
           
+          ${confirmationSection}
+          
+          ${isUpdate ? `
           <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>📅 Calendar File Attached</strong></p>
-            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to ${isUpdate ? 'update this event in' : 'add this event to'} your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event (Philippine Standard Time).</p>
+            <p style="margin: 0;"><strong>📅 Updated Calendar File Attached</strong></p>
+            <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to update this event in your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event (Philippine Standard Time).</p>
           </div>
+          ` : ''}
           
           <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
           
@@ -274,7 +326,7 @@ const handler = async (req: Request): Promise<Response> => {
           staff.email,
           emailSubject,
           emailHtml,
-          icsContent
+          isUpdate ? icsContent : undefined // Only attach ICS for updates
         );
         
         console.log(`Email sent to ${staff.name} (${staff.email}):`, emailResponse);

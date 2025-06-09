@@ -1,4 +1,5 @@
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
+export type ConfirmationStatus = "pending" | "confirmed" | "declined";
 
 export interface Schedule {
   id: string;
@@ -40,6 +41,10 @@ export type AttendanceStatus = "Pending" | "Completed" | "Absent" | "Excused";
 export interface StaffAssignment {
   staffId: string;
   attendanceStatus: AttendanceStatus;
+  confirmationStatus?: ConfirmationStatus;
+  confirmationToken?: string;
+  confirmedAt?: string;
+  declinedAt?: string;
 }
 
 export interface Event {
