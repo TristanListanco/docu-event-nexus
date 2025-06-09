@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   AlertDialog,
@@ -14,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/events/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { Event } from "@/types/models";
 import { toast } from "@/hooks/use-toast";

@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/events/use-events";
 import EventsHeader from "@/components/events/events-header";
 import EventsPageContent from "@/components/events/events-page-content";
 import EventActionsManager from "@/components/events/event-actions-manager";

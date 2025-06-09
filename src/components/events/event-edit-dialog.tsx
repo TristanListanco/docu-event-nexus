@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -294,6 +294,7 @@ export default function EventEditDialog({
             availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
+            excludeStaffIds={selectedPhotographers}
           />
         </div>
 
@@ -304,6 +305,7 @@ export default function EventEditDialog({
             availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
+            excludeStaffIds={selectedVideographers}
           />
         </div>
       </div>

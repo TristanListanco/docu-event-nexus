@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";

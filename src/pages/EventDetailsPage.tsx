@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Event, StaffMember } from "@/types/models";

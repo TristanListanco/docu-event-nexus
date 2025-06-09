@@ -14,6 +14,7 @@ interface MultiStaffSelectorProps {
   onSelectionChange: (staffIds: string[]) => void;
   maxSelection?: number;
   disabled?: boolean;
+  excludeStaffIds?: string[]; // Staff IDs to exclude from selection
 }
 
 export default function MultiStaffSelector({
@@ -22,7 +23,8 @@ export default function MultiStaffSelector({
   selectedStaffIds,
   onSelectionChange,
   maxSelection = 2,
-  disabled = false
+  disabled = false,
+  excludeStaffIds = []
 }: MultiStaffSelectorProps) {
   const [pendingSelection, setPendingSelection] = useState<string>("");
 
@@ -50,8 +52,10 @@ export default function MultiStaffSelector({
   };
 
   const canAddMore = selectedStaffIds.length < maxSelection;
+  
+  // Filter available staff to exclude those already selected in other roles
   const availableForSelection = availableStaff.filter(staff => 
-    !selectedStaffIds.includes(staff.id)
+    !selectedStaffIds.includes(staff.id) && !excludeStaffIds.includes(staff.id)
   );
 
   const roleIcon = role === "Videographer" ? Video : Camera;
