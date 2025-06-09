@@ -536,11 +536,11 @@ export function useEvents() {
             const validVideographers = videographerIds.filter(id => id !== "none");
             
             if (validVideographers.length > 0) {
-              // Only assign staff members who have Videographer role
+              // Only assign staff members who have Videographer role or Working Com role
               const videographerAssignments = validVideographers
                 .filter(staffId => {
                   const role = staffRoleMap.get(staffId);
-                  return role === "Videographer" || role === "Both";
+                  return role === "Videographer" || role === "Working Com";
                 })
                 .map(staffId => ({
                   user_id: user.id,
@@ -569,11 +569,11 @@ export function useEvents() {
             const validPhotographers = photographerIds.filter(id => id !== "none");
             
             if (validPhotographers.length > 0) {
-              // Only assign staff members who have Photographer role
+              // Only assign staff members who have Photographer role or Working Com role
               const photographerAssignments = validPhotographers
                 .filter(staffId => {
                   const role = staffRoleMap.get(staffId);
-                  return role === "Photographer" || role === "Both";
+                  return role === "Photographer" || role === "Working Com";
                 })
                 .map(staffId => ({
                   user_id: user.id,

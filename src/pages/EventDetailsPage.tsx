@@ -108,20 +108,20 @@ export default function EventDetailsPage() {
         
         // Find assigned staff when both event and staff data are available
         if (staff.length > 0) {
-          // Find assigned videographers
+          // Find assigned videographers - match by assignment and check if staff has videographer capability
           const videographers = staff.filter(s => {
             const isAssignedAsVideographer = foundEvent.videographers && 
               foundEvent.videographers.some(v => v.staffId === s.id);
-            const hasVideographerRole = s.roles.includes("Videographer");
-            return isAssignedAsVideographer && hasVideographerRole;
+            const canDoVideography = s.role === "Videographer" || s.role === "Working Com";
+            return isAssignedAsVideographer && canDoVideography;
           });
           
-          // Find assigned photographers
+          // Find assigned photographers - match by assignment and check if staff has photographer capability
           const photographers = staff.filter(s => {
             const isAssignedAsPhotographer = foundEvent.photographers && 
               foundEvent.photographers.some(p => p.staffId === s.id);
-            const hasPhotographerRole = s.roles.includes("Photographer");
-            return isAssignedAsPhotographer && hasPhotographerRole;
+            const canDoPhotography = s.role === "Photographer" || s.role === "Working Com";
+            return isAssignedAsPhotographer && canDoPhotography;
           });
           
           console.log("Filtered videographers:", videographers);
