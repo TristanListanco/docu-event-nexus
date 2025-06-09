@@ -1,5 +1,5 @@
 
-import nodemailer from "npm:nodemailer@6.9.8";
+import { createTransporter } from "npm:nodemailer@6.9.8";
 
 export async function sendEmailWithNodemailer(to: string, subject: string, html: string, icsContent?: string) {
   const gmailUser = Deno.env.get("GMAIL_USER");
@@ -9,7 +9,7 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
     throw new Error("Gmail credentials not configured");
   }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = createTransporter({
     service: 'gmail',
     auth: {
       user: gmailUser,

@@ -27,6 +27,11 @@ export default function SendInvitationButton({ eventId, staffMember, eventData }
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSendInvitation = async () => {
+    // Prevent multiple clicks while processing
+    if (isLoading) {
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -73,7 +78,7 @@ export default function SendInvitationButton({ eventId, staffMember, eventData }
       className="h-8 w-8 p-0"
       title={`Send invitation to ${staffMember.name}`}
     >
-      <Send className="h-4 w-4" />
+      <Send className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
     </Button>
   );
 }
