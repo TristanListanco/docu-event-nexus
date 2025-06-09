@@ -1,15 +1,18 @@
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
 import EventsHeader from "@/components/events/events-header";
 import EventsPageContent from "@/components/events/events-page-content";
 import EventActionsManager from "@/components/events/event-actions-manager";
+import AddEventDialog from "@/components/events/add-event-dialog";
 import { getEventStatus } from "@/components/events/event-status-utils";
 import { Event } from "@/types/models";
 
 export default function EventsPage() {
   const navigate = useNavigate();
   const { events, loading } = useEvents();
+  const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
 
   const eventActions = EventActionsManager({
     onEventUpdated: () => {
@@ -24,6 +27,14 @@ export default function EventsPage() {
     navigate(`/events/${event.id}`);
   };
 
+  const handleAddEvent = () => {
+    setAddEventDialogOpen(true);
+  };
+
+  const handleEventAdded = () => {
+    // Events list will auto-refresh through the hook
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -34,7 +45,7 @@ export default function EventsPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <EventsHeader />
+      <EventsHeader onAddEvent={handleAddEvent} />
       
       <EventsPageContent
         events={events}
@@ -42,6 +53,12 @@ export default function EventsPage() {
         onEditEvent={eventActions.editHandler}
         onDeleteEvent={eventActions.deleteHandler}
         getEventStatus={getEventStatus}
+      />
+
+      <AddEventDialog
+        open={addEventDialogOpen}
+        onOpenChange={setAddEventDialogOpen}
+        onEventAdded={handleEventAdded}
       />
 
       {eventActions.dialogs}
