@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Info, LogOut } from "lucide-react";
+import { Calendar, Users, Info, LogOut, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sidebar,
@@ -55,50 +55,74 @@ export default function MainLayout() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <Sidebar>
-          <SidebarHeader className="border-b">
-            <div className="flex items-center space-x-2 px-2">
-              <span className="font-bold text-lg text-primary">CCS DOCU</span>
+        <Sidebar className="border-r border-sidebar-border">
+          <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/5 to-accent/5">
+            <div className="flex items-center space-x-3 px-4 py-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                <Building2 size={20} />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-lg text-primary">CCS DOCU</span>
+                <span className="text-xs text-muted-foreground">MSU-IIT</span>
+              </div>
             </div>
           </SidebarHeader>
           
-          <SidebarContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={item.isActive}
-                    onClick={() => navigate(item.path)}
-                  >
-                    <item.icon size={20} />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
+          <SidebarContent className="px-2 py-4">
+            <div className="space-y-2">
+              <div className="px-2 mb-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Navigation
+                </p>
+              </div>
+              <SidebarMenu>
+                {menuItems.map((item) => (
+                  <SidebarMenuItem key={item.path}>
+                    <SidebarMenuButton
+                      isActive={item.isActive}
+                      onClick={() => navigate(item.path)}
+                      className="h-11 px-3 mx-1 rounded-lg transition-all duration-200 hover:shadow-sm"
+                    >
+                      <item.icon size={20} className="shrink-0" />
+                      <span className="font-medium">{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
           </SidebarContent>
 
-          <SidebarFooter className="border-t">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut}>
-                  <LogOut size={20} />
-                  <span>Sign Out</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-            <div className="p-2">
-              <ThemeToggle />
+          <SidebarFooter className="border-t border-sidebar-border bg-gradient-to-r from-muted/30 to-muted/10 p-3">
+            <div className="space-y-3">
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    onClick={handleSignOut}
+                    className="h-11 px-3 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+                  >
+                    <LogOut size={20} />
+                    <span className="font-medium">Sign Out</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <div className="flex justify-center">
+                <ThemeToggle />
+              </div>
             </div>
           </SidebarFooter>
         </Sidebar>
         
         <SidebarInset className="flex-1">
           {/* Mobile header with sidebar trigger */}
-          <div className="md:hidden flex items-center border-b p-4">
-            <SidebarTrigger />
-            <div className="flex-1 flex justify-center">
-              <span className="font-bold text-lg">CCS Documentation System</span>
+          <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 sticky top-0 z-40">
+            <div className="flex items-center space-x-2">
+              <SidebarTrigger className="h-8 w-8" />
+              <div className="flex items-center space-x-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                  <Building2 size={16} />
+                </div>
+                <span className="font-bold text-sm">CCS DOCU</span>
+              </div>
             </div>
           </div>
           
