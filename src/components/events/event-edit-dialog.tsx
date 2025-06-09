@@ -311,9 +311,10 @@ export default function EventEditDialog({
               <Label className="text-right mt-2">Videographers</Label>
               <div className="col-span-3">
                 <MultiStaffSelector
-                  staff={staff.filter(s => s.roles.includes("Videographer"))}
-                  selectedStaff={selectedVideographers}
-                  setSelectedStaff={setSelectedVideographers}
+                  role="Videographer"
+                  availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
+                  selectedStaffIds={selectedVideographers}
+                  onSelectionChange={setSelectedVideographers}
                 />
               </div>
             </div>
@@ -322,9 +323,10 @@ export default function EventEditDialog({
               <Label className="text-right mt-2">Photographers</Label>
               <div className="col-span-3">
                 <MultiStaffSelector
-                  staff={staff.filter(s => s.roles.includes("Photographer"))}
-                  selectedStaff={selectedPhotographers}
-                  setSelectedStaff={setSelectedPhotographers}
+                  role="Photographer"
+                  availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
+                  selectedStaffIds={selectedPhotographers}
+                  onSelectionChange={setSelectedPhotographers}
                 />
               </div>
             </div>
