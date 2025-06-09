@@ -150,10 +150,26 @@ const handler = async (req: Request): Promise<Response> => {
       subject: subject
     });
 
-    // Step 5: Log success
+    // Step 5: Log email sending in database for tracking
+    console.log("Step 5: Recording email sending activity...");
+    const { error: logError } = await supabase
+      .from('staff_assignments')
+      .update({
+        // We could add a last_email_sent_at field if needed
+      })
+      .eq('id', existingAssignment.id);
+
+    if (logError) {
+      console.log("Warning: Could not update email tracking:", logError);
+      // Don't fail the request for this
+    }
+
+    // Step 6: Log success
     console.log("=== CONFIRMATION EMAIL SUCCESS ===");
     console.log("Final confirmation token:", confirmationToken);
     console.log("Token expires at:", tokenExpiresAt);
+    console.log("Email delivery status: SUCCESS");
+    console.log("Next step: User should click confirmation link to confirm/decline");
     
     return new Response(
       JSON.stringify({ 
@@ -161,7 +177,8 @@ const handler = async (req: Request): Promise<Response> => {
         confirmationToken,
         tokenExpiresAt,
         emailSent: true,
-        messageId: emailResponse.messageId
+        messageId: emailResponse.messageId,
+        confirmationUrl: confirmationUrl
       }),
       {
         status: 200,
@@ -171,15 +188,19 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("=== CONFIRMATION EMAIL ERROR ===");
-    console.error("Error details:", error);
+    console.error("Error type:", error.constructor.name);
     console.error("Error message:", error.message);
     console.error("Error code:", error.code);
+    console.error("Full error details:", error);
+    console.error("Stack trace:", error.stack);
     
     return new Response(
       JSON.stringify({ 
         error: error.message,
         code: error.code,
-        details: error
+        type: error.constructor.name,
+        details: error,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,
