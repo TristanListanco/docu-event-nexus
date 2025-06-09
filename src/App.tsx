@@ -54,6 +54,7 @@ function App() {
             <Route index element={<Index />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="events/add" element={<AddEventPage />} />
+            <Route path="events/new" element={<AddEventPage />} />
             <Route path="events/:eventId" element={<EventDetailsPage />} />
             <Route path="staff" element={<StaffPage />} />
             <Route path="about" element={<AboutPage />} />
