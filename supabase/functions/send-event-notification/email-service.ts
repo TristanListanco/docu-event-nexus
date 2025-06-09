@@ -1,4 +1,5 @@
 
+
 import nodemailer from "npm:nodemailer@6.9.8";
 
 export async function sendEmailWithNodemailer(to: string, subject: string, html: string, icsContent?: string) {
@@ -9,7 +10,7 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
     throw new Error("Gmail credentials not configured");
   }
 
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: gmailUser,
@@ -43,3 +44,4 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
     response: info.response,
   };
 }
+
