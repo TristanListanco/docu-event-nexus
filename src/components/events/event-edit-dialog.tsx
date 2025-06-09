@@ -1,395 +1,337 @@
-
 import { useState, useEffect } from "react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useEvents } from "@/hooks/use-events";
+import { useStaff } from "@/hooks/use-staff";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, GraduationCap } from "lucide-react";
-import { useStaff } from "@/hooks/use-staff";
-import { useEvents } from "@/hooks/use-events";
-import { Event, EventStatus, EventType, StaffMember } from "@/types/models";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import MultiStaffSelector from "./multi-staff-selector";
+import { Event, EventType, StaffMember } from "@/types/models";
+import { Checkbox } from "@/components/ui/checkbox";
+import MultiStaffSelector from "@/components/events/multi-staff-selector";
 
-export interface EventEditDialogProps {
+interface EventEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: Event;
   onEventUpdated: () => void;
 }
 
-export default function EventEditDialog({ open, onOpenChange, event, onEventUpdated }: EventEditDialogProps) {
-  const [name, setName] = useState(event.name);
-  const [date, setDate] = useState<Date>(new Date(event.date));
-  const [startTime, setStartTime] = useState(event.startTime);
-  const [endTime, setEndTime] = useState(event.endTime);
-  const [location, setLocation] = useState(event.location);
-  const [organizer, setOrganizer] = useState(event.organizer || "");
-  const [type, setType] = useState<EventType>(event.type);
-  const [status, setStatus] = useState<EventStatus>(event.status);
-  const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
+export default function EventEditDialog({
+  open,
+  onOpenChange,
+  event,
+  onEventUpdated,
+}: EventEditDialogProps) {
+  const { updateEvent } = useEvents();
+  const { staff } = useStaff();
+  
+  const [formData, setFormData] = useState({
+    name: "",
+    date: undefined as Date | undefined,
+    startTime: "",
+    endTime: "",
+    location: "",
+    organizer: "",
+    type: "General" as EventType,
+    ignoreScheduleConflicts: false,
+    ccsOnlyEvent: false,
+  });
+  
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
-  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
-  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
-  const [scheduleCalculated, setScheduleCalculated] = useState(false);
-  const [updating, setUpdating] = useState(false);
-  
-  const { staff, getAvailableStaff } = useStaff();
-  const { updateEvent } = useEvents();
-  const { toast } = useToast();
-  
-  // Initialize form values when event or dialog opens
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Initialize form data when dialog opens or event changes
   useEffect(() => {
     if (open && event) {
-      setName(event.name);
-      setDate(new Date(event.date));
-      setStartTime(event.startTime);
-      setEndTime(event.endTime);
-      setLocation(event.location);
-      setOrganizer(event.organizer || "");
-      setType(event.type);
-      setStatus(event.status);
-      
-      // Set staff availability mode based on event properties
-      if (event.ignoreScheduleConflicts) {
-        setStaffAvailabilityMode("ignore");
-      } else if (event.ccsOnlyEvent) {
-        setStaffAvailabilityMode("ccs");
-      } else {
-        setStaffAvailabilityMode("normal");
-      }
-      
-      // Initialize selected staff from event
-      const assignedVideographers = event.videographers?.map(v => v.staffId) || [];
-      const assignedPhotographers = event.photographers?.map(p => p.staffId) || [];
-      
-      setSelectedVideographers(assignedVideographers);
-      setSelectedPhotographers(assignedPhotographers);
-    }
-  }, [event, open]);
-  
-  // Calculate available staff when date, time, or staff availability mode changes
-  useEffect(() => {
-    if (date && startTime && endTime && staff.length > 0) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
-      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
-      
-      const { videographers, photographers } = getAvailableStaff(
-        formattedDate,
-        startTime,
-        endTime,
-        ignoreScheduleConflicts,
-        ccsOnlyEvent
-      );
-      
-      // Always include currently assigned staff even if they're not available
-      let allVideographers = [...videographers];
-      let allPhotographers = [...photographers];
-      
-      // Add current videographers if not in available list
-      if (event.videographers && event.videographers.length > 0) {
-        event.videographers.forEach(assignment => {
-          const currentVideographer = staff.find(s => s.id === assignment.staffId);
-          if (currentVideographer && !allVideographers.some(v => v.id === currentVideographer.id)) {
-            allVideographers.push(currentVideographer);
-          }
-        });
-      }
-      
-      // Add current photographers if not in available list
-      if (event.photographers && event.photographers.length > 0) {
-        event.photographers.forEach(assignment => {
-          const currentPhotographer = staff.find(s => s.id === assignment.staffId);
-          if (currentPhotographer && !allPhotographers.some(p => p.id === currentPhotographer.id)) {
-            allPhotographers.push(currentPhotographer);
-          }
-        });
-      }
-      
-      setAvailableVideographers(allVideographers);
-      setAvailablePhotographers(allPhotographers);
-      setScheduleCalculated(true);
-    } else {
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
-      setScheduleCalculated(false);
-    }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, event.videographers, event.photographers]);
-  
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setUpdating(true);
-    
-    if (new Date(`${date.toISOString().split('T')[0]}T${endTime}`) <= new Date(`${date.toISOString().split('T')[0]}T${startTime}`)) {
-      toast({
-        title: "Invalid Time",
-        description: "End time must be later than start time.",
-        variant: "destructive",
+      setFormData({
+        name: event.name,
+        date: event.date ? new Date(event.date) : undefined,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        location: event.location,
+        organizer: event.organizer || "",
+        type: event.type,
+        ignoreScheduleConflicts: event.ignoreScheduleConflicts || false,
+        ccsOnlyEvent: event.ccsOnlyEvent || false,
       });
-      setUpdating(false);
-      return;
-    }
-    
-    try {
-      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
-      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+
+      // Set selected staff
+      const videographerIds = event.videographers?.map(v => v.staffId) || [];
+      const photographerIds = event.photographers?.map(p => p.staffId) || [];
       
-      const success = await updateEvent(
+      setSelectedVideographers(videographerIds);
+      setSelectedPhotographers(photographerIds);
+    }
+  }, [open, event?.id]); // Only depend on open and event.id to prevent infinite loops
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleSelectChange = (value: EventType) => {
+    setFormData(prev => ({ ...prev, type: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      if (!event) {
+        throw new Error("Event data is not available.");
+      }
+
+      // Validate form data
+      if (!formData.name || !formData.date || !formData.startTime || !formData.endTime || !formData.location) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+
+      // Convert date back to string format for Supabase
+      const formattedDate = format(formData.date, 'yyyy-MM-dd');
+
+      // Update event
+      await updateEvent(
         event.id,
         {
-          name,
-          date: format(date, 'yyyy-MM-dd'),
-          startTime,
-          endTime,
-          location,
-          organizer: organizer || undefined,
-          type,
-          status,
-          ignoreScheduleConflicts,
-          ccsOnlyEvent,
+          name: formData.name,
+          date: formattedDate,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          location: formData.location,
+          organizer: formData.organizer,
+          type: formData.type,
+          ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
+          ccsOnlyEvent: formData.ccsOnlyEvent,
         },
         selectedVideographers,
         selectedPhotographers
       );
-      
-      if (success) {
-        onOpenChange(false);
-        onEventUpdated();
-      }
-    } catch (error) {
+
+      // Notify parent and close dialog
+      onEventUpdated();
+      onOpenChange(false);
+    } catch (error: any) {
       console.error("Error updating event:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update event. Please try again.",
-        variant: "destructive",
-      });
+      alert("Failed to update event. Please try again.");
     } finally {
-      setUpdating(false);
+      setIsSubmitting(false);
     }
   };
 
-  const getStaffAvailabilityDescription = () => {
-    switch (staffAvailabilityMode) {
-      case "ignore":
-        return "Showing all staff members (schedule conflicts ignored)";
-      case "ccs":
-        return "Showing staff members available for the selected time slot (CCS classes suspended)";
-      default:
-        return "Showing only staff members available for the selected time slot";
-    }
-  };
-  
+  const assignedVideographerIds = event.videographers?.map(v => v.staffId) || [];
+  const assignedPhotographerIds = event.photographers?.map(p => p.staffId) || [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>
+            Make changes to your event here. Click save when you're done.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          {/* Name field */}
-          <div className="grid gap-2">
-            <Label htmlFor="name">Event Name</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="organizer">Organizer/s</Label>
-            <Input
-              id="organizer"
-              value={organizer}
-              onChange={(e) => setOrganizer(e.target.value)}
-              placeholder="Event Organizer/s"
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label>Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(date) => date && setDate(date)}
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="startTime">Start Time</Label>
-              <div className="relative">
-                <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="pl-8"
-                  required
-                />
-              </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+              />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <div className="relative">
-                <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="pl-8"
-                  required
-                />
-              </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "col-span-3 pl-3 text-left font-normal",
+                      !formData.date && "text-muted-foreground"
+                    )}
+                  >
+                    {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.date}
+                    onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
+                    disabled={(date) =>
+                      date > new Date()
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="type">Event Type</Label>
-              <Select value={type} onValueChange={(value) => setType(value as EventType)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time
+              </Label>
+              <Input
+                type="time"
+                id="startTime"
+                name="startTime"
+                value={formData.startTime}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time
+              </Label>
+              <Input
+                type="time"
+                id="endTime"
+                name="endTime"
+                value={formData.endTime}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="location" className="text-right">
+                Location
+              </Label>
+              <Input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="organizer" className="text-right">
+                Organizer
+              </Label>
+              <Textarea
+                id="organizer"
+                name="organizer"
+                value={formData.organizer}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select onValueChange={handleSelectChange}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a type" defaultValue={formData.type} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="General">General</SelectItem>
                   <SelectItem value="SPECOM">SPECOM</SelectItem>
                   <SelectItem value="LITCOM">LITCOM</SelectItem>
                   <SelectItem value="CUACOM">CUACOM</SelectItem>
                   <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={(value) => setStatus(value as EventStatus)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Upcoming">Upcoming</SelectItem>
-                  <SelectItem value="Ongoing">Ongoing</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          {/* Staff Availability Mode */}
-          <div className="grid gap-3">
-            <Label>Staff Availability</Label>
-            <RadioGroup
-              value={staffAvailabilityMode}
-              onValueChange={setStaffAvailabilityMode}
-              className="grid gap-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="normal" id="normal-edit" />
-                <Label htmlFor="normal-edit" className="font-normal">
-                  Normal (respect schedule conflicts)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ignore" id="ignore-edit" />
-                <Label htmlFor="ignore-edit" className="font-normal">
-                  Show all staff (ignore schedule conflicts)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ccs" id="ccs-edit" />
-                <Label htmlFor="ccs-edit" className="flex items-center font-normal">
-                  <GraduationCap className="h-4 w-4 mr-2" />
-                  CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-          
-          {/* Staff Assignment */}
-          <div className="grid gap-4 pt-2">
-            <h3 className="text-sm font-semibold">Staff Assignment</h3>
-            
-            {scheduleCalculated && (
-              <p className="text-xs text-muted-foreground">
-                {getStaffAvailabilityDescription()}
-              </p>
-            )}
-            
-            <div className="space-y-4">
-              <MultiStaffSelector
-                role="Videographer"
-                availableStaff={availableVideographers}
-                selectedStaffIds={selectedVideographers}
-                onSelectionChange={setSelectedVideographers}
-                disabled={!scheduleCalculated}
-              />
-              
-              <MultiStaffSelector
-                role="Photographer"
-                availableStaff={availablePhotographers}
-                selectedStaffIds={selectedPhotographers}
-                onSelectionChange={setSelectedPhotographers}
-                disabled={!scheduleCalculated}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ignoreScheduleConflicts" className="text-right">
+                Ignore Conflicts
+              </Label>
+              <Checkbox
+                id="ignoreScheduleConflicts"
+                name="ignoreScheduleConflicts"
+                checked={formData.ignoreScheduleConflicts}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
+                className="col-span-3"
               />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ccsOnlyEvent" className="text-right">
+                CCS Only Event
+              </Label>
+              <Checkbox
+                id="ccsOnlyEvent"
+                name="ccsOnlyEvent"
+                checked={formData.ccsOnlyEvent}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
+                className="col-span-3"
+              />
+            </div>
+
+            {/* Staff Assignment Selectors */}
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right mt-2">Videographers</Label>
+              <div className="col-span-3">
+                <MultiStaffSelector
+                  staff={staff.filter(s => s.roles.includes("Videographer"))}
+                  selectedStaff={selectedVideographers}
+                  setSelectedStaff={setSelectedVideographers}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right mt-2">Photographers</Label>
+              <div className="col-span-3">
+                <MultiStaffSelector
+                  staff={staff.filter(s => s.roles.includes("Photographer"))}
+                  selectedStaff={selectedPhotographers}
+                  setSelectedStaff={setSelectedPhotographers}
+                />
+              </div>
+            </div>
           </div>
-          
-          {/* Action buttons */}
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={updating}>
-              {updating ? "Updating..." : "Save Changes"}
+          <DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Updating..." : "Save changes"}
             </Button>
           </DialogFooter>
         </form>
