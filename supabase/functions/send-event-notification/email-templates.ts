@@ -52,6 +52,7 @@ export function generateEmailTemplate(
   // Always use the production URL for confirmation links
   const productionUrl = "https://docu-event-scheduling.vercel.app";
   
+  // Show confirmation section for new assignments (when not an update and token exists)
   const confirmationSection = staff.confirmationToken && !isUpdate
     ? `
       <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
