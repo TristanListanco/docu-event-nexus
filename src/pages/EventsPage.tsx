@@ -1,8 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/use-events";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import EventsHeader from "@/components/events/events-header";
 import EventsFilters from "@/components/events/events-filters";
 import EventsGrid from "@/components/events/events-grid";
@@ -25,6 +26,7 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
 
   const getEventStatus = (event: Event) => {
     const now = new Date();
@@ -39,6 +41,18 @@ export default function EventsPage() {
     } else {
       return "Elapsed";
     }
+  };
+
+  const toggleMonthCollapse = (monthYear: string) => {
+    setCollapsedMonths(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(monthYear)) {
+        newSet.delete(monthYear);
+      } else {
+        newSet.add(monthYear);
+      }
+      return newSet;
+    });
   };
 
   // Filter and sort events based on selected criteria
@@ -138,33 +152,48 @@ export default function EventsPage() {
             <EventsEmptyState searchQuery={searchQuery} />
           ) : (
             <div className="space-y-8">
-              {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
-                <div key={monthYear} className="space-y-4">
-                  <div className="border-b border-border pb-2">
-                    <h2 className="text-xl font-semibold text-foreground">{monthYear}</h2>
-                    <p className="text-sm text-muted-foreground">{monthEvents.length} event{monthEvents.length !== 1 ? 's' : ''}</p>
-                  </div>
-                  
-                  {/* Mobile uses grid view, desktop/tablet uses list view */}
-                  {isMobile ? (
-                    <EventsGrid
-                      events={monthEvents}
-                      onEventClick={handleEventClick}
-                      onEditEvent={handleEditEvent}
-                      onDeleteEvent={handleDeleteEvent}
-                      getEventStatus={getEventStatus}
-                    />
-                  ) : (
-                    <EventsList
-                      events={monthEvents}
-                      onEventClick={handleEventClick}
-                      onEditEvent={handleEditEvent}
-                      onDeleteEvent={handleDeleteEvent}
-                      getEventStatus={getEventStatus}
-                    />
-                  )}
-                </div>
-              ))}
+              {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => {
+                const isCollapsed = collapsedMonths.has(monthYear);
+                
+                return (
+                  <Collapsible key={monthYear} open={!isCollapsed} onOpenChange={() => toggleMonthCollapse(monthYear)}>
+                    <div className="space-y-4">
+                      <CollapsibleTrigger className="w-full">
+                        <div className="border-b border-border pb-2 flex items-center justify-between hover:bg-muted/50 transition-colors rounded-md p-2">
+                          <div className="text-left">
+                            <h2 className="text-xl font-semibold text-foreground">{monthYear}</h2>
+                            <p className="text-sm text-muted-foreground">{monthEvents.length} event{monthEvents.length !== 1 ? 's' : ''}</p>
+                          </div>
+                          <ChevronDown 
+                            className={`h-5 w-5 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                          />
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent>
+                        {/* Mobile uses grid view, desktop/tablet uses list view */}
+                        {isMobile ? (
+                          <EventsGrid
+                            events={monthEvents}
+                            onEventClick={handleEventClick}
+                            onEditEvent={handleEditEvent}
+                            onDeleteEvent={handleDeleteEvent}
+                            getEventStatus={getEventStatus}
+                          />
+                        ) : (
+                          <EventsList
+                            events={monthEvents}
+                            onEventClick={handleEventClick}
+                            onEditEvent={handleEditEvent}
+                            onDeleteEvent={handleDeleteEvent}
+                            getEventStatus={getEventStatus}
+                          />
+                        )}
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
         </div>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -45,11 +44,13 @@ export default function ConfirmAssignmentPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [tokenNotFound, setTokenNotFound] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadAssignmentDetails = async () => {
       if (!token) {
         console.log("No token provided in URL");
+        setErrorMessage("No confirmation token found in the URL.");
         setTokenNotFound(true);
         setLoading(false);
         return;
@@ -66,6 +67,7 @@ export default function ConfirmAssignmentPage() {
             confirmation_status,
             confirmed_at,
             declined_at,
+            confirmation_token,
             events!inner(
               id,
               name,
@@ -90,18 +92,11 @@ export default function ConfirmAssignmentPage() {
           console.error("Assignment error:", assignmentError);
           if (assignmentError.code === 'PGRST116') {
             // No rows returned
+            setErrorMessage("This confirmation link is invalid or has expired. Please contact the event organizer for a new link.");
             setTokenNotFound(true);
-            toast({
-              title: "Assignment Not Found",
-              description: "The confirmation link is invalid or has expired.",
-              variant: "destructive",
-            });
           } else {
-            toast({
-              title: "Database Error",
-              description: `Failed to load assignment: ${assignmentError.message}`,
-              variant: "destructive",
-            });
+            setErrorMessage(`Database error: ${assignmentError.message}`);
+            setTokenNotFound(true);
           }
           setLoading(false);
           return;
@@ -109,15 +104,14 @@ export default function ConfirmAssignmentPage() {
 
         if (!assignmentData) {
           console.log("No assignment data returned");
+          setErrorMessage("This confirmation link is invalid or has expired. Please contact the event organizer for a new link.");
           setTokenNotFound(true);
-          toast({
-            title: "Assignment Not Found",
-            description: "The confirmation link is invalid or has expired.",
-            variant: "destructive",
-          });
           setLoading(false);
           return;
         }
+
+        // Check if the token is still valid (you can add expiration logic here if needed)
+        console.log("Assignment found:", assignmentData);
 
         setEvent({
           id: assignmentData.events.id,
@@ -140,11 +134,7 @@ export default function ConfirmAssignmentPage() {
         });
       } catch (error: any) {
         console.error("Error loading assignment:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load assignment details.",
-          variant: "destructive",
-        });
+        setErrorMessage("An unexpected error occurred while loading the assignment details.");
         setTokenNotFound(true);
       } finally {
         setLoading(false);
@@ -279,7 +269,7 @@ export default function ConfirmAssignmentPage() {
             <XCircle className="h-16 w-16 mx-auto text-red-500 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Assignment Not Found</h2>
             <p className="text-muted-foreground mb-4">
-              The confirmation link is invalid or has expired.
+              {errorMessage || "The confirmation link is invalid or has expired."}
             </p>
             <p className="text-sm text-muted-foreground">
               Please contact the event organizer for a new confirmation link.
