@@ -36,28 +36,29 @@ interface NotificationRequest {
 
 // Function to generate .ics calendar file content with Philippine Standard Time (UTC+8)
 function generateICSContent(event: NotificationRequest): string {
-  // Create dates in Philippine Standard Time (UTC+8)
-  const startDateTime = new Date(`${event.eventDate}T${event.startTime}+08:00`);
-  const endDateTime = new Date(`${event.eventDate}T${event.endTime}+08:00`);
+  // Parse the date and times correctly for Philippine timezone
+  const eventDateStr = event.eventDate; // Format: YYYY-MM-DD
+  const startTimeStr = event.startTime; // Format: HH:MM (24-hour)
+  const endTimeStr = event.endTime; // Format: HH:MM (24-hour)
   
-  // Format dates for ICS (YYYYMMDDTHHMMSS) with timezone
-  const formatDateForICS = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}${month}${day}T${hours}${minutes}${seconds}`;
+  // Create date strings in the format the ICS expects (local time in Manila timezone)
+  const startDateTime = `${eventDateStr}T${startTimeStr}:00`;
+  const endDateTime = `${eventDateStr}T${endTimeStr}:00`;
+  
+  // Format for ICS in local time (YYYYMMDDTHHMMSS)
+  const formatDateForICS = (dateTimeStr: string) => {
+    return dateTimeStr.replace(/[-:]/g, '').replace('T', 'T');
   };
   
   const startFormatted = formatDateForICS(startDateTime);
   const endFormatted = formatDateForICS(endDateTime);
-  const now = formatDateForICS(new Date());
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   
-  // Calculate alarm times (6 hours and 1 hour before) in Philippine time
-  const alarm6HoursBefore = new Date(startDateTime.getTime() - (6 * 60 * 60 * 1000));
-  const alarm1HourBefore = new Date(startDateTime.getTime() - (1 * 60 * 60 * 1000));
+  // For alarms, we need to calculate the trigger times
+  // 6 hours before start time
+  const startDateTimeObj = new Date(`${eventDateStr}T${startTimeStr}:00+08:00`);
+  const alarm6Hours = new Date(startDateTimeObj.getTime() - (6 * 60 * 60 * 1000));
+  const alarm1Hour = new Date(startDateTimeObj.getTime() - (1 * 60 * 60 * 1000));
   
   const organizerInfo = event.organizer ? `\\nOrganizer: ${event.organizer}` : '';
   
@@ -75,7 +76,7 @@ END:STANDARD
 END:VTIMEZONE
 BEGIN:VEVENT
 UID:${event.eventId}@admin-ccsdocu.com
-DTSTAMP:${now}Z
+DTSTAMP:${now}
 DTSTART;TZID=Asia/Manila:${startFormatted}
 DTEND;TZID=Asia/Manila:${endFormatted}
 SUMMARY:${event.eventName}
