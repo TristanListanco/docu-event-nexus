@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -76,7 +75,6 @@ export default function EventEditDialog({
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize form data when dialog opens or event changes
   useEffect(() => {
     if (open && event) {
       setFormData({
