@@ -61,12 +61,14 @@ export default function ConfirmAssignmentPage() {
       console.log("Loading assignment for token:", token);
 
       try {
-        // First try to find the assignment without querying related tables
+        // First try to find the assignment
         const { data: assignmentData, error: assignmentError } = await supabase
           .from("staff_assignments")
           .select("*")
           .eq("confirmation_token", token)
           .single();
+
+        console.log("Assignment query result:", { assignmentData, assignmentError });
 
         if (assignmentError) {
           console.error("Assignment error:", assignmentError);
@@ -94,6 +96,12 @@ export default function ConfirmAssignmentPage() {
           const expiryDate = new Date(assignmentData.confirmation_token_expires_at);
           const now = new Date();
           
+          console.log("Token expiry check:", {
+            expiryDate: expiryDate.toISOString(),
+            now: now.toISOString(),
+            expired: now > expiryDate
+          });
+          
           if (now > expiryDate) {
             console.log("Token has expired");
             setErrorMessage("This confirmation link has expired. Please contact the event organizer for a new confirmation link.");
@@ -110,6 +118,8 @@ export default function ConfirmAssignmentPage() {
           .eq("id", assignmentData.event_id)
           .single();
 
+        console.log("Event query result:", { eventData, eventError });
+
         if (eventError || !eventData) {
           console.error("Event error:", eventError);
           setErrorMessage("Unable to load event details.");
@@ -125,6 +135,8 @@ export default function ConfirmAssignmentPage() {
           .eq("id", assignmentData.staff_id)
           .single();
 
+        console.log("Staff query result:", { staffData, staffError });
+
         if (staffError || !staffData) {
           console.error("Staff error:", staffError);
           setErrorMessage("Unable to load staff details.");
@@ -133,7 +145,7 @@ export default function ConfirmAssignmentPage() {
           return;
         }
 
-        console.log("Assignment found:", assignmentData);
+        console.log("Assignment successfully loaded:", assignmentData);
 
         setEvent({
           id: eventData.id,
@@ -172,6 +184,8 @@ export default function ConfirmAssignmentPage() {
 
     setProcessing(true);
     try {
+      console.log(`${confirm ? 'Confirming' : 'Declining'} assignment for token:`, token);
+      
       const updateData = confirm
         ? {
             confirmation_status: "confirmed",
@@ -190,8 +204,11 @@ export default function ConfirmAssignmentPage() {
         .eq("id", assignment.id);
 
       if (error) {
+        console.error("Error updating assignment:", error);
         throw error;
       }
+
+      console.log("Assignment updated successfully");
 
       setAssignment(prev => prev ? {
         ...prev,
@@ -229,6 +246,8 @@ export default function ConfirmAssignmentPage() {
     if (!event || !assignment) return;
 
     try {
+      console.log("Downloading calendar file for event:", event.id);
+      
       const { data, error } = await supabase.functions.invoke('send-event-notification', {
         body: {
           eventId: event.id,
@@ -249,6 +268,7 @@ export default function ConfirmAssignmentPage() {
       });
 
       if (error) {
+        console.error("Error downloading calendar file:", error);
         throw error;
       }
 
@@ -263,6 +283,8 @@ export default function ConfirmAssignmentPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      console.log("Calendar file downloaded successfully");
     } catch (error: any) {
       console.error("Error downloading calendar file:", error);
       toast({
