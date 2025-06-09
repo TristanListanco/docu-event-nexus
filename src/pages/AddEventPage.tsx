@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -127,12 +128,15 @@ export default function AddEventPage() {
       const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
       const ccsOnlyEvent = staffAvailabilityMode === "ccs";
 
+      // Format date properly to avoid timezone issues
+      const formattedDate = format(date, 'yyyy-MM-dd');
+
       // Save the event with multiple staff assignments
       const eventId = await addEvent(
         {
           name,
           logId,
-          date: date.toISOString().split('T')[0],
+          date: formattedDate,
           startTime,
           endTime,
           location,
@@ -377,6 +381,7 @@ export default function AddEventPage() {
                         availableStaff={availableVideographers}
                         selectedStaffIds={selectedVideographers}
                         onSelectionChange={setSelectedVideographers}
+                        excludeStaffIds={selectedPhotographers}
                         disabled={!scheduleCalculated}
                       />
                       
@@ -385,6 +390,7 @@ export default function AddEventPage() {
                         availableStaff={availablePhotographers}
                         selectedStaffIds={selectedPhotographers}
                         onSelectionChange={setSelectedPhotographers}
+                        excludeStaffIds={selectedVideographers}
                         disabled={!scheduleCalculated}
                       />
                     </div>

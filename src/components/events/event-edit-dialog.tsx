@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -122,7 +123,7 @@ export default function EventEditDialog({
         return;
       }
 
-      // Convert date back to string format for Supabase
+      // Format date properly to avoid timezone issues
       const formattedDate = format(formData.date, 'yyyy-MM-dd');
 
       // Update event
@@ -191,8 +192,9 @@ export default function EventEditDialog({
                 mode="single"
                 selected={formData.date}
                 onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
-                disabled={(date) => date > new Date()}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>

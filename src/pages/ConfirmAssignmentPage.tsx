@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -59,43 +60,60 @@ export default function ConfirmAssignmentPage() {
       console.log("Loading assignment for token:", token);
 
       try {
-        // Get assignment details with event and staff information
-        const { data: assignmentData, error: assignmentError } = await supabase
-          .from("staff_assignments")
-          .select(`
-            id,
-            confirmation_status,
-            confirmed_at,
-            declined_at,
-            confirmation_token,
-            events!inner(
+        // Try multiple times to handle network issues
+        let attemptCount = 0;
+        const maxAttempts = 3;
+        let assignmentData = null;
+        let assignmentError = null;
+
+        while (attemptCount < maxAttempts && !assignmentData) {
+          attemptCount++;
+          console.log(`Attempt ${attemptCount} to load assignment`);
+          
+          const { data, error } = await supabase
+            .from("staff_assignments")
+            .select(`
               id,
-              name,
-              date,
-              start_time,
-              end_time,
-              location,
-              organizer,
-              type
-            ),
-            staff_members!inner(
-              name,
-              role
-            )
-          `)
-          .eq("confirmation_token", token)
-          .single();
+              confirmation_status,
+              confirmed_at,
+              declined_at,
+              confirmation_token,
+              events!inner(
+                id,
+                name,
+                date,
+                start_time,
+                end_time,
+                location,
+                organizer,
+                type
+              ),
+              staff_members!inner(
+                name,
+                role
+              )
+            `)
+            .eq("confirmation_token", token)
+            .single();
+
+          assignmentData = data;
+          assignmentError = error;
+
+          if (error && attemptCount < maxAttempts) {
+            console.log(`Attempt ${attemptCount} failed, retrying...`, error);
+            await new Promise(resolve => setTimeout(resolve, 1000 * attemptCount));
+          }
+        }
 
         console.log("Assignment query result:", { assignmentData, assignmentError });
 
         if (assignmentError) {
           console.error("Assignment error:", assignmentError);
           if (assignmentError.code === 'PGRST116') {
-            // No rows returned
             setErrorMessage("This confirmation link is invalid or has expired. Please contact the event organizer for a new link.");
             setTokenNotFound(true);
           } else {
-            setErrorMessage(`Database error: ${assignmentError.message}`);
+            setErrorMessage(`Unable to load assignment details. Please check your internet connection and try again. Error: ${assignmentError.message}`);
             setTokenNotFound(true);
           }
           setLoading(false);
@@ -110,7 +128,6 @@ export default function ConfirmAssignmentPage() {
           return;
         }
 
-        // Check if the token is still valid (you can add expiration logic here if needed)
         console.log("Assignment found:", assignmentData);
 
         setEvent({
@@ -134,7 +151,7 @@ export default function ConfirmAssignmentPage() {
         });
       } catch (error: any) {
         console.error("Error loading assignment:", error);
-        setErrorMessage("An unexpected error occurred while loading the assignment details.");
+        setErrorMessage("An unexpected error occurred while loading the assignment details. Please check your internet connection and try again.");
         setTokenNotFound(true);
       } finally {
         setLoading(false);
@@ -194,7 +211,7 @@ export default function ConfirmAssignmentPage() {
       console.error("Error updating assignment:", error);
       toast({
         title: "Error",
-        description: "Failed to update assignment status.",
+        description: "Failed to update assignment status. Please check your internet connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -271,9 +288,16 @@ export default function ConfirmAssignmentPage() {
             <p className="text-muted-foreground mb-4">
               {errorMessage || "The confirmation link is invalid or has expired."}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mb-4">
               Please contact the event organizer for a new confirmation link.
             </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              className="w-full"
+            >
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>
