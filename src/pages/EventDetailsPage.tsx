@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Event, StaffMember } from "@/types/models";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 // Helper function to convert 24-hour time to 12-hour format
