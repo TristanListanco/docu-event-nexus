@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -58,9 +57,11 @@ export default function MainLayout() {
         <Sidebar className="border-r border-sidebar-border">
           <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/5 to-accent/5">
             <div className="flex items-center space-x-3 px-4 py-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-                <Building2 size={20} />
-              </div>
+              <img 
+                src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
+                alt="CCS DOCU Logo" 
+                className="h-10 w-10 rounded-lg object-cover shadow-sm"
+              />
               <div className="flex flex-col">
                 <span className="font-bold text-lg text-primary">CCS DOCU</span>
                 <span className="text-xs text-muted-foreground">MSU-IIT</span>
@@ -113,14 +114,16 @@ export default function MainLayout() {
         </Sidebar>
         
         <SidebarInset className="flex-1">
-          {/* Mobile header with sidebar trigger */}
+          {/* Mobile header with sidebar trigger and logo */}
           <div className="md:hidden flex items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 sticky top-0 z-40">
             <div className="flex items-center space-x-2">
               <SidebarTrigger className="h-8 w-8" />
               <div className="flex items-center space-x-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                  <Building2 size={16} />
-                </div>
+                <img 
+                  src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
+                  alt="CCS DOCU Logo" 
+                  className="h-8 w-8 rounded-md object-cover"
+                />
                 <span className="font-bold text-sm">CCS DOCU</span>
               </div>
             </div>
