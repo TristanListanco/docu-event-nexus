@@ -262,7 +262,7 @@ export default function ConfirmAssignmentPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12 h-screen">
+      <div className="flex items-center justify-center p-12 h-screen bg-background text-foreground">
         <div className="text-center">
           <CalendarIcon className="h-8 w-8 animate-pulse mx-auto text-primary" />
           <p className="mt-2 text-lg">Loading assignment details...</p>
@@ -273,7 +273,7 @@ export default function ConfirmAssignmentPage() {
 
   if (tokenNotFound || !event || !assignment) {
     return (
-      <div className="flex items-center justify-center p-12 h-screen">
+      <div className="flex items-center justify-center p-12 h-screen bg-background text-foreground">
         <Card className="max-w-md">
           <CardContent className="text-center p-6">
             <XCircle className="h-16 w-16 mx-auto text-red-500 mb-4" />
@@ -294,7 +294,7 @@ export default function ConfirmAssignmentPage() {
   const isAlreadyResponded = assignment.confirmationStatus !== 'pending';
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background text-foreground py-8">
       <div className="max-w-2xl mx-auto px-4">
         <Card className="mb-6">
           <CardHeader>
@@ -303,7 +303,7 @@ export default function ConfirmAssignmentPage() {
           <CardContent>
             <div className="space-y-6">
               {/* Event Details */}
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-primary/10 dark:bg-primary/20 p-4 rounded-lg">
                 <h3 className="font-semibold text-lg mb-3">{event.name}</h3>
                 <div className="space-y-2">
                   <div className="flex items-center">
@@ -332,7 +332,7 @@ export default function ConfirmAssignmentPage() {
               </div>
 
               {/* Assignment Details */}
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-muted/50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Assignment Details</h4>
                 <p className="text-sm">
                   Hello <strong>{assignment.staffName}</strong>, you have been assigned as the <strong>{assignment.role}</strong> for this event.
