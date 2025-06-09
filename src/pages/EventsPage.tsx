@@ -1,17 +1,22 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/events/use-events";
+import { useIsMobile } from "@/hooks/use-mobile";
 import EventsHeader from "@/components/events/events-header";
 import EventsPageContent from "@/components/events/events-page-content";
 import EventActionsManager from "@/components/events/event-actions-manager";
 import AddEventDialog from "@/components/events/add-event-dialog";
+import AddEventSheet from "@/components/events/add-event-sheet";
 import { getEventStatus } from "@/components/events/event-status-utils";
 import { Event } from "@/types/models";
 
 export default function EventsPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { events, loading } = useEvents();
   const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
+  const [addEventSheetOpen, setAddEventSheetOpen] = useState(false);
 
   const eventActions = EventActionsManager({
     onEventUpdated: () => {
@@ -27,7 +32,11 @@ export default function EventsPage() {
   };
 
   const handleAddEvent = () => {
-    setAddEventDialogOpen(true);
+    if (isMobile) {
+      setAddEventSheetOpen(true);
+    } else {
+      setAddEventDialogOpen(true);
+    }
   };
 
   const handleEventAdded = () => {
@@ -54,9 +63,17 @@ export default function EventsPage() {
         getEventStatus={getEventStatus}
       />
 
+      {/* Desktop Dialog */}
       <AddEventDialog
         open={addEventDialogOpen}
         onOpenChange={setAddEventDialogOpen}
+        onEventAdded={handleEventAdded}
+      />
+
+      {/* Mobile/Tablet Sheet */}
+      <AddEventSheet
+        open={addEventSheetOpen}
+        onOpenChange={setAddEventSheetOpen}
         onEventAdded={handleEventAdded}
       />
 
