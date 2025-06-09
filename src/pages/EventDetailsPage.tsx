@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Event, StaffMember } from "@/types/models";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
@@ -39,6 +39,7 @@ export default function EventDetailsPage() {
   const navigate = useNavigate();
   const { events, loading, loadEvents } = useEvents();
   const { staff, loading: staffLoading } = useStaff();
+  const isMobile = useIsMobile();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
   const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
@@ -241,6 +242,26 @@ export default function EventDetailsPage() {
               <p className="text-muted-foreground">{event.logId}</p>
             </div>
           </div>
+          
+          {/* Mobile Action Buttons in Header */}
+          {isMobile && (
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       
@@ -384,29 +405,32 @@ export default function EventDetailsPage() {
           </Card>
         </div>
         
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Administration</CardTitle>
-              <CardDescription>Manage event settings and assignments</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full" onClick={() => setEditDialogOpen(true)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Event
-              </Button>
-              
-              <Button 
-                variant="destructive" 
-                className="w-full"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Event
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Desktop Action Buttons in Sidebar */}
+        {!isMobile && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Event Administration</CardTitle>
+                <CardDescription>Manage event settings and assignments</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button className="w-full" onClick={() => setEditDialogOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Event
+                </Button>
+                
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Event
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Edit Event Dialog */}
