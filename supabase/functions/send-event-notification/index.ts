@@ -251,6 +251,9 @@ const handler = async (req: Request): Promise<Response> => {
       })
     );
 
+    // Ensure we always use the production URL for confirmation links
+    const baseUrl = "https://docu-event-scheduling.vercel.app";
+
     // Send emails to all assigned staff using Nodemailer
     const emailPromises = staffWithTokens.map(async (staff) => {
       if (!staff.email) {
@@ -267,13 +270,13 @@ const handler = async (req: Request): Promise<Response> => {
         : '';
 
       // Generate confirmation link if we have a token and it's not an update
-      // Use the production URL for the confirmation link
+      // Always use the production URL for the confirmation link
       const confirmationSection = staff.confirmationToken && !isUpdate
         ? `
           <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
             <h3 style="color: #2563eb; margin-top: 0;">📋 Please Confirm Your Assignment</h3>
             <p style="margin: 10px 0;">Click the button below to confirm or decline this assignment:</p>
-            <a href="https://docu-event-scheduling.vercel.app/confirm/${staff.confirmationToken}" 
+            <a href="${baseUrl}/confirm/${staff.confirmationToken}" 
                style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
               Confirm Assignment
             </a>
