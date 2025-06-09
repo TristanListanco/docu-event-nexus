@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -205,7 +204,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0 w-[95vw]">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Add New Event</DialogTitle>
         </DialogHeader>
@@ -238,7 +237,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
               />
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>Event Date *</Label>
                 <Popover>
@@ -268,7 +267,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                 </Popover>
               </div>
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startTime">Start Time *</Label>
                   <div className="relative">
@@ -393,7 +392,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                   </p>
                 )}
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <MultiStaffSelector
                     role="Videographer"
                     availableStaff={availableVideographers}
