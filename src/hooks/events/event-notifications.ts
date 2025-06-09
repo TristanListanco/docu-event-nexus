@@ -52,14 +52,14 @@ export const sendEventNotifications = async (
     }
 
     if (staffData && staffData.length > 0) {
-      // Generate confirmation tokens for new assignments (not updates)
+      // For new assignments, create staff assignments first
       if (!isUpdate) {
+        console.log("Creating staff assignments for new event...");
         for (const staff of staffData) {
           const confirmationToken = uuidv4();
           const expiryDate = new Date();
           expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
 
-          // Update or insert the staff assignment with confirmation token
           const { error: assignmentError } = await supabase
             .from("staff_assignments")
             .upsert({
@@ -74,36 +74,72 @@ export const sendEventNotifications = async (
             });
 
           if (assignmentError) {
-            console.error("Error updating assignment with token:", assignmentError);
+            console.error("Error creating assignment:", assignmentError);
+          } else {
+            console.log(`Assignment created for staff ${staff.name}`);
           }
         }
-      }
 
-      const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
-        body: {
-          ...notificationData,
-          assignedStaff: staffData.map(staff => ({
-            id: staff.id,
-            name: staff.name,
-            email: staff.email,
-            role: videographerIds.includes(staff.id) ? "Videographer" : "Photographer"
-          }))
+        // Send confirmation emails using the new dedicated function
+        console.log("Sending confirmation emails...");
+        for (const staff of staffData) {
+          if (!staff.email) {
+            console.log(`Skipping ${staff.name} - no email provided`);
+            continue;
+          }
+
+          const staffRole = videographerIds.includes(staff.id) ? "Videographer" : "Photographer";
+          
+          try {
+            const { error: emailError } = await supabase.functions.invoke('confirmation-email', {
+              body: {
+                eventId: notificationData.eventId,
+                staffId: staff.id,
+                staffName: staff.name,
+                staffEmail: staff.email,
+                staffRole: staffRole,
+                eventName: notificationData.eventName,
+                eventDate: notificationData.eventDate,
+                startTime: notificationData.startTime,
+                endTime: notificationData.endTime,
+                location: notificationData.location,
+                organizer: notificationData.organizer,
+                type: notificationData.type
+              }
+            });
+
+            if (emailError) {
+              console.error(`Error sending confirmation email to ${staff.name}:`, emailError);
+            } else {
+              console.log(`Confirmation email sent to ${staff.name}`);
+            }
+          } catch (error) {
+            console.error(`Failed to send confirmation email to ${staff.name}:`, error);
+          }
         }
-      });
-
-      if (notificationError) {
-        console.error("Error sending notifications:", notificationError);
-        toast({
-          title: isUpdate ? "Event Updated" : "Event Created",
-          description: `${notificationData.eventName} has been ${isUpdate ? 'updated' : 'created'}, but email notifications failed to send.`,
-          variant: "default",
-        });
       } else {
-        toast({
-          title: isUpdate ? "Event Updated" : "Event Created",
-          description: `${notificationData.eventName} has been ${isUpdate ? 'updated' : 'created'} and email notifications sent to assigned staff.`,
+        // For updates, use the existing notification function
+        const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
+          body: {
+            ...notificationData,
+            assignedStaff: staffData.map(staff => ({
+              id: staff.id,
+              name: staff.name,
+              email: staff.email,
+              role: videographerIds.includes(staff.id) ? "Videographer" : "Photographer"
+            }))
+          }
         });
+
+        if (notificationError) {
+          console.error("Error sending update notifications:", notificationError);
+        }
       }
+
+      toast({
+        title: isUpdate ? "Event Updated" : "Event Created",
+        description: `${notificationData.eventName} has been ${isUpdate ? 'updated' : 'created'} and email notifications sent to assigned staff.`,
+      });
     }
   } catch (error) {
     console.error("Error with notifications:", error);
