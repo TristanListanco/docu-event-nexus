@@ -60,7 +60,7 @@ export function useEvents() {
               confirmation_token,
               confirmed_at,
               declined_at,
-              staff_members!inner(id, name, roles:staff_roles(role))
+              staff_members!inner(id, name)
             `)
             .eq("event_id", event.id);
 
@@ -68,14 +68,38 @@ export function useEvents() {
             console.error("Error fetching staff assignments:", assignmentsError);
           }
 
+          // Get staff roles for all assigned staff
+          const assignedStaffIds = allAssignments?.map(a => a.staff_members.id) || [];
+          let staffRolesMap: Record<string, string[]> = {};
+          
+          if (assignedStaffIds.length > 0) {
+            const { data: staffRoles, error: rolesError } = await supabase
+              .from("staff_roles")
+              .select("staff_id, role")
+              .in("staff_id", assignedStaffIds);
+
+            if (rolesError) {
+              console.error("Error fetching staff roles:", rolesError);
+            } else {
+              // Group roles by staff_id
+              staffRolesMap = staffRoles?.reduce((acc, role) => {
+                if (!acc[role.staff_id]) {
+                  acc[role.staff_id] = [];
+                }
+                acc[role.staff_id].push(role.role);
+                return acc;
+              }, {} as Record<string, string[]>) || {};
+            }
+          }
+
           // Filter assignments by checking if staff member has the required role
           const videographerAssignments = allAssignments?.filter(a => {
-            const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+            const staffRoles = staffRolesMap[a.staff_members.id] || [];
             return staffRoles.includes("Videographer");
           }) || [];
           
           const photographerAssignments = allAssignments?.filter(a => {
-            const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+            const staffRoles = staffRolesMap[a.staff_members.id] || [];
             return staffRoles.includes("Photographer");
           }) || [];
 
@@ -363,7 +387,7 @@ export function useEvents() {
           confirmation_token,
           confirmed_at,
           declined_at,
-          staff_members!inner(roles:staff_roles(role))
+          staff_members!inner(id, name)
         `)
         .eq("event_id", eventId);
 
@@ -371,14 +395,38 @@ export function useEvents() {
         console.error("Error fetching staff assignments:", assignmentsError);
       }
 
+      // Get staff roles for all assigned staff
+      const assignedStaffIds = allAssignments?.map(a => a.staff_members.id) || [];
+      let staffRolesMap: Record<string, string[]> = {};
+      
+      if (assignedStaffIds.length > 0) {
+        const { data: staffRoles, error: rolesError } = await supabase
+          .from("staff_roles")
+          .select("staff_id, role")
+          .in("staff_id", assignedStaffIds);
+
+        if (rolesError) {
+          console.error("Error fetching staff roles:", rolesError);
+        } else {
+          // Group roles by staff_id
+          staffRolesMap = staffRoles?.reduce((acc, role) => {
+            if (!acc[role.staff_id]) {
+              acc[role.staff_id] = [];
+            }
+            acc[role.staff_id].push(role.role);
+            return acc;
+          }, {} as Record<string, string[]>) || {};
+        }
+      }
+
       // Filter assignments by checking if staff member has the required role
       const videographerAssignments = allAssignments?.filter(a => {
-        const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+        const staffRoles = staffRolesMap[a.staff_members.id] || [];
         return staffRoles.includes("Videographer");
       }) || [];
       
       const photographerAssignments = allAssignments?.filter(a => {
-        const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+        const staffRoles = staffRolesMap[a.staff_members.id] || [];
         return staffRoles.includes("Photographer");
       }) || [];
 
