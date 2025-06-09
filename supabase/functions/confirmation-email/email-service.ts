@@ -10,7 +10,7 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
   }
 
   console.log("Creating email transporter...");
-  const transporter = nodemailer.createTransporter({
+  const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: gmailUser,
