@@ -196,6 +196,7 @@ export type Database = {
           attendance_status: Database["public"]["Enums"]["attendance_status"]
           confirmation_status: string | null
           confirmation_token: string | null
+          confirmation_token_expires_at: string | null
           confirmed_at: string | null
           declined_at: string | null
           event_id: string
@@ -207,6 +208,7 @@ export type Database = {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
           confirmation_status?: string | null
           confirmation_token?: string | null
+          confirmation_token_expires_at?: string | null
           confirmed_at?: string | null
           declined_at?: string | null
           event_id: string
@@ -218,6 +220,7 @@ export type Database = {
           attendance_status?: Database["public"]["Enums"]["attendance_status"]
           confirmation_status?: string | null
           confirmation_token?: string | null
+          confirmation_token_expires_at?: string | null
           confirmed_at?: string | null
           declined_at?: string | null
           event_id?: string

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,35 +61,12 @@ export default function ConfirmAssignmentPage() {
       console.log("Loading assignment for token:", token);
 
       try {
-        // Enhanced query with token expiry check
+        // First try to find the assignment without querying related tables
         const { data: assignmentData, error: assignmentError } = await supabase
           .from("staff_assignments")
-          .select(`
-            id,
-            confirmation_status,
-            confirmed_at,
-            declined_at,
-            confirmation_token,
-            confirmation_token_expires_at,
-            events!inner(
-              id,
-              name,
-              date,
-              start_time,
-              end_time,
-              location,
-              organizer,
-              type
-            ),
-            staff_members!inner(
-              name,
-              role
-            )
-          `)
+          .select("*")
           .eq("confirmation_token", token)
           .single();
-
-        console.log("Assignment query result:", { assignmentData, assignmentError });
 
         if (assignmentError) {
           console.error("Assignment error:", assignmentError);
@@ -125,24 +103,54 @@ export default function ConfirmAssignmentPage() {
           }
         }
 
+        // Now fetch the event details
+        const { data: eventData, error: eventError } = await supabase
+          .from("events")
+          .select("*")
+          .eq("id", assignmentData.event_id)
+          .single();
+
+        if (eventError || !eventData) {
+          console.error("Event error:", eventError);
+          setErrorMessage("Unable to load event details.");
+          setTokenNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch staff member details
+        const { data: staffData, error: staffError } = await supabase
+          .from("staff_members")
+          .select("name, role")
+          .eq("id", assignmentData.staff_id)
+          .single();
+
+        if (staffError || !staffData) {
+          console.error("Staff error:", staffError);
+          setErrorMessage("Unable to load staff details.");
+          setTokenNotFound(true);
+          setLoading(false);
+          return;
+        }
+
         console.log("Assignment found:", assignmentData);
 
         setEvent({
-          id: assignmentData.events.id,
-          name: assignmentData.events.name,
-          date: assignmentData.events.date,
-          startTime: assignmentData.events.start_time,
-          endTime: assignmentData.events.end_time,
-          location: assignmentData.events.location,
-          organizer: assignmentData.events.organizer,
-          type: assignmentData.events.type,
+          id: eventData.id,
+          name: eventData.name,
+          date: eventData.date,
+          startTime: eventData.start_time,
+          endTime: eventData.end_time,
+          location: eventData.location,
+          organizer: eventData.organizer,
+          type: eventData.type,
         });
 
         setAssignment({
           id: assignmentData.id,
-          staffName: assignmentData.staff_members.name,
-          role: assignmentData.staff_members.role,
-          confirmationStatus: assignmentData.confirmation_status,
+          staffName: staffData.name,
+          role: staffData.role,
+          confirmationStatus: assignmentData.confirmation_status || 'pending',
           confirmedAt: assignmentData.confirmed_at,
           declinedAt: assignmentData.declined_at,
           tokenExpiresAt: assignmentData.confirmation_token_expires_at,
