@@ -112,7 +112,7 @@ export default function EventDetailsPage() {
           const videographers = staff.filter(s => {
             const isAssignedAsVideographer = foundEvent.videographers && 
               foundEvent.videographers.some(v => v.staffId === s.id);
-            const canDoVideography = s.role === "Videographer" || s.role === "Working Com";
+            const canDoVideography = s.roles.includes("Videographer") || s.roles.includes("Working Com");
             return isAssignedAsVideographer && canDoVideography;
           });
           
@@ -120,7 +120,7 @@ export default function EventDetailsPage() {
           const photographers = staff.filter(s => {
             const isAssignedAsPhotographer = foundEvent.photographers && 
               foundEvent.photographers.some(p => p.staffId === s.id);
-            const canDoPhotography = s.role === "Photographer" || s.role === "Working Com";
+            const canDoPhotography = s.roles.includes("Photographer") || s.roles.includes("Working Com");
             return isAssignedAsPhotographer && canDoPhotography;
           });
           
