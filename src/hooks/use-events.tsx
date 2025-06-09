@@ -60,7 +60,7 @@ export function useEvents() {
               confirmation_token,
               confirmed_at,
               declined_at,
-              staff_members!inner(id, name, role)
+              staff_members!inner(id, name, roles:staff_roles(role))
             `)
             .eq("event_id", event.id);
 
@@ -68,14 +68,16 @@ export function useEvents() {
             console.error("Error fetching staff assignments:", assignmentsError);
           }
 
-          // Filter assignments by role
-          const videographerAssignments = allAssignments?.filter(a => 
-            a.staff_members?.role === "Videographer"
-          ) || [];
+          // Filter assignments by checking if staff member has the required role
+          const videographerAssignments = allAssignments?.filter(a => {
+            const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+            return staffRoles.includes("Videographer");
+          }) || [];
           
-          const photographerAssignments = allAssignments?.filter(a => 
-            a.staff_members?.role === "Photographer"
-          ) || [];
+          const photographerAssignments = allAssignments?.filter(a => {
+            const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+            return staffRoles.includes("Photographer");
+          }) || [];
 
           return {
             id: event.id,
@@ -209,7 +211,7 @@ export function useEvents() {
           // Get staff details for email notifications
           const { data: staffData, error: staffError } = await supabase
             .from("staff_members")
-            .select("id, name, email, role")
+            .select("id, name, email")
             .in("id", allAssignedStaffIds);
 
           if (staffError) {
@@ -230,7 +232,7 @@ export function useEvents() {
                   id: staff.id,
                   name: staff.name,
                   email: staff.email,
-                  role: staff.role
+                  role: videographerIds.includes(staff.id) ? "Videographer" : "Photographer"
                 }))
               }
             });
@@ -361,7 +363,7 @@ export function useEvents() {
           confirmation_token,
           confirmed_at,
           declined_at,
-          staff_members!inner(role)
+          staff_members!inner(roles:staff_roles(role))
         `)
         .eq("event_id", eventId);
 
@@ -369,14 +371,16 @@ export function useEvents() {
         console.error("Error fetching staff assignments:", assignmentsError);
       }
 
-      // Filter assignments by role
-      const videographerAssignments = allAssignments?.filter(a => 
-        a.staff_members?.role === "Videographer"
-      ) || [];
+      // Filter assignments by checking if staff member has the required role
+      const videographerAssignments = allAssignments?.filter(a => {
+        const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+        return staffRoles.includes("Videographer");
+      }) || [];
       
-      const photographerAssignments = allAssignments?.filter(a => 
-        a.staff_members?.role === "Photographer"
-      ) || [];
+      const photographerAssignments = allAssignments?.filter(a => {
+        const staffRoles = a.staff_members?.roles?.map(r => r.role) || [];
+        return staffRoles.includes("Photographer");
+      }) || [];
 
       const event: Event = {
         id: data.id,
@@ -434,13 +438,15 @@ export function useEvents() {
         throw new Error("User not authenticated");
       }
 
+      console.log("Updating event with staff assignments:", { videographerIds, photographerIds });
+
       // Get current event data to track changes
       const currentEvent = events.find(e => e.id === eventId);
       if (!currentEvent) {
         throw new Error("Event not found");
       }
 
-      // Track changes
+      // Track changes for notifications
       const changes: any = {};
       if (eventData.name && eventData.name !== currentEvent.name) {
         changes.name = { old: currentEvent.name, new: eventData.name };
@@ -464,7 +470,6 @@ export function useEvents() {
         changes.type = { old: currentEvent.type, new: eventData.type };
       }
 
-      // Check if there are meaningful changes to notify about
       const hasChanges = Object.keys(changes).length > 0;
 
       // Update the event
@@ -511,55 +516,53 @@ export function useEvents() {
           throw deleteError;
         }
 
-        console.log("Updating staff assignments:", { videographerIds, photographerIds });
+        console.log("Staff assignments to process:", { videographerIds, photographerIds });
+
+        // Filter out "none" values and ensure we have valid staff IDs
+        const validVideographerIds = videographerIds ? videographerIds.filter(id => id && id !== "none") : [];
+        const validPhotographerIds = photographerIds ? photographerIds.filter(id => id && id !== "none") : [];
+
+        console.log("Valid staff IDs after filtering:", { validVideographerIds, validPhotographerIds });
 
         // Add new videographer assignments
-        if (videographerIds && videographerIds.length > 0) {
-          const validVideographers = videographerIds.filter(id => id !== "none");
-          
-          if (validVideographers.length > 0) {
-            const videographerAssignments = validVideographers.map(staffId => ({
-              user_id: user.id,
-              event_id: eventId,
-              staff_id: staffId,
-              attendance_status: "Pending" as AttendanceStatus
-            }));
+        if (validVideographerIds.length > 0) {
+          const videographerAssignments = validVideographerIds.map(staffId => ({
+            user_id: user.id,
+            event_id: eventId,
+            staff_id: staffId,
+            attendance_status: "Pending" as AttendanceStatus
+          }));
 
-            console.log("Inserting videographer assignments:", videographerAssignments);
+          console.log("Inserting videographer assignments:", videographerAssignments);
 
-            const { error: videographerError } = await supabase
-              .from("staff_assignments")
-              .insert(videographerAssignments);
+          const { error: videographerError } = await supabase
+            .from("staff_assignments")
+            .insert(videographerAssignments);
 
-            if (videographerError) {
-              console.error("Error inserting videographer assignments:", videographerError);
-              throw videographerError;
-            }
+          if (videographerError) {
+            console.error("Error inserting videographer assignments:", videographerError);
+            throw videographerError;
           }
         }
 
         // Add new photographer assignments
-        if (photographerIds && photographerIds.length > 0) {
-          const validPhotographers = photographerIds.filter(id => id !== "none");
-          
-          if (validPhotographers.length > 0) {
-            const photographerAssignments = validPhotographers.map(staffId => ({
-              user_id: user.id,
-              event_id: eventId,
-              staff_id: staffId,
-              attendance_status: "Pending" as AttendanceStatus
-            }));
+        if (validPhotographerIds.length > 0) {
+          const photographerAssignments = validPhotographerIds.map(staffId => ({
+            user_id: user.id,
+            event_id: eventId,
+            staff_id: staffId,
+            attendance_status: "Pending" as AttendanceStatus
+          }));
 
-            console.log("Inserting photographer assignments:", photographerAssignments);
+          console.log("Inserting photographer assignments:", photographerAssignments);
 
-            const { error: photographerError } = await supabase
-              .from("staff_assignments")
-              .insert(photographerAssignments);
+          const { error: photographerError } = await supabase
+            .from("staff_assignments")
+            .insert(photographerAssignments);
 
-            if (photographerError) {
-              console.error("Error inserting photographer assignments:", photographerError);
-              throw photographerError;
-            }
+          if (photographerError) {
+            console.error("Error inserting photographer assignments:", photographerError);
+            throw photographerError;
           }
         }
       }
@@ -567,25 +570,22 @@ export function useEvents() {
       // Send update notifications if there are meaningful changes and assigned staff
       if (hasChanges) {
         try {
-          // Get current assigned staff for notifications
           const allAssignedIds = [
-            ...(videographerIds ? videographerIds.filter(id => id !== "none") : 
+            ...(videographerIds ? videographerIds.filter(id => id && id !== "none") : 
                currentEvent.videographers?.map(v => v.staffId) || []),
-            ...(photographerIds ? photographerIds.filter(id => id !== "none") : 
+            ...(photographerIds ? photographerIds.filter(id => id && id !== "none") : 
                currentEvent.photographers?.map(p => p.staffId) || [])
           ];
 
           if (allAssignedIds.length > 0) {
-            // Get staff details for notifications
             const { data: staffData, error: staffError } = await supabase
               .from("staff_members")
-              .select("id, name, email, role")
+              .select("id, name, email")
               .in("id", allAssignedIds);
 
             if (staffError) {
               console.error("Error fetching staff for update notifications:", staffError);
             } else if (staffData && staffData.length > 0) {
-              // Use updated event data for notification
               const updatedEventData = {
                 name: eventData.name || currentEvent.name,
                 date: eventData.date || currentEvent.date,
@@ -596,7 +596,6 @@ export function useEvents() {
                 type: eventData.type || currentEvent.type
               };
 
-              // Send update notification emails
               const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
                 body: {
                   eventId: eventId,
@@ -609,12 +608,16 @@ export function useEvents() {
                   type: updatedEventData.type,
                   isUpdate: true,
                   changes: changes,
-                  assignedStaff: staffData.map(staff => ({
-                    id: staff.id,
-                    name: staff.name,
-                    email: staff.email,
-                    role: staff.role
-                  }))
+                  assignedStaff: staffData.map(staff => {
+                    const isVideographer = videographerIds?.includes(staff.id) || 
+                                         (!videographerIds && currentEvent.videographers?.some(v => v.staffId === staff.id));
+                    return {
+                      id: staff.id,
+                      name: staff.name,
+                      email: staff.email,
+                      role: isVideographer ? "Videographer" : "Photographer"
+                    };
+                  })
                 }
               });
 
