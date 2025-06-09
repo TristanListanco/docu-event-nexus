@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,6 +26,7 @@ interface AssignmentDetails {
   confirmationStatus: string;
   confirmedAt?: string;
   declinedAt?: string;
+  tokenExpiresAt?: string;
 }
 
 const formatTime12Hour = (time24: string) => {
@@ -60,50 +60,33 @@ export default function ConfirmAssignmentPage() {
       console.log("Loading assignment for token:", token);
 
       try {
-        // Try multiple times to handle network issues
-        let attemptCount = 0;
-        const maxAttempts = 3;
-        let assignmentData = null;
-        let assignmentError = null;
-
-        while (attemptCount < maxAttempts && !assignmentData) {
-          attemptCount++;
-          console.log(`Attempt ${attemptCount} to load assignment`);
-          
-          const { data, error } = await supabase
-            .from("staff_assignments")
-            .select(`
+        // Enhanced query with token expiry check
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from("staff_assignments")
+          .select(`
+            id,
+            confirmation_status,
+            confirmed_at,
+            declined_at,
+            confirmation_token,
+            confirmation_token_expires_at,
+            events!inner(
               id,
-              confirmation_status,
-              confirmed_at,
-              declined_at,
-              confirmation_token,
-              events!inner(
-                id,
-                name,
-                date,
-                start_time,
-                end_time,
-                location,
-                organizer,
-                type
-              ),
-              staff_members!inner(
-                name,
-                role
-              )
-            `)
-            .eq("confirmation_token", token)
-            .single();
-
-          assignmentData = data;
-          assignmentError = error;
-
-          if (error && attemptCount < maxAttempts) {
-            console.log(`Attempt ${attemptCount} failed, retrying...`, error);
-            await new Promise(resolve => setTimeout(resolve, 1000 * attemptCount));
-          }
-        }
+              name,
+              date,
+              start_time,
+              end_time,
+              location,
+              organizer,
+              type
+            ),
+            staff_members!inner(
+              name,
+              role
+            )
+          `)
+          .eq("confirmation_token", token)
+          .single();
 
         console.log("Assignment query result:", { assignmentData, assignmentError });
 
@@ -113,7 +96,7 @@ export default function ConfirmAssignmentPage() {
             setErrorMessage("This confirmation link is invalid or has expired. Please contact the event organizer for a new link.");
             setTokenNotFound(true);
           } else {
-            setErrorMessage(`Unable to load assignment details. Please check your internet connection and try again. Error: ${assignmentError.message}`);
+            setErrorMessage(`Unable to load assignment details. Error: ${assignmentError.message}`);
             setTokenNotFound(true);
           }
           setLoading(false);
@@ -126,6 +109,20 @@ export default function ConfirmAssignmentPage() {
           setTokenNotFound(true);
           setLoading(false);
           return;
+        }
+
+        // Check if token has expired
+        if (assignmentData.confirmation_token_expires_at) {
+          const expiryDate = new Date(assignmentData.confirmation_token_expires_at);
+          const now = new Date();
+          
+          if (now > expiryDate) {
+            console.log("Token has expired");
+            setErrorMessage("This confirmation link has expired. Please contact the event organizer for a new confirmation link.");
+            setTokenNotFound(true);
+            setLoading(false);
+            return;
+          }
         }
 
         console.log("Assignment found:", assignmentData);
@@ -148,6 +145,7 @@ export default function ConfirmAssignmentPage() {
           confirmationStatus: assignmentData.confirmation_status,
           confirmedAt: assignmentData.confirmed_at,
           declinedAt: assignmentData.declined_at,
+          tokenExpiresAt: assignmentData.confirmation_token_expires_at,
         });
       } catch (error: any) {
         console.error("Error loading assignment:", error);
@@ -307,6 +305,10 @@ export default function ConfirmAssignmentPage() {
   const formattedDate = format(new Date(event.date), 'MMMM d, yyyy');
   const isAlreadyResponded = assignment.confirmationStatus !== 'pending';
 
+  // Check if token is expiring soon (within 24 hours)
+  const isExpiringSoon = assignment.tokenExpiresAt && 
+    new Date(assignment.tokenExpiresAt).getTime() - new Date().getTime() < 24 * 60 * 60 * 1000;
+
   return (
     <div className="min-h-screen bg-background text-foreground py-8">
       <div className="max-w-2xl mx-auto px-4">
@@ -316,6 +318,18 @@ export default function ConfirmAssignmentPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Token expiry warning */}
+              {isExpiringSoon && assignment.confirmationStatus === 'pending' && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
+                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                      <strong>Reminder:</strong> This confirmation link expires soon. Please respond as soon as possible.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Event Details */}
               <div className="bg-primary/10 dark:bg-primary/20 p-4 rounded-lg">
                 <h3 className="font-semibold text-lg mb-3">{event.name}</h3>

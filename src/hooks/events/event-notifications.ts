@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface NotificationData {
   eventId: string;
@@ -45,6 +46,32 @@ export const sendEventNotifications = async (
     }
 
     if (staffData && staffData.length > 0) {
+      // Generate confirmation tokens for new assignments (not updates)
+      if (!isUpdate) {
+        for (const staff of staffData) {
+          const confirmationToken = uuidv4();
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 7); // 7 days from now
+
+          // Update or insert the staff assignment with confirmation token
+          const { error: assignmentError } = await supabase
+            .from("staff_assignments")
+            .upsert({
+              event_id: notificationData.eventId,
+              staff_id: staff.id,
+              confirmation_token: confirmationToken,
+              confirmation_token_expires_at: expiryDate.toISOString(),
+              confirmation_status: 'pending'
+            }, {
+              onConflict: 'event_id,staff_id'
+            });
+
+          if (assignmentError) {
+            console.error("Error updating assignment with token:", assignmentError);
+          }
+        }
+      }
+
       const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
         body: {
           ...notificationData,

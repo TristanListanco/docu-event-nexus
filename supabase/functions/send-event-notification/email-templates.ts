@@ -49,12 +49,15 @@ export function generateEmailTemplate(
     ? `<p><strong>Organizer:</strong> ${notificationData.organizer}</p>`
     : '';
 
+  // Always use the production URL for confirmation links
+  const productionUrl = "https://docu-event-scheduling.vercel.app";
+  
   const confirmationSection = staff.confirmationToken && !isUpdate
     ? `
       <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
         <h3 style="color: #2563eb; margin-top: 0;">📋 Please Confirm Your Assignment</h3>
         <p style="margin: 10px 0;">Click the button below to confirm or decline this assignment:</p>
-        <a href="${baseUrl}/confirm/${staff.confirmationToken}" 
+        <a href="${productionUrl}/confirm/${staff.confirmationToken}" 
            style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
           Confirm Assignment
         </a>
@@ -64,6 +67,12 @@ export function generateEmailTemplate(
         <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ffc107;">
           <p style="font-size: 12px; color: #856404; margin: 0;">
             ⏰ <strong>Important:</strong> This confirmation link will expire in 7 days. Please respond as soon as possible to secure your assignment.
+          </p>
+        </div>
+        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin: 10px 0;">
+          <p style="font-size: 11px; color: #666; margin: 0;">
+            <strong>Confirmation Link:</strong><br>
+            <code style="word-break: break-all;">${productionUrl}/confirm/${staff.confirmationToken}</code>
           </p>
         </div>
       </div>
