@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
 import { StaffMember } from "@/types/models";
 import { toast } from "./use-toast";
@@ -12,30 +13,24 @@ import {
 } from "./staff/staff-crud";
 
 export function useStaff() {
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const loadStaff = async () => {
-    setLoading(true);
-    try {
+  const { 
+    data: staff = [], 
+    isLoading: loading, 
+    refetch: loadStaff 
+  } = useQuery({
+    queryKey: ['staff', user?.id],
+    queryFn: async () => {
       if (!user) {
         throw new Error("User not authenticated");
       }
-
-      const staffMembers = await loadStaffFromDatabase(user.id);
-      setStaff(staffMembers);
-    } catch (error: any) {
-      console.error("Error loading staff:", error.message);
-      toast({
-        title: "Error loading staff",
-        description: error.message || "Could not load staff. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return await loadStaffFromDatabase(user.id);
+    },
+    enabled: !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const addStaff = async (staffData: Omit<StaffMember, "id">) => {
     try {
@@ -45,8 +40,8 @@ export function useStaff() {
 
       const data = await addStaffToDatabase(user.id, staffData);
       
-      // Refresh the staff list
-      await loadStaff();
+      // Invalidate and refetch staff data
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
 
       return data;
     } catch (error: any) {
@@ -71,8 +66,8 @@ export function useStaff() {
 
       const data = await updateStaffInDatabase(user.id, staffId, staffData);
       
-      // Refresh the staff list
-      await loadStaff();
+      // Invalidate and refetch staff data
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
 
       return data;
     } catch (error: any) {
@@ -94,8 +89,8 @@ export function useStaff() {
 
       await deleteStaffFromDatabase(user.id, staffId);
 
-      // Update the local state by removing the deleted staff member
-      setStaff(staff.filter((staffMember) => staffMember.id !== staffId));
+      // Invalidate and refetch staff data
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
 
       return true;
     } catch (error: any) {
@@ -125,13 +120,6 @@ export function useStaff() {
       ccsOnlyEvent
     );
   };
-
-  // Load staff on initialization and when user changes
-  useEffect(() => {
-    if (user) {
-      loadStaff();
-    }
-  }, [user]);
 
   return {
     staff,
