@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/use-events";
 import { useStaff } from "@/hooks/use-staff";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +58,7 @@ export default function EventEditDialog({
 }: EventEditDialogProps) {
   const { updateEvent } = useEvents();
   const { staff } = useStaff();
+  const isMobile = useIsMobile();
   
   const [formData, setFormData] = useState({
     name: "",
@@ -87,16 +98,11 @@ export default function EventEditDialog({
       setSelectedVideographers(videographerIds);
       setSelectedPhotographers(photographerIds);
     }
-  }, [open, event?.id]); // Only depend on open and event.id to prevent infinite loops
+  }, [open, event?.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleSelectChange = (value: EventType) => {
@@ -150,193 +156,196 @@ export default function EventEditDialog({
     }
   };
 
-  const assignedVideographerIds = event.videographers?.map(v => v.staffId) || [];
-  const assignedPhotographerIds = event.photographers?.map(p => p.staffId) || [];
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Name</Label>
+          <Input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="date">Date</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !formData.date && "text-muted-foreground"
+                )}
+              >
+                {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
+                  <span>Pick a date</span>
+                )}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={formData.date}
+                onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
+                disabled={(date) => date > new Date()}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="startTime">Start Time</Label>
+          <Input
+            type="time"
+            id="startTime"
+            name="startTime"
+            value={formData.startTime}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="endTime">End Time</Label>
+          <Input
+            type="time"
+            id="endTime"
+            name="endTime"
+            value={formData.endTime}
+            onChange={handleInputChange}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location">Location</Label>
+        <Input
+          type="text"
+          id="location"
+          name="location"
+          value={formData.location}
+          onChange={handleInputChange}
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="organizer">Organizer</Label>
+        <Textarea
+          id="organizer"
+          name="organizer"
+          value={formData.organizer}
+          onChange={handleInputChange}
+          rows={2}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="type">Type</Label>
+        <Select onValueChange={handleSelectChange} value={formData.type}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="General">General</SelectItem>
+            <SelectItem value="SPECOM">SPECOM</SelectItem>
+            <SelectItem value="LITCOM">LITCOM</SelectItem>
+            <SelectItem value="CUACOM">CUACOM</SelectItem>
+            <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="ignoreScheduleConflicts"
+            checked={formData.ignoreScheduleConflicts}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
+          />
+          <Label htmlFor="ignoreScheduleConflicts" className="text-sm">Ignore Conflicts</Label>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="ccsOnlyEvent"
+            checked={formData.ccsOnlyEvent}
+            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
+          />
+          <Label htmlFor="ccsOnlyEvent" className="text-sm">CCS Only Event</Label>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Videographers</Label>
+          <MultiStaffSelector
+            role="Videographer"
+            availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
+            selectedStaffIds={selectedVideographers}
+            onSelectionChange={setSelectedVideographers}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Photographers</Label>
+          <MultiStaffSelector
+            role="Photographer"
+            availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
+            selectedStaffIds={selectedPhotographers}
+            onSelectionChange={setSelectedPhotographers}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-4">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Updating..." : "Save changes"}
+        </Button>
+      </div>
+    </form>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[90vh]">
+          <SheetHeader>
+            <SheetTitle>Edit Event</SheetTitle>
+            <SheetDescription>
+              Make changes to your event here. Click save when you're done.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
+            {formContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
           <DialogDescription>
             Make changes to your event here. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "col-span-3 pl-3 text-left font-normal",
-                      !formData.date && "text-muted-foreground"
-                    )}
-                  >
-                    {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
-                      <span>Pick a date</span>
-                    )}
-                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.date}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
-                    disabled={(date) =>
-                      date > new Date()
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="startTime" className="text-right">
-                Start Time
-              </Label>
-              <Input
-                type="time"
-                id="startTime"
-                name="startTime"
-                value={formData.startTime}
-                onChange={handleInputChange}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="endTime" className="text-right">
-                End Time
-              </Label>
-              <Input
-                type="time"
-                id="endTime"
-                name="endTime"
-                value={formData.endTime}
-                onChange={handleInputChange}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
-              <Input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="organizer" className="text-right">
-                Organizer
-              </Label>
-              <Textarea
-                id="organizer"
-                name="organizer"
-                value={formData.organizer}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="type" className="text-right">
-                Type
-              </Label>
-              <Select onValueChange={handleSelectChange}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a type" defaultValue={formData.type} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="General">General</SelectItem>
-                  <SelectItem value="SPECOM">SPECOM</SelectItem>
-                  <SelectItem value="LITCOM">LITCOM</SelectItem>
-                  <SelectItem value="CUACOM">CUACOM</SelectItem>
-                  <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ignoreScheduleConflicts" className="text-right">
-                Ignore Conflicts
-              </Label>
-              <Checkbox
-                id="ignoreScheduleConflicts"
-                name="ignoreScheduleConflicts"
-                checked={formData.ignoreScheduleConflicts}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ccsOnlyEvent" className="text-right">
-                CCS Only Event
-              </Label>
-              <Checkbox
-                id="ccsOnlyEvent"
-                name="ccsOnlyEvent"
-                checked={formData.ccsOnlyEvent}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
-                className="col-span-3"
-              />
-            </div>
-
-            {/* Staff Assignment Selectors */}
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right mt-2">Videographers</Label>
-              <div className="col-span-3">
-                <MultiStaffSelector
-                  role="Videographer"
-                  availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
-                  selectedStaffIds={selectedVideographers}
-                  onSelectionChange={setSelectedVideographers}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right mt-2">Photographers</Label>
-              <div className="col-span-3">
-                <MultiStaffSelector
-                  role="Photographer"
-                  availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
-                  selectedStaffIds={selectedPhotographers}
-                  onSelectionChange={setSelectedPhotographers}
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Updating..." : "Save changes"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className="overflow-y-auto flex-1 px-1">
+          {formContent}
+        </div>
       </DialogContent>
     </Dialog>
   );
