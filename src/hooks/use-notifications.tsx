@@ -35,8 +35,14 @@ export function useNotifications() {
 
       if (error) throw error;
 
-      setNotifications(data || []);
-      setUnreadCount((data || []).filter(n => !n.read).length);
+      // Type assertion to ensure proper typing
+      const typedNotifications: Notification[] = (data || []).map(notification => ({
+        ...notification,
+        type: notification.type as 'confirmation' | 'decline'
+      }));
+
+      setNotifications(typedNotifications);
+      setUnreadCount(typedNotifications.filter(n => !n.read).length);
     } catch (error: any) {
       console.error("Error loading notifications:", error);
     } finally {
@@ -140,7 +146,10 @@ export function useNotifications() {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            const newNotification = payload.new as Notification;
+            const newNotification = {
+              ...payload.new,
+              type: payload.new.type as 'confirmation' | 'decline'
+            } as Notification;
             console.log('New notification received:', newNotification);
             
             setNotifications(prev => [newNotification, ...prev]);
