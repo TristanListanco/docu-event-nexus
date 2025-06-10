@@ -24,6 +24,19 @@ const ConfirmAssignmentPage = () => {
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'declined' | 'error' | 'expired'>('pending');
   const [error, setError] = useState<string>('');
 
+  // Function to get client IP (best effort)
+  const getClientIP = async (): Promise<string> => {
+    try {
+      // Try to get IP from a public service
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || 'client-detected';
+    } catch (error) {
+      console.log('Could not detect IP:', error);
+      return 'client-detected';
+    }
+  };
+
   const handleConfirmation = async (action: 'confirm' | 'decline') => {
     if (!token) return;
 
@@ -31,12 +44,15 @@ const ConfirmAssignmentPage = () => {
     try {
       console.log(`Processing ${action} for token:`, token);
 
+      // Get client IP
+      const clientIP = await getClientIP();
+
       const { data, error } = await supabase.functions.invoke('handle-confirmation', {
         body: {
           token,
           action,
           userAgent: navigator.userAgent,
-          ipAddress: 'client-side' // You could implement IP detection if needed
+          ipAddress: clientIP
         }
       });
 
@@ -122,7 +138,7 @@ const ConfirmAssignmentPage = () => {
           <CardTitle className="text-center">
             {status === 'pending' && "Event Assignment Confirmation"}
             {status === 'confirmed' && (
-              <span className="text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
+              <span className="text-green-600 flex items-center justify-center gap-2">
                 <CheckCircle className="h-5 w-5" />
                 Assignment Confirmed
               </span>
@@ -140,7 +156,7 @@ const ConfirmAssignmentPage = () => {
               </span>
             )}
             {status === 'expired' && (
-              <span className="text-orange-600 dark:text-orange-400 flex items-center justify-center gap-2">
+              <span className="text-orange-600 flex items-center justify-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Link Expired
               </span>
@@ -157,27 +173,27 @@ const ConfirmAssignmentPage = () => {
 
         <CardContent className="space-y-6">
           {assignment && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 space-y-3 border border-blue-200 dark:border-blue-800">
+            <div className="bg-primary/5 rounded-lg p-4 space-y-3 border border-primary/20">
               <h3 className="font-semibold text-lg text-foreground">{assignment.eventName}</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <User className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground"><strong>Assigned to:</strong> {assignment.staffName}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground"><strong>Date:</strong> {formatDate(assignment.eventDate)}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Clock className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground"><strong>Time:</strong> {assignment.startTime} - {assignment.endTime}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <MapPin className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground"><strong>Location:</strong> {assignment.location}</span>
                 </div>
               </div>

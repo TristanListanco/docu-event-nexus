@@ -19,6 +19,35 @@ interface ConfirmationRequest {
   ipAddress?: string;
 }
 
+// Function to detect real IP address from headers
+const getClientIP = (req: Request): string => {
+  // Check various headers that might contain the real IP
+  const xForwardedFor = req.headers.get('x-forwarded-for');
+  const xRealIP = req.headers.get('x-real-ip');
+  const cfConnectingIP = req.headers.get('cf-connecting-ip'); // Cloudflare
+  const xClientIP = req.headers.get('x-client-ip');
+  const xForwarded = req.headers.get('x-forwarded');
+  const forwardedFor = req.headers.get('forwarded-for');
+  const forwarded = req.headers.get('forwarded');
+
+  // x-forwarded-for can contain multiple IPs, get the first one (original client)
+  if (xForwardedFor) {
+    const ips = xForwardedFor.split(',').map(ip => ip.trim());
+    return ips[0];
+  }
+
+  // Try other headers in order of preference
+  if (cfConnectingIP) return cfConnectingIP;
+  if (xRealIP) return xRealIP;
+  if (xClientIP) return xClientIP;
+  if (xForwarded) return xForwarded;
+  if (forwardedFor) return forwardedFor;
+  if (forwarded) return forwarded;
+
+  // Fallback to 'unknown' if no IP found
+  return 'unknown';
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -26,13 +55,18 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const requestData: ConfirmationRequest = await req.json();
-    const { token, action, userAgent, ipAddress } = requestData;
+    const { token, action, userAgent } = requestData;
+    
+    // Detect IP address from request headers
+    const detectedIP = getClientIP(req);
     
     console.log("=== ASSIGNMENT CONFIRMATION REQUEST ===");
     console.log("Token:", token);
     console.log("Action:", action);
     console.log("User Agent:", userAgent);
-    console.log("IP Address:", ipAddress);
+    console.log("Client IP (provided):", requestData.ipAddress);
+    console.log("Client IP (detected):", detectedIP);
+    console.log("Request Headers:", Object.fromEntries(req.headers.entries()));
     console.log("Timestamp:", new Date().toISOString());
     
     // Step 1: Find the assignment by token
@@ -112,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Step 4: Update assignment status - let's not update attendance_status for now
+    // Step 4: Update assignment status
     console.log(`Step 4: Processing ${action} action...`);
     const updateData = action === 'confirm' 
       ? {
@@ -138,13 +172,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Assignment ${action}ed successfully`);
 
-    // Step 5: Log the action
-    console.log("=== CONFIRMATION SUCCESS ===");
+    // Step 5: Log the confirmation/decline action with network info
+    console.log("=== CONFIRMATION ACTION LOGGED ===");
     console.log("Action completed:", action.toUpperCase());
     console.log("Staff member:", assignment.staff_members?.name);
+    console.log("Staff email:", assignment.staff_members?.email);
     console.log("Event:", assignment.events?.name);
+    console.log("Event date:", assignment.events?.date);
+    console.log("Event time:", `${assignment.events?.start_time} - ${assignment.events?.end_time}`);
+    console.log("Event location:", assignment.events?.location);
     console.log("Final status:", updateData.confirmation_status);
+    console.log("Client IP:", detectedIP);
+    console.log("User Agent:", userAgent);
     console.log("Processed at:", new Date().toISOString());
+    console.log("Confirmation timestamp:", action === 'confirm' ? updateData.confirmed_at : updateData.declined_at);
+
+    // Log any potential security concerns
+    if (detectedIP === 'unknown') {
+      console.log("WARNING: Could not detect client IP address");
+    }
 
     return new Response(
       JSON.stringify({ 
@@ -159,6 +205,10 @@ const handler = async (req: Request): Promise<Response> => {
           startTime: assignment.events?.start_time,
           endTime: assignment.events?.end_time,
           location: assignment.events?.location
+        },
+        networkInfo: {
+          detectedIP: detectedIP,
+          userAgent: userAgent
         },
         timestamp: new Date().toISOString()
       }),
