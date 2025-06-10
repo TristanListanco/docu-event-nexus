@@ -112,20 +112,18 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Step 4: Update assignment status
+    // Step 4: Update assignment status - let's not update attendance_status for now
     console.log(`Step 4: Processing ${action} action...`);
     const updateData = action === 'confirm' 
       ? {
           confirmation_status: 'confirmed',
           confirmed_at: new Date().toISOString(),
-          declined_at: null,
-          attendance_status: 'Present'
+          declined_at: null
         }
       : {
           confirmation_status: 'declined',
           declined_at: new Date().toISOString(),
-          confirmed_at: null,
-          attendance_status: 'Absent'
+          confirmed_at: null
         };
 
     const { error: updateError } = await supabase

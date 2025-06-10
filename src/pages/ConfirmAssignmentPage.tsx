@@ -99,16 +99,16 @@ const ConfirmAssignmentPage = () => {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <XCircle className="h-5 w-5" />
               Invalid Link
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p>This confirmation link is invalid or malformed.</p>
+            <p className="text-muted-foreground">This confirmation link is invalid or malformed.</p>
           </CardContent>
         </Card>
       </div>
@@ -116,31 +116,31 @@ const ConfirmAssignmentPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="text-center">
             {status === 'pending' && "Event Assignment Confirmation"}
             {status === 'confirmed' && (
-              <span className="text-green-600 flex items-center justify-center gap-2">
+              <span className="text-green-600 dark:text-green-400 flex items-center justify-center gap-2">
                 <CheckCircle className="h-5 w-5" />
                 Assignment Confirmed
               </span>
             )}
             {status === 'declined' && (
-              <span className="text-red-600 flex items-center justify-center gap-2">
+              <span className="text-destructive flex items-center justify-center gap-2">
                 <XCircle className="h-5 w-5" />
                 Assignment Declined
               </span>
             )}
             {status === 'error' && (
-              <span className="text-red-600 flex items-center justify-center gap-2">
+              <span className="text-destructive flex items-center justify-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Error
               </span>
             )}
             {status === 'expired' && (
-              <span className="text-orange-600 flex items-center justify-center gap-2">
+              <span className="text-orange-600 dark:text-orange-400 flex items-center justify-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Link Expired
               </span>
@@ -157,36 +157,36 @@ const ConfirmAssignmentPage = () => {
 
         <CardContent className="space-y-6">
           {assignment && (
-            <div className="bg-blue-50 rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold text-lg">{assignment.eventName}</h3>
+            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 space-y-3 border border-blue-200 dark:border-blue-800">
+              <h3 className="font-semibold text-lg text-foreground">{assignment.eventName}</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-600" />
-                  <span><strong>Assigned to:</strong> {assignment.staffName}</span>
+                  <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-muted-foreground"><strong>Assigned to:</strong> {assignment.staffName}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                  <span><strong>Date:</strong> {formatDate(assignment.eventDate)}</span>
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-muted-foreground"><strong>Date:</strong> {formatDate(assignment.eventDate)}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-600" />
-                  <span><strong>Time:</strong> {assignment.startTime} - {assignment.endTime}</span>
+                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-muted-foreground"><strong>Time:</strong> {assignment.startTime} - {assignment.endTime}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-600" />
-                  <span><strong>Location:</strong> {assignment.location}</span>
+                  <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-muted-foreground"><strong>Location:</strong> {assignment.location}</span>
                 </div>
               </div>
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
 
@@ -195,7 +195,7 @@ const ConfirmAssignmentPage = () => {
               <Button
                 onClick={() => handleConfirmation('confirm')}
                 disabled={loading}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? "Processing..." : "Confirm Assignment"}
               </Button>
@@ -204,7 +204,7 @@ const ConfirmAssignmentPage = () => {
                 onClick={() => handleConfirmation('decline')}
                 disabled={loading}
                 variant="outline"
-                className="border-red-300 text-red-600 hover:bg-red-50"
+                className="border-destructive text-destructive hover:bg-destructive/10"
               >
                 {loading ? "Processing..." : "Decline Assignment"}
               </Button>
@@ -213,7 +213,7 @@ const ConfirmAssignmentPage = () => {
 
           {(status === 'confirmed' || status === 'declined') && assignment && (
             <div className="text-center">
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {status === 'confirmed' 
                   ? "You can now add this event to your calendar." 
                   : "The event organizer has been notified of your decision."
