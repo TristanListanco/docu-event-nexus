@@ -119,13 +119,13 @@ const handler = async (req: Request): Promise<Response> => {
           confirmation_status: 'confirmed',
           confirmed_at: new Date().toISOString(),
           declined_at: null,
-          attendance_status: 'Confirmed'
+          attendance_status: 'Present'
         }
       : {
           confirmation_status: 'declined',
           declined_at: new Date().toISOString(),
           confirmed_at: null,
-          attendance_status: 'Declined'
+          attendance_status: 'Absent'
         };
 
     const { error: updateError } = await supabase
