@@ -14,9 +14,10 @@ import { Event } from "@/types/models";
 export default function EventsPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { events, loading } = useEvents();
+  const { events, loading, loadEvents } = useEvents();
   const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
   const [addEventSheetOpen, setAddEventSheetOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const eventActions = EventActionsManager({
     onEventUpdated: () => {
@@ -43,6 +44,15 @@ export default function EventsPage() {
     // Events list will auto-refresh through the hook
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadEvents();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -53,7 +63,11 @@ export default function EventsPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <EventsHeader onAddEvent={handleAddEvent} />
+      <EventsHeader 
+        onAddEvent={handleAddEvent} 
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
       
       <EventsPageContent
         events={events}

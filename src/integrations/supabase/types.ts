@@ -125,6 +125,60 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_name: string
+          id: string
+          message: string
+          read: boolean
+          staff_id: string
+          staff_name: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_name: string
+          id?: string
+          message: string
+          read?: boolean
+          staff_id: string
+          staff_name: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_name?: string
+          id?: string
+          message?: string
+          read?: boolean
+          staff_id?: string
+          staff_name?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

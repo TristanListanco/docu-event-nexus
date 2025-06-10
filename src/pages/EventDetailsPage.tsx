@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -156,6 +155,11 @@ export default function EventDetailsPage() {
     } else {
       return <Badge variant="secondary" className="text-xs">Pending</Badge>;
     }
+  };
+
+  const shouldShowInviteButton = (staffId: string) => {
+    const assignment = staffAssignments[staffId];
+    return !assignment || assignment.confirmationStatus !== 'declined';
   };
 
   // Function to get dynamic event status based on current time
@@ -329,23 +333,25 @@ export default function EventDetailsPage() {
                               <span className="text-sm">{videographer.name}</span>
                               {getConfirmationBadge(videographer.id)}
                             </div>
-                            <SendInvitationButton
-                              eventId={event.id}
-                              staffMember={{
-                                id: videographer.id,
-                                name: videographer.name,
-                                email: videographer.email,
-                                role: "Videographer"
-                              }}
-                              eventData={{
-                                name: event.name,
-                                date: event.date,
-                                startTime: event.startTime,
-                                endTime: event.endTime,
-                                location: event.location,
-                                type: event.type
-                              }}
-                            />
+                            {shouldShowInviteButton(videographer.id) && (
+                              <SendInvitationButton
+                                eventId={event.id}
+                                staffMember={{
+                                  id: videographer.id,
+                                  name: videographer.name,
+                                  email: videographer.email,
+                                  role: "Videographer"
+                                }}
+                                eventData={{
+                                  name: event.name,
+                                  date: event.date,
+                                  startTime: event.startTime,
+                                  endTime: event.endTime,
+                                  location: event.location,
+                                  type: event.type
+                                }}
+                              />
+                            )}
                           </div>
                         ))
                       ) : (
@@ -373,23 +379,25 @@ export default function EventDetailsPage() {
                               <span className="text-sm">{photographer.name}</span>
                               {getConfirmationBadge(photographer.id)}
                             </div>
-                            <SendInvitationButton
-                              eventId={event.id}
-                              staffMember={{
-                                id: photographer.id,
-                                name: photographer.name,
-                                email: photographer.email,
-                                role: "Photographer"
-                              }}
-                              eventData={{
-                                name: event.name,
-                                date: event.date,
-                                startTime: event.startTime,
-                                endTime: event.endTime,
-                                location: event.location,
-                                type: event.type
-                              }}
-                            />
+                            {shouldShowInviteButton(photographer.id) && (
+                              <SendInvitationButton
+                                eventId={event.id}
+                                staffMember={{
+                                  id: photographer.id,
+                                  name: photographer.name,
+                                  email: photographer.email,
+                                  role: "Photographer"
+                                }}
+                                eventData={{
+                                  name: event.name,
+                                  date: event.date,
+                                  startTime: event.startTime,
+                                  endTime: event.endTime,
+                                  location: event.location,
+                                  type: event.type
+                                }}
+                              />
+                            )}
                           </div>
                         ))
                       ) : (

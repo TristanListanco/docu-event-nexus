@@ -1,22 +1,36 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import NotificationsPanel from "@/components/notifications/notifications-panel";
 
 interface EventsHeaderProps {
   onAddEvent: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export default function EventsHeader({ onAddEvent }: EventsHeaderProps) {
+export default function EventsHeader({ onAddEvent, onRefresh, isRefreshing }: EventsHeaderProps) {
   return (
     <div className="border-b">
-      <div className="flex items-center justify-between p-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Events</h1>
-          <p className="text-muted-foreground">Manage your scheduled events</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button onClick={onAddEvent} size="icon">
-            <Plus className="h-4 w-4" />
+      <div className="flex h-16 items-center justify-between px-6">
+        <h1 className="text-2xl font-bold tracking-tight">Events</h1>
+        <div className="flex items-center space-x-4">
+          <NotificationsPanel />
+          {onRefresh && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+          <Button onClick={onAddEvent}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
           </Button>
         </div>
       </div>

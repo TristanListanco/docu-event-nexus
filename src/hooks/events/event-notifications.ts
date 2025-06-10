@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -35,12 +34,6 @@ export const sendEventNotifications = async (
   }
 
   try {
-    // Show immediate feedback that emails are being sent
-    const emailToast = toast({
-      title: "Sending Invitations",
-      description: "Preparing email invitations for assigned staff...",
-    });
-
     // Get the current user ID
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -62,6 +55,12 @@ export const sendEventNotifications = async (
       if (!isUpdate) {
         console.log("Creating staff assignments for new event...");
         
+        // Show immediate success feedback
+        toast({
+          title: "Event Created",
+          description: `${notificationData.eventName} has been created successfully. Email notifications are being sent in the background.`,
+        });
+
         // Create assignments with better error handling
         const assignmentPromises = staffData.map(async (staff) => {
           const confirmationToken = uuidv4();
@@ -92,15 +91,8 @@ export const sendEventNotifications = async (
 
         await Promise.all(assignmentPromises);
 
-        // Update toast to show email sending progress
-        emailToast.update({
-          id: emailToast.id,
-          title: "Sending Emails",
-          description: `Sending confirmation emails to ${staffData.length} staff member(s)...`,
-        });
-
-        // Send confirmation emails using the new dedicated function
-        console.log("Sending confirmation emails...");
+        // Send confirmation emails asynchronously using background task
+        console.log("Sending confirmation emails in background...");
         const emailPromises = staffData.map(async (staff) => {
           if (!staff.email) {
             console.log(`Skipping ${staff.name} - no email provided`);
@@ -140,32 +132,32 @@ export const sendEventNotifications = async (
           }
         });
 
-        const emailResults = await Promise.all(emailPromises);
-        const successCount = emailResults.filter(result => result.success).length;
-        const failureCount = emailResults.filter(result => !result.success).length;
+        // Process emails in background without blocking UI
+        Promise.all(emailPromises).then((emailResults) => {
+          const successCount = emailResults.filter(result => result.success).length;
+          const failureCount = emailResults.filter(result => !result.success).length;
 
-        // Update final toast based on results
-        if (successCount === staffData.length) {
-          emailToast.update({
-            id: emailToast.id,
-            title: "Event Created",
-            description: `${notificationData.eventName} created and confirmation emails sent to all ${successCount} staff member(s).`,
-          });
-        } else if (successCount > 0) {
-          emailToast.update({
-            id: emailToast.id,
-            title: "Event Created",
-            description: `${notificationData.eventName} created. Emails sent to ${successCount} staff member(s), ${failureCount} failed.`,
-            variant: "default",
-          });
-        } else {
-          emailToast.update({
-            id: emailToast.id,
-            title: "Event Created",
-            description: `${notificationData.eventName} created, but all email notifications failed to send.`,
-            variant: "destructive",
-          });
-        }
+          if (successCount === staffData.length) {
+            console.log(`All ${successCount} confirmation emails sent successfully`);
+          } else if (successCount > 0) {
+            console.log(`${successCount} emails sent successfully, ${failureCount} failed`);
+            toast({
+              title: "Partial Email Success",
+              description: `${successCount} emails sent, ${failureCount} failed to send.`,
+              variant: "default",
+            });
+          } else {
+            console.error("All email notifications failed to send");
+            toast({
+              title: "Email Sending Failed",
+              description: "Failed to send email notifications to staff members.",
+              variant: "destructive",
+            });
+          }
+        }).catch((error) => {
+          console.error("Error in background email processing:", error);
+        });
+
       } else {
         // For updates, use the existing notification function
         const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {

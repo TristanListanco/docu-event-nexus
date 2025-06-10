@@ -21,31 +21,46 @@ interface ConfirmationRequest {
 
 // Function to detect real IP address from headers
 const getClientIP = (req: Request): string => {
-  // Check various headers that might contain the real IP
   const xForwardedFor = req.headers.get('x-forwarded-for');
   const xRealIP = req.headers.get('x-real-ip');
-  const cfConnectingIP = req.headers.get('cf-connecting-ip'); // Cloudflare
+  const cfConnectingIP = req.headers.get('cf-connecting-ip');
   const xClientIP = req.headers.get('x-client-ip');
-  const xForwarded = req.headers.get('x-forwarded');
-  const forwardedFor = req.headers.get('forwarded-for');
-  const forwarded = req.headers.get('forwarded');
 
-  // x-forwarded-for can contain multiple IPs, get the first one (original client)
   if (xForwardedFor) {
     const ips = xForwardedFor.split(',').map(ip => ip.trim());
     return ips[0];
   }
 
-  // Try other headers in order of preference
   if (cfConnectingIP) return cfConnectingIP;
   if (xRealIP) return xRealIP;
   if (xClientIP) return xClientIP;
-  if (xForwarded) return xForwarded;
-  if (forwardedFor) return forwardedFor;
-  if (forwarded) return forwarded;
 
-  // Fallback to 'unknown' if no IP found
   return 'unknown';
+};
+
+// Function to generate ICS file content
+const generateICSContent = (eventData: any, staffName: string): string => {
+  const startDate = new Date(`${eventData.date}T${eventData.start_time}`);
+  const endDate = new Date(`${eventData.date}T${eventData.end_time}`);
+  
+  const formatDate = (date: Date) => {
+    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  };
+
+  return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Event Management//Event Calendar//EN
+BEGIN:VEVENT
+UID:${eventData.id}@eventmanagement.com
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${eventData.name}
+DESCRIPTION:You have confirmed your attendance for this event.\\nRole: Staff Member\\nOrganizer: ${eventData.organizer || 'N/A'}
+LOCATION:${eventData.location}
+STATUS:CONFIRMED
+ATTENDEE:CN=${staffName}
+END:VEVENT
+END:VCALENDAR`;
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -57,16 +72,12 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData: ConfirmationRequest = await req.json();
     const { token, action, userAgent } = requestData;
     
-    // Detect IP address from request headers
     const detectedIP = getClientIP(req);
     
     console.log("=== ASSIGNMENT CONFIRMATION REQUEST ===");
     console.log("Token:", token);
     console.log("Action:", action);
-    console.log("User Agent:", userAgent);
-    console.log("Client IP (provided):", requestData.ipAddress);
     console.log("Client IP (detected):", detectedIP);
-    console.log("Request Headers:", Object.fromEntries(req.headers.entries()));
     console.log("Timestamp:", new Date().toISOString());
     
     // Step 1: Find the assignment by token
@@ -77,9 +88,10 @@ const handler = async (req: Request): Promise<Response> => {
         id,
         event_id,
         staff_id,
+        user_id,
         confirmation_status,
         confirmation_token_expires_at,
-        events(name, date, start_time, end_time, location),
+        events(id, name, date, start_time, end_time, location, organizer),
         staff_members(name, email)
       `)
       .eq('confirmation_token', token)
@@ -87,7 +99,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (fetchError || !assignment) {
       console.error("Assignment not found for token:", token);
-      console.error("Database error:", fetchError);
       return new Response(
         JSON.stringify({ 
           error: "Invalid or expired confirmation token",
@@ -108,15 +119,11 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Step 2: Checking token expiry...");
     if (assignment.confirmation_token_expires_at && 
         new Date() > new Date(assignment.confirmation_token_expires_at)) {
-      console.error("Token expired:", {
-        expiresAt: assignment.confirmation_token_expires_at,
-        currentTime: new Date().toISOString()
-      });
+      console.error("Token expired");
       return new Response(
         JSON.stringify({ 
           error: "Confirmation token has expired",
-          code: "TOKEN_EXPIRED",
-          expiresAt: assignment.confirmation_token_expires_at
+          code: "TOKEN_EXPIRED"
         }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -126,10 +133,24 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Step 3: Checking if already processed...");
     if (assignment.confirmation_status === 'confirmed') {
       console.log("Assignment already confirmed");
+      
+      // Generate ICS file for confirmed events
+      const icsContent = generateICSContent(assignment.events, assignment.staff_members?.name || 'Staff Member');
+      
       return new Response(
         JSON.stringify({ 
           message: "Assignment already confirmed",
-          status: "already_confirmed"
+          status: "already_confirmed",
+          assignment: {
+            id: assignment.id,
+            eventName: assignment.events?.name,
+            staffName: assignment.staff_members?.name,
+            eventDate: assignment.events?.date,
+            startTime: assignment.events?.start_time,
+            endTime: assignment.events?.end_time,
+            location: assignment.events?.location
+          },
+          icsFile: icsContent
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -140,7 +161,16 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ 
           message: "Assignment already declined",
-          status: "already_declined"
+          status: "already_declined",
+          assignment: {
+            id: assignment.id,
+            eventName: assignment.events?.name,
+            staffName: assignment.staff_members?.name,
+            eventDate: assignment.events?.date,
+            startTime: assignment.events?.start_time,
+            endTime: assignment.events?.end_time,
+            location: assignment.events?.location
+          }
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -172,25 +202,42 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Assignment ${action}ed successfully`);
 
-    // Step 5: Log the confirmation/decline action with network info
-    console.log("=== CONFIRMATION ACTION LOGGED ===");
-    console.log("Action completed:", action.toUpperCase());
-    console.log("Staff member:", assignment.staff_members?.name);
-    console.log("Staff email:", assignment.staff_members?.email);
-    console.log("Event:", assignment.events?.name);
-    console.log("Event date:", assignment.events?.date);
-    console.log("Event time:", `${assignment.events?.start_time} - ${assignment.events?.end_time}`);
-    console.log("Event location:", assignment.events?.location);
-    console.log("Final status:", updateData.confirmation_status);
-    console.log("Client IP:", detectedIP);
-    console.log("User Agent:", userAgent);
-    console.log("Processed at:", new Date().toISOString());
-    console.log("Confirmation timestamp:", action === 'confirm' ? updateData.confirmed_at : updateData.declined_at);
+    // Step 5: Create notification for the admin
+    console.log("Step 5: Creating notification for admin...");
+    const notificationMessage = action === 'confirm' 
+      ? `${assignment.staff_members?.name} confirmed their assignment for ${assignment.events?.name}`
+      : `${assignment.staff_members?.name} declined their assignment for ${assignment.events?.name}`;
 
-    // Log any potential security concerns
-    if (detectedIP === 'unknown') {
-      console.log("WARNING: Could not detect client IP address");
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: assignment.user_id,
+        event_id: assignment.event_id,
+        staff_id: assignment.staff_id,
+        type: action === 'confirm' ? 'confirmation' : 'decline',
+        staff_name: assignment.staff_members?.name || 'Unknown Staff',
+        event_name: assignment.events?.name || 'Unknown Event',
+        message: notificationMessage
+      });
+
+    if (notificationError) {
+      console.error("Error creating notification:", notificationError);
+      // Don't fail the request if notification creation fails
+    } else {
+      console.log("Notification created successfully");
     }
+
+    // Step 6: Generate ICS file for confirmed events
+    let icsContent = null;
+    if (action === 'confirm') {
+      icsContent = generateICSContent(assignment.events, assignment.staff_members?.name || 'Staff Member');
+    }
+
+    console.log("=== CONFIRMATION ACTION COMPLETED ===");
+    console.log(`Action: ${action.toUpperCase()}`);
+    console.log("Staff member:", assignment.staff_members?.name);
+    console.log("Event:", assignment.events?.name);
+    console.log("Final status:", updateData.confirmation_status);
 
     return new Response(
       JSON.stringify({ 
@@ -206,10 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
           endTime: assignment.events?.end_time,
           location: assignment.events?.location
         },
-        networkInfo: {
-          detectedIP: detectedIP,
-          userAgent: userAgent
-        },
+        icsFile: icsContent,
         timestamp: new Date().toISOString()
       }),
       {
@@ -220,19 +264,12 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error("=== CONFIRMATION ERROR ===");
-    console.error("Error type:", error.constructor.name);
     console.error("Error message:", error.message);
-    console.error("Error code:", error.code);
-    console.error("Full error details:", error);
-    console.error("Stack trace:", error.stack);
-    console.error("Timestamp:", new Date().toISOString());
+    console.error("Full error:", error);
     
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        code: error.code,
-        type: error.constructor.name,
-        details: error,
         timestamp: new Date().toISOString()
       }),
       {
