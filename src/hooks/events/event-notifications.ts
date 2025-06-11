@@ -92,7 +92,10 @@ export const sendEventNotifications = async (
         await Promise.all(assignmentPromises);
         console.log("All assignments created successfully");
 
-        // Send confirmation emails
+        // Add a small delay to ensure database consistency
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Send confirmation emails with retry logic
         console.log("Sending confirmation emails...");
         const emailPromises = staffData.map(async (staff) => {
           if (!staff.email) {
@@ -102,41 +105,65 @@ export const sendEventNotifications = async (
 
           const staffRole = videographerIds.includes(staff.id) ? "Videographer" : "Photographer";
           
-          try {
-            const { data, error: emailError } = await supabase.functions.invoke('confirmation-email', {
-              body: {
-                eventId: notificationData.eventId,
-                staffId: staff.id,
-                staffName: staff.name,
-                staffEmail: staff.email,
-                staffRole: staffRole,
-                eventName: notificationData.eventName,
-                eventDate: notificationData.eventDate,
-                startTime: notificationData.startTime,
-                endTime: notificationData.endTime,
-                location: notificationData.location,
-                organizer: notificationData.organizer,
-                type: notificationData.type
-              }
-            });
+          // Retry logic for email sending
+          let attempts = 0;
+          const maxAttempts = 3;
+          
+          while (attempts < maxAttempts) {
+            try {
+              console.log(`Sending email to ${staff.name} (attempt ${attempts + 1})`);
+              
+              const { data, error: emailError } = await supabase.functions.invoke('confirmation-email', {
+                body: {
+                  eventId: notificationData.eventId,
+                  staffId: staff.id,
+                  staffName: staff.name,
+                  staffEmail: staff.email,
+                  staffRole: staffRole,
+                  eventName: notificationData.eventName,
+                  eventDate: notificationData.eventDate,
+                  startTime: notificationData.startTime,
+                  endTime: notificationData.endTime,
+                  location: notificationData.location,
+                  organizer: notificationData.organizer,
+                  type: notificationData.type
+                }
+              });
 
-            if (emailError) {
-              console.error(`Error sending confirmation email to ${staff.name}:`, emailError);
-              return { success: false, staff: staff.name, error: emailError };
-            } else {
-              console.log(`Confirmation email sent to ${staff.name}:`, data);
-              return { success: true, staff: staff.name };
+              if (emailError) {
+                console.error(`Email error for ${staff.name} (attempt ${attempts + 1}):`, emailError);
+                attempts++;
+                if (attempts < maxAttempts) {
+                  // Wait before retry
+                  await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+                  continue;
+                }
+                return { success: false, staff: staff.name, error: emailError };
+              } else {
+                console.log(`Confirmation email sent to ${staff.name}:`, data);
+                return { success: true, staff: staff.name };
+              }
+            } catch (error) {
+              console.error(`Failed to send confirmation email to ${staff.name} (attempt ${attempts + 1}):`, error);
+              attempts++;
+              if (attempts < maxAttempts) {
+                // Wait before retry
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+                continue;
+              }
+              return { success: false, staff: staff.name, error };
             }
-          } catch (error) {
-            console.error(`Failed to send confirmation email to ${staff.name}:`, error);
-            return { success: false, staff: staff.name, error };
           }
+          
+          return { success: false, staff: staff.name, error: "Max retries exceeded" };
         });
 
         // Wait for all emails to be sent
         const emailResults = await Promise.all(emailPromises);
         const successCount = emailResults.filter(result => result.success).length;
         const failureCount = emailResults.filter(result => !result.success).length;
+
+        console.log("Email results:", emailResults);
 
         if (successCount === staffData.length) {
           console.log(`All ${successCount} confirmation emails sent successfully`);
@@ -146,16 +173,25 @@ export const sendEventNotifications = async (
           });
         } else if (successCount > 0) {
           console.log(`${successCount} emails sent successfully, ${failureCount} failed`);
+          const failedStaff = emailResults
+            .filter(result => !result.success)
+            .map(result => result.staff)
+            .join(", ");
+          
           toast({
             title: "Partial Success",
-            description: `Event created. ${successCount} emails sent, ${failureCount} failed to send.`,
+            description: `Event created. ${successCount} emails sent successfully. Failed to send to: ${failedStaff}`,
             variant: "default",
           });
         } else {
           console.error("All email notifications failed to send");
+          const allErrors = emailResults.map(result => 
+            `${result.staff}: ${result.reason || 'Unknown error'}`
+          ).join("; ");
+          
           toast({
             title: "Email Sending Failed",
-            description: "Event created but failed to send email notifications to staff members.",
+            description: `Event created but failed to send email notifications. Errors: ${allErrors}`,
             variant: "destructive",
           });
         }
@@ -188,7 +224,7 @@ export const sendEventNotifications = async (
     console.error("Error with notifications:", error);
     toast({
       title: isUpdate ? "Event Updated" : "Event Created",
-      description: `${notificationData.eventName} has been ${isUpdate ? 'updated' : 'created'}, but email notifications failed to send.`,
+      description: `${notificationData.eventName} has been ${isUpdate ? 'updated' : 'created'}, but email notifications failed to send. Error: ${error.message}`,
       variant: "destructive",
     });
   }

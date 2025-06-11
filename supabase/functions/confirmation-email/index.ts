@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { sendEmailWithNodemailer } from "./email-service.ts";
-import { generateConfirmationEmailTemplate } from "./email-template.ts";
+import { generateEmailTemplate } from "./email-template.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +14,7 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-interface ConfirmationEmailRequest {
+interface EmailRequest {
   eventId: string;
   staffId: string;
   staffName: string;
@@ -35,8 +35,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const requestData: ConfirmationEmailRequest = await req.json();
-    
+    const requestData: EmailRequest = await req.json();
     console.log("=== CONFIRMATION EMAIL REQUEST ===");
     console.log("Event ID:", requestData.eventId);
     console.log("Staff ID:", requestData.staffId);
@@ -44,141 +43,91 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Staff Name:", requestData.staffName);
     console.log("Staff Role:", requestData.staffRole);
     console.log("Event Name:", requestData.eventName);
-    
-    // Step 1: Check if assignment exists
-    console.log("Step 1: Checking existing assignment...");
-    const { data: existingAssignment, error: fetchError } = await supabase
-      .from('staff_assignments')
-      .select('id, confirmation_token, confirmation_token_expires_at, confirmation_status')
-      .eq('event_id', requestData.eventId)
-      .eq('staff_id', requestData.staffId)
-      .single();
 
-    if (fetchError && fetchError.code === 'PGRST116') {
-      console.log("No existing assignment found, this should not happen");
+    // Step 1: Check if assignment exists with retry logic
+    console.log("Step 1: Checking existing assignment...");
+    let assignment = null;
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    while (attempts < maxAttempts && !assignment) {
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('staff_assignments')
+        .select('id, confirmation_token, confirmation_token_expires_at')
+        .eq('event_id', requestData.eventId)
+        .eq('staff_id', requestData.staffId)
+        .maybeSingle();
+
+      if (assignmentError) {
+        console.error("Error fetching assignment:", assignmentError);
+        throw assignmentError;
+      }
+
+      if (assignmentData) {
+        assignment = assignmentData;
+        break;
+      }
+
+      attempts++;
+      if (attempts < maxAttempts) {
+        console.log(`Assignment not found, retrying in ${attempts} seconds... (attempt ${attempts}/${maxAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, attempts * 1000));
+      }
+    }
+
+    if (!assignment) {
+      console.error("No assignment found after retries");
       return new Response(
         JSON.stringify({ 
           error: "Assignment not found",
-          details: "Staff assignment should be created before sending confirmation email"
+          details: "The staff assignment could not be found in the database"
         }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { 
+          status: 404, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
       );
     }
 
-    if (fetchError) {
-      console.error("Database error fetching assignment:", fetchError);
-      throw fetchError;
-    }
+    console.log("Assignment found:", assignment.id);
 
-    console.log("Existing assignment found:", {
-      id: existingAssignment.id,
-      status: existingAssignment.confirmation_status,
-      tokenExists: !!existingAssignment.confirmation_token,
-      expiresAt: existingAssignment.confirmation_token_expires_at
-    });
-
-    // Step 2: Generate or use existing token
-    let confirmationToken = existingAssignment.confirmation_token;
-    let tokenExpiresAt = existingAssignment.confirmation_token_expires_at;
+    // Step 2: Generate confirmation links
+    const confirmUrl = `${Deno.env.get('SUPABASE_URL')?.replace('//', '//').replace('supabase.co', 'lovableproject.com')}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
+    const declineUrl = `${Deno.env.get('SUPABASE_URL')?.replace('//', '//').replace('supabase.co', 'lovableproject.com')}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
     
-    if (!confirmationToken || !tokenExpiresAt || new Date() > new Date(tokenExpiresAt)) {
-      console.log("Generating new confirmation token...");
-      
-      confirmationToken = crypto.randomUUID();
-      const newExpiryDate = new Date();
-      newExpiryDate.setDate(newExpiryDate.getDate() + 7);
-      tokenExpiresAt = newExpiryDate.toISOString();
-
-      console.log("New token generated:", {
-        token: confirmationToken,
-        expiresAt: tokenExpiresAt
-      });
-
-      const { error: updateError } = await supabase
-        .from('staff_assignments')
-        .update({
-          confirmation_token: confirmationToken,
-          confirmation_token_expires_at: tokenExpiresAt,
-          confirmation_status: 'pending',
-          confirmed_at: null,
-          declined_at: null
-        })
-        .eq('id', existingAssignment.id);
-
-      if (updateError) {
-        console.error("Error updating assignment with new token:", updateError);
-        throw updateError;
-      }
-      
-      console.log("Assignment updated with new token successfully");
-    } else {
-      console.log("Using existing valid token");
-    }
+    console.log("Confirmation URL:", confirmUrl);
+    console.log("Decline URL:", declineUrl);
 
     // Step 3: Generate email content
-    console.log("Step 3: Generating email content...");
-    const baseUrl = "https://docu-event-scheduling.vercel.app";
-    const confirmationUrl = `${baseUrl}/confirm/${confirmationToken}`;
-    
-    console.log("Confirmation URL:", confirmationUrl);
-    
-    const { subject, html } = generateConfirmationEmailTemplate({
+    const emailSubject = `Event Assignment: ${requestData.eventName}`;
+    const emailHtml = generateEmailTemplate({
       staffName: requestData.staffName,
-      staffRole: requestData.staffRole,
       eventName: requestData.eventName,
       eventDate: requestData.eventDate,
       startTime: requestData.startTime,
       endTime: requestData.endTime,
       location: requestData.location,
-      organizer: requestData.organizer,
-      type: requestData.type,
-      confirmationUrl,
-      tokenExpiresAt
+      organizer: requestData.organizer || 'N/A',
+      role: requestData.staffRole,
+      confirmUrl: confirmUrl,
+      declineUrl: declineUrl
     });
 
     // Step 4: Send email
-    console.log("Step 4: Sending confirmation email...");
-    const emailResponse = await sendEmailWithNodemailer(
+    console.log("Step 4: Sending email...");
+    const emailResult = await sendEmailWithNodemailer(
       requestData.staffEmail,
-      subject,
-      html
+      emailSubject,
+      emailHtml
     );
 
-    console.log("Email sent successfully:", {
-      messageId: emailResponse.messageId,
-      to: requestData.staffEmail,
-      subject: subject
-    });
+    console.log("Email sent successfully:", emailResult.messageId);
 
-    // Step 5: Log email sending in database for tracking
-    console.log("Step 5: Recording email sending activity...");
-    const { error: logError } = await supabase
-      .from('staff_assignments')
-      .update({
-        // We could add a last_email_sent_at field if needed
-      })
-      .eq('id', existingAssignment.id);
-
-    if (logError) {
-      console.log("Warning: Could not update email tracking:", logError);
-      // Don't fail the request for this
-    }
-
-    // Step 6: Log success
-    console.log("=== CONFIRMATION EMAIL SUCCESS ===");
-    console.log("Final confirmation token:", confirmationToken);
-    console.log("Token expires at:", tokenExpiresAt);
-    console.log("Email delivery status: SUCCESS");
-    console.log("Next step: User should click confirmation link to confirm/decline");
-    
     return new Response(
       JSON.stringify({ 
         success: true,
-        confirmationToken,
-        tokenExpiresAt,
-        emailSent: true,
-        messageId: emailResponse.messageId,
-        confirmationUrl: confirmationUrl
+        messageId: emailResult.messageId,
+        assignmentId: assignment.id
       }),
       {
         status: 200,
@@ -187,19 +136,13 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("=== CONFIRMATION EMAIL ERROR ===");
-    console.error("Error type:", error.constructor.name);
+    console.error("=== EMAIL SENDING ERROR ===");
     console.error("Error message:", error.message);
-    console.error("Error code:", error.code);
-    console.error("Full error details:", error);
-    console.error("Stack trace:", error.stack);
+    console.error("Full error:", error);
     
     return new Response(
       JSON.stringify({ 
         error: error.message,
-        code: error.code,
-        type: error.constructor.name,
-        details: error,
         timestamp: new Date().toISOString()
       }),
       {
