@@ -59,18 +59,16 @@ export default function EventDetailsPage() {
     try {
       console.log("Loading assignment statuses for event:", eventId);
       
-      // Get assignment details including confirmation status, ordered by created_at to get the most recent
+      // Get assignment details including confirmation status
       const { data: assignments, error } = await supabase
         .from("staff_assignments")
         .select(`
           staff_id,
           confirmation_status,
           confirmed_at,
-          declined_at,
-          created_at
+          declined_at
         `)
-        .eq("event_id", eventId)
-        .order('created_at', { ascending: false });
+        .eq("event_id", eventId);
 
       if (error) {
         console.error("Error loading assignment statuses:", error);
@@ -81,7 +79,7 @@ export default function EventDetailsPage() {
 
       // Group by staff_id and take the most recent assignment for each staff member
       const assignmentMap = assignments?.reduce((acc, assignment) => {
-        // Only set if we haven't seen this staff member yet (since we're ordered by created_at desc)
+        // For each staff member, store their latest assignment status
         if (!acc[assignment.staff_id]) {
           acc[assignment.staff_id] = {
             confirmationStatus: assignment.confirmation_status,
@@ -92,7 +90,7 @@ export default function EventDetailsPage() {
         return acc;
       }, {} as Record<string, any>) || {};
 
-      console.log("Assignment map (latest per staff):", assignmentMap);
+      console.log("Assignment map:", assignmentMap);
       setStaffAssignments(assignmentMap);
     } catch (error) {
       console.error("Error loading assignment statuses:", error);
