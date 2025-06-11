@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface ConfirmationRequest {
   token: string;
-  action: 'confirm' | 'decline';
+  action: 'confirm' | 'decline' | 'check';
   userAgent?: string;
   ipAddress?: string;
 }
@@ -160,6 +160,35 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Prepare assignment data for response
+    const assignmentData = {
+      id: assignment.id,
+      eventName: assignment.events?.name,
+      staffName: assignment.staff_members?.name,
+      eventDate: assignment.events?.date,
+      startTime: assignment.events?.start_time,
+      endTime: assignment.events?.end_time,
+      location: assignment.events?.location
+    };
+
+    // If this is just a check action, return current status
+    if (action === 'check') {
+      let icsContent = null;
+      if (assignment.confirmation_status === 'confirmed') {
+        icsContent = generateICSContent(assignment.events, assignment.staff_members?.name || 'Staff Member');
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          status: assignment.confirmation_status === 'confirmed' ? 'already_confirmed' : 
+                  assignment.confirmation_status === 'declined' ? 'already_declined' : 'pending',
+          assignment: assignmentData,
+          icsFile: icsContent
+        }),
+        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Step 3: Check if already processed
     console.log("Step 3: Checking if already processed...");
     if (assignment.confirmation_status === 'confirmed') {
@@ -172,15 +201,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           message: "Assignment already confirmed",
           status: "already_confirmed",
-          assignment: {
-            id: assignment.id,
-            eventName: assignment.events?.name,
-            staffName: assignment.staff_members?.name,
-            eventDate: assignment.events?.date,
-            startTime: assignment.events?.start_time,
-            endTime: assignment.events?.end_time,
-            location: assignment.events?.location
-          },
+          assignment: assignmentData,
           icsFile: icsContent
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -193,15 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           message: "Assignment already declined",
           status: "already_declined",
-          assignment: {
-            id: assignment.id,
-            eventName: assignment.events?.name,
-            staffName: assignment.staff_members?.name,
-            eventDate: assignment.events?.date,
-            startTime: assignment.events?.start_time,
-            endTime: assignment.events?.end_time,
-            location: assignment.events?.location
-          }
+          assignment: assignmentData
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -275,15 +288,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         action: action,
         status: updateData.confirmation_status,
-        assignment: {
-          id: assignment.id,
-          eventName: assignment.events?.name,
-          staffName: assignment.staff_members?.name,
-          eventDate: assignment.events?.date,
-          startTime: assignment.events?.start_time,
-          endTime: assignment.events?.end_time,
-          location: assignment.events?.location
-        },
+        assignment: assignmentData,
         icsFile: icsContent,
         timestamp: new Date().toISOString()
       }),

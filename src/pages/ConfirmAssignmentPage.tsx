@@ -35,60 +35,40 @@ export default function ConfirmAssignmentPage() {
     };
   };
 
-  // Function to check current status without taking any action
+  // Function to check current status using the edge function
   const checkCurrentStatus = async () => {
-    if (!token) return;
+    if (!token) {
+      setError("No confirmation token provided");
+      setInitialLoading(false);
+      return;
+    }
 
     setInitialLoading(true);
     try {
-      // Query the database directly to check status
-      const { data: assignments, error: dbError } = await supabase
-        .from('staff_assignments')
-        .select(`
-          id,
-          confirmation_status,
-          events(id, name, date, start_time, end_time, location),
-          staff_members(name)
-        `)
-        .eq('confirmation_token', token)
-        .single();
-
-      if (dbError || !assignments) {
-        setError("Invalid or expired confirmation token");
-        return;
-      }
-
-      // Set assignment data
-      setAssignment({
-        id: assignments.id,
-        eventName: assignments.events?.name || 'Unknown Event',
-        staffName: assignments.staff_members?.name || 'Unknown Staff',
-        eventDate: assignments.events?.date || '',
-        startTime: assignments.events?.start_time || '',
-        endTime: assignments.events?.end_time || '',
-        location: assignments.events?.location || ''
+      const clientInfo = getClientInfo();
+      
+      // Use the handle-confirmation function to check status without taking action
+      const { data, error: statusError } = await supabase.functions.invoke('handle-confirmation', {
+        body: {
+          token,
+          action: 'check', // We'll modify the function to handle 'check' action
+          ...clientInfo
+        }
       });
 
-      // Set status based on current confirmation_status
-      if (assignments.confirmation_status === 'confirmed') {
-        setStatus('already_confirmed');
-        // For confirmed events, try to get the ICS file
-        const clientInfo = getClientInfo();
-        const { data, error: icsError } = await supabase.functions.invoke('handle-confirmation', {
-          body: {
-            token,
-            action: 'confirm',
-            ...clientInfo
-          }
-        });
-        
-        if (!icsError && data.icsFile) {
+      if (statusError) {
+        throw statusError;
+      }
+
+      if (data.assignment) {
+        setAssignment(data.assignment);
+      }
+
+      if (data.status) {
+        setStatus(data.status);
+        if (data.icsFile && (data.status === 'confirmed' || data.status === 'already_confirmed')) {
           setIcsContent(data.icsFile);
         }
-      } else if (assignments.confirmation_status === 'declined') {
-        setStatus('already_declined');
-      } else {
-        setStatus('pending');
       }
 
     } catch (error: any) {
@@ -213,10 +193,13 @@ export default function ConfirmAssignmentPage() {
     }
   }, [searchParams]);
 
-  // Check status on load - only check, don't auto-confirm
+  // Check status on load
   useEffect(() => {
     if (token) {
       checkCurrentStatus();
+    } else {
+      setError("No confirmation token provided");
+      setInitialLoading(false);
     }
   }, [token]);
 
