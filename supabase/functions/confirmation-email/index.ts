@@ -44,7 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Staff Role:", requestData.staffRole);
     console.log("Event Name:", requestData.eventName);
 
-    // Step 1: Check if assignment exists with retry logic
+    // Step 1: Check if assignment exists - get the most recent one if multiple exist
     console.log("Step 1: Checking existing assignment...");
     let assignment = null;
     let attempts = 0;
@@ -56,15 +56,16 @@ const handler = async (req: Request): Promise<Response> => {
         .select('id, confirmation_token, confirmation_token_expires_at')
         .eq('event_id', requestData.eventId)
         .eq('staff_id', requestData.staffId)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (assignmentError) {
         console.error("Error fetching assignment:", assignmentError);
         throw assignmentError;
       }
 
-      if (assignmentData) {
-        assignment = assignmentData;
+      if (assignmentData && assignmentData.length > 0) {
+        assignment = assignmentData[0]; // Get the most recent assignment
         break;
       }
 
