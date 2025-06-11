@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +18,8 @@ interface AssignmentData {
 }
 
 export default function ConfirmAssignmentPage() {
-  const { token } = useParams();
   const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const [loading, setLoading] = useState(false);
   const [assignment, setAssignment] = useState<AssignmentData | null>(null);
   const [status, setStatus] = useState<'pending' | 'confirmed' | 'declined' | 'already_confirmed' | 'already_declined' | null>(null);

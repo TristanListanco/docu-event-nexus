@@ -45,7 +45,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/confirm/:token" element={<ConfirmAssignmentPage />} />
+          <Route path="/confirm-assignment" element={<ConfirmAssignmentPage />} />
           <Route path="/" element={
             <ProtectedRoute>
               <MainLayout />
