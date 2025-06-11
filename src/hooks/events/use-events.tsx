@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../use-auth";
@@ -380,12 +381,14 @@ export function useEvents() {
 
       // Send update notifications if there are meaningful changes to existing assignments
       if (hasChanges) {
-        const existingAssignedIds = [
-          ...(uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : []),
-          ...(uniquePhotographerIds ? uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [])
-        ];
+        const existingVideographerIds = uniqueVideographerIds ? 
+          uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [];
+        const existingPhotographerIds = uniquePhotographerIds ? 
+          uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [];
+        
+        const existingAssignedStaffIds = [...existingVideographerIds, ...existingPhotographerIds];
 
-        if (existingAssignedIds.length > 0) {
+        if (existingAssignedStaffIds.length > 0) {
           const updatedEventData = {
             name: eventData.name || currentEvent.name,
             date: eventData.date || currentEvent.date,
@@ -409,15 +412,15 @@ export function useEvents() {
               isUpdate: true,
               changes: changes
             },
-            existingAssignedIds,
-            uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [],
+            existingAssignedStaffIds,
+            existingVideographerIds,
             true
           );
         }
       }
 
       // Show success message if no notifications were sent
-      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || !existingAssignedIds || existingAssignedIds.length === 0)) {
+      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || !existingAssignedStaffIds || existingAssignedStaffIds.length === 0)) {
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",
