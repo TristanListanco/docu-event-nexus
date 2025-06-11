@@ -54,42 +54,47 @@ export default function EventDetailsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    const loadAssignmentStatuses = async () => {
-      if (!eventId) return;
+  const loadAssignmentStatuses = async () => {
+    if (!eventId) return;
 
-      try {
-        // Get assignment details including confirmation status
-        const { data: assignments, error } = await supabase
-          .from("staff_assignments")
-          .select(`
-            staff_id,
-            confirmation_status,
-            confirmed_at,
-            declined_at
-          `)
-          .eq("event_id", eventId);
+    try {
+      console.log("Loading assignment statuses for event:", eventId);
+      
+      // Get assignment details including confirmation status
+      const { data: assignments, error } = await supabase
+        .from("staff_assignments")
+        .select(`
+          staff_id,
+          confirmation_status,
+          confirmed_at,
+          declined_at
+        `)
+        .eq("event_id", eventId);
 
-        if (error) {
-          console.error("Error loading assignment statuses:", error);
-          return;
-        }
-
-        const assignmentMap = assignments?.reduce((acc, assignment) => {
-          acc[assignment.staff_id] = {
-            confirmationStatus: assignment.confirmation_status,
-            confirmedAt: assignment.confirmed_at,
-            declinedAt: assignment.declined_at,
-          };
-          return acc;
-        }, {} as Record<string, any>) || {};
-
-        setStaffAssignments(assignmentMap);
-      } catch (error) {
+      if (error) {
         console.error("Error loading assignment statuses:", error);
+        return;
       }
-    };
 
+      console.log("Loaded assignments:", assignments);
+
+      const assignmentMap = assignments?.reduce((acc, assignment) => {
+        acc[assignment.staff_id] = {
+          confirmationStatus: assignment.confirmation_status,
+          confirmedAt: assignment.confirmed_at,
+          declinedAt: assignment.declined_at,
+        };
+        return acc;
+      }, {} as Record<string, any>) || {};
+
+      console.log("Assignment map:", assignmentMap);
+      setStaffAssignments(assignmentMap);
+    } catch (error) {
+      console.error("Error loading assignment statuses:", error);
+    }
+  };
+
+  useEffect(() => {
     if (eventId) {
       loadAssignmentStatuses();
     }
@@ -99,8 +104,10 @@ export default function EventDetailsPage() {
   useEffect(() => {
     if (!eventId) return;
 
+    console.log("Setting up real-time subscription for event:", eventId);
+
     const channel = supabase
-      .channel('assignment-status-changes')
+      .channel(`assignment-status-changes-${eventId}`)
       .on(
         'postgres_changes',
         {
@@ -110,22 +117,29 @@ export default function EventDetailsPage() {
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
-          console.log('Assignment status updated:', payload);
+          console.log('Real-time assignment status update received:', payload);
           const { staff_id, confirmation_status, confirmed_at, declined_at } = payload.new;
           
-          setStaffAssignments(prev => ({
-            ...prev,
-            [staff_id]: {
-              confirmationStatus: confirmation_status,
-              confirmedAt: confirmed_at,
-              declinedAt: declined_at,
-            }
-          }));
+          setStaffAssignments(prev => {
+            const updated = {
+              ...prev,
+              [staff_id]: {
+                confirmationStatus: confirmation_status,
+                confirmedAt: confirmed_at,
+                declinedAt: declined_at,
+              }
+            };
+            console.log('Updated staff assignments state:', updated);
+            return updated;
+          });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
+      console.log("Cleaning up real-time subscription");
       supabase.removeChannel(channel);
     };
   }, [eventId]);
@@ -172,42 +186,9 @@ export default function EventDetailsPage() {
   const handleAfterEdit = () => {
     // Reload both events and assignment statuses after edit
     loadEvents();
-    // Add a small delay to ensure database consistency
+    // Reload assignment statuses to ensure UI is in sync
     setTimeout(() => {
-      if (eventId) {
-        const loadAssignmentStatuses = async () => {
-          try {
-            const { data: assignments, error } = await supabase
-              .from("staff_assignments")
-              .select(`
-                staff_id,
-                confirmation_status,
-                confirmed_at,
-                declined_at
-              `)
-              .eq("event_id", eventId);
-
-            if (error) {
-              console.error("Error reloading assignment statuses:", error);
-              return;
-            }
-
-            const assignmentMap = assignments?.reduce((acc, assignment) => {
-              acc[assignment.staff_id] = {
-                confirmationStatus: assignment.confirmation_status,
-                confirmedAt: assignment.confirmed_at,
-                declinedAt: assignment.declined_at,
-              };
-              return acc;
-            }, {} as Record<string, any>) || {};
-
-            setStaffAssignments(assignmentMap);
-          } catch (error) {
-            console.error("Error reloading assignment statuses:", error);
-          }
-        };
-        loadAssignmentStatuses();
-      }
+      loadAssignmentStatuses();
     }, 1000);
   };
 
@@ -217,9 +198,15 @@ export default function EventDetailsPage() {
 
   const getConfirmationBadge = (staffId: string) => {
     const assignment = staffAssignments[staffId];
-    if (!assignment) return null;
+    console.log(`Getting badge for staff ${staffId}:`, assignment);
+    
+    if (!assignment) {
+      console.log(`No assignment found for staff ${staffId}`);
+      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+    }
 
     const status = assignment.confirmationStatus;
+    console.log(`Status for staff ${staffId}:`, status);
     
     if (status === 'confirmed') {
       return <Badge variant="default" className="text-xs">Confirmed</Badge>;
