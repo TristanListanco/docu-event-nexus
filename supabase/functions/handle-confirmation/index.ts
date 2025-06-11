@@ -122,6 +122,8 @@ const handler = async (req: Request): Promise<Response> => {
         user_id,
         confirmation_status,
         confirmation_token_expires_at,
+        confirmed_at,
+        declined_at,
         events(id, name, date, start_time, end_time, location, organizer),
         staff_members(name, email)
       `)
@@ -183,7 +185,9 @@ const handler = async (req: Request): Promise<Response> => {
           status: assignment.confirmation_status === 'confirmed' ? 'already_confirmed' : 
                   assignment.confirmation_status === 'declined' ? 'already_declined' : 'pending',
           assignment: assignmentData,
-          icsFile: icsContent
+          icsFile: icsContent,
+          timestamp: assignment.confirmation_status === 'confirmed' ? assignment.confirmed_at :
+                    assignment.confirmation_status === 'declined' ? assignment.declined_at : null
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -202,7 +206,8 @@ const handler = async (req: Request): Promise<Response> => {
           message: "Assignment already confirmed",
           status: "already_confirmed",
           assignment: assignmentData,
-          icsFile: icsContent
+          icsFile: icsContent,
+          timestamp: assignment.confirmed_at
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -214,7 +219,8 @@ const handler = async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           message: "Assignment already declined",
           status: "already_declined",
-          assignment: assignmentData
+          assignment: assignmentData,
+          timestamp: assignment.declined_at
         }),
         { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
@@ -222,15 +228,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Step 4: Update assignment status
     console.log(`Step 4: Processing ${action} action...`);
+    const now = new Date().toISOString();
     const updateData = action === 'confirm' 
       ? {
           confirmation_status: 'confirmed',
-          confirmed_at: new Date().toISOString(),
+          confirmed_at: now,
           declined_at: null
         }
       : {
           confirmation_status: 'declined',
-          declined_at: new Date().toISOString(),
+          declined_at: now,
           confirmed_at: null
         };
 
@@ -290,7 +297,7 @@ const handler = async (req: Request): Promise<Response> => {
         status: updateData.confirmation_status,
         assignment: assignmentData,
         icsFile: icsContent,
-        timestamp: new Date().toISOString()
+        timestamp: now
       }),
       {
         status: 200,

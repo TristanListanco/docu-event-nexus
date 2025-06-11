@@ -53,7 +53,7 @@ export default function MultiStaffSelector({
 
   const canAddMore = selectedStaffIds.length < maxSelection;
   
-  // Filter available staff to exclude those already selected in other roles
+  // Filter available staff to exclude those already selected in other roles AND current role
   const availableForSelection = availableStaff.filter(staff => 
     !selectedStaffIds.includes(staff.id) && !excludeStaffIds.includes(staff.id)
   );
@@ -75,7 +75,7 @@ export default function MultiStaffSelector({
       {selectedStaffIds.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedStaffIds.map((staffId) => (
-            <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
+            <Badge key={`${role}-${staffId}`} variant="secondary" className="flex items-center gap-1">
               {getStaffName(staffId)}
               <Button
                 type="button"

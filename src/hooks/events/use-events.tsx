@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../use-auth";
@@ -337,18 +336,56 @@ export function useEvents() {
       const uniqueVideographerIds = videographerIds ? Array.from(new Set(videographerIds)) : undefined;
       const uniquePhotographerIds = photographerIds ? Array.from(new Set(photographerIds)) : undefined;
       
+      // Get current assignments to detect new staff
+      const currentVideographerIds = currentEvent.videographers?.map(v => v.staffId) || [];
+      const currentPhotographerIds = currentEvent.photographers?.map(p => p.staffId) || [];
+      
+      // Find newly added staff
+      const newVideographerIds = uniqueVideographerIds ? 
+        uniqueVideographerIds.filter(id => id && id !== "none" && !currentVideographerIds.includes(id)) : [];
+      const newPhotographerIds = uniquePhotographerIds ? 
+        uniquePhotographerIds.filter(id => id && id !== "none" && !currentPhotographerIds.includes(id)) : [];
+      
+      const newlyAssignedStaffIds = [...newVideographerIds, ...newPhotographerIds];
+      
       await updateStaffAssignments(user.id, eventId, uniqueVideographerIds, uniquePhotographerIds);
 
-      // Send update notifications if there are meaningful changes and assigned staff
+      // Send notifications for newly assigned staff
+      if (newlyAssignedStaffIds.length > 0) {
+        const updatedEventData = {
+          name: eventData.name || currentEvent.name,
+          date: eventData.date || currentEvent.date,
+          startTime: eventData.startTime || currentEvent.startTime,
+          endTime: eventData.endTime || currentEvent.endTime,
+          location: eventData.location || currentEvent.location,
+          organizer: eventData.organizer || currentEvent.organizer,
+          type: eventData.type || currentEvent.type
+        };
+
+        await sendEventNotifications(
+          {
+            eventId: eventId,
+            eventName: updatedEventData.name,
+            eventDate: updatedEventData.date,
+            startTime: updatedEventData.startTime,
+            endTime: updatedEventData.endTime,
+            location: updatedEventData.location,
+            organizer: updatedEventData.organizer,
+            type: updatedEventData.type
+          },
+          newlyAssignedStaffIds,
+          newVideographerIds
+        );
+      }
+
+      // Send update notifications if there are meaningful changes to existing assignments
       if (hasChanges) {
-        const allAssignedIds = [
-          ...(uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none") : 
-             currentEvent.videographers?.map(v => v.staffId) || []),
-          ...(uniquePhotographerIds ? uniquePhotographerIds.filter(id => id && id !== "none") : 
-             currentEvent.photographers?.map(p => p.staffId) || [])
+        const existingAssignedIds = [
+          ...(uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : []),
+          ...(uniquePhotographerIds ? uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [])
         ];
 
-        if (allAssignedIds.length > 0) {
+        if (existingAssignedIds.length > 0) {
           const updatedEventData = {
             name: eventData.name || currentEvent.name,
             date: eventData.date || currentEvent.date,
@@ -372,18 +409,15 @@ export function useEvents() {
               isUpdate: true,
               changes: changes
             },
-            allAssignedIds,
-            uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none") : 
-              currentEvent.videographers?.map(v => v.staffId) || [],
+            existingAssignedIds,
+            uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [],
             true
           );
-        } else {
-          toast({
-            title: "Event Updated",
-            description: "The event has been successfully updated.",
-          });
         }
-      } else {
+      }
+
+      // Show success message if no notifications were sent
+      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || !existingAssignedIds || existingAssignedIds.length === 0)) {
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",

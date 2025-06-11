@@ -32,7 +32,7 @@ export default function EventsHeader({
           {showEventActions && event ? event.name : "Events"}
         </h1>
         <div className="flex items-center space-x-2 md:space-x-4">
-          <div className="scale-90 md:scale-100">
+          <div className="relative z-50">
             <NotificationsPanel />
           </div>
           {onRefresh && (

@@ -134,7 +134,45 @@ export default function EventDetailsPage() {
   }, [events, eventId, staff]);
 
   const handleAfterEdit = () => {
+    // Reload both events and assignment statuses after edit
     loadEvents();
+    // Add a small delay to ensure database consistency
+    setTimeout(() => {
+      if (eventId) {
+        const loadAssignmentStatuses = async () => {
+          try {
+            const { data: assignments, error } = await supabase
+              .from("staff_assignments")
+              .select(`
+                staff_id,
+                confirmation_status,
+                confirmed_at,
+                declined_at
+              `)
+              .eq("event_id", eventId);
+
+            if (error) {
+              console.error("Error reloading assignment statuses:", error);
+              return;
+            }
+
+            const assignmentMap = assignments?.reduce((acc, assignment) => {
+              acc[assignment.staff_id] = {
+                confirmationStatus: assignment.confirmation_status,
+                confirmedAt: assignment.confirmed_at,
+                declinedAt: assignment.declined_at,
+              };
+              return acc;
+            }, {} as Record<string, any>) || {};
+
+            setStaffAssignments(assignmentMap);
+          } catch (error) {
+            console.error("Error reloading assignment statuses:", error);
+          }
+        };
+        loadAssignmentStatuses();
+      }
+    }, 1000);
   };
 
   const handleAfterDelete = () => {

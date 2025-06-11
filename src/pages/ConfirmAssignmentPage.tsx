@@ -1,12 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Check, X, Download, AlertCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface AssignmentData {
   id: string;
@@ -18,221 +18,159 @@ interface AssignmentData {
   location: string;
 }
 
+interface ConfirmationResponse {
+  success?: boolean;
+  action?: string;
+  status?: string;
+  assignment?: AssignmentData;
+  icsFile?: string;
+  message?: string;
+  error?: string;
+  code?: string;
+  timestamp?: string;
+}
+
 export default function ConfirmAssignmentPage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const token = searchParams.get("token");
+  const action = searchParams.get("action");
+  
+  const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState(false);
+  const [status, setStatus] = useState<string>("");
   const [assignment, setAssignment] = useState<AssignmentData | null>(null);
-  const [status, setStatus] = useState<'pending' | 'confirmed' | 'declined' | 'already_confirmed' | 'already_declined' | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [icsContent, setIcsContent] = useState<string | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [confirmationTimestamp, setConfirmationTimestamp] = useState<string | null>(null);
+  const [icsFile, setIcsFile] = useState<string | null>(null);
+  const [error, setError] = useState<string>("");
+  const [confirmationTimestamp, setConfirmationTimestamp] = useState<string>("");
 
-  // Get IP address for confirmation
-  const getClientInfo = () => {
-    return {
-      userAgent: navigator.userAgent,
-      ipAddress: 'client-detected' // Will be detected server-side
-    };
-  };
-
-  // Function to check current status using the edge function
-  const checkCurrentStatus = async () => {
+  useEffect(() => {
     if (!token) {
       setError("No confirmation token provided");
-      setInitialLoading(false);
+      setLoading(false);
       return;
     }
 
-    setInitialLoading(true);
+    checkAssignmentStatus();
+  }, [token]);
+
+  const checkAssignmentStatus = async () => {
     try {
-      const clientInfo = getClientInfo();
-      
-      // Use the handle-confirmation function to check status without taking action
-      const { data, error: statusError } = await supabase.functions.invoke('handle-confirmation', {
+      setLoading(true);
+      console.log("Checking assignment status for token:", token);
+
+      const { data, error } = await supabase.functions.invoke('handle-confirmation', {
         body: {
-          token,
-          action: 'check', // We'll modify the function to handle 'check' action
-          ...clientInfo
+          token: token,
+          action: 'check'
         }
       });
 
-      if (statusError) {
-        throw statusError;
+      if (error) {
+        console.error("Error checking status:", error);
+        throw error;
       }
 
-      if (data.assignment) {
-        setAssignment(data.assignment);
+      console.log("Status check response:", data);
+
+      if (data.error) {
+        setError(data.error);
+        return;
       }
 
-      if (data.status) {
-        setStatus(data.status);
-        if (data.icsFile && (data.status === 'confirmed' || data.status === 'already_confirmed')) {
-          setIcsContent(data.icsFile);
-        }
-        // Set confirmation timestamp if available
-        if (data.timestamp) {
-          setConfirmationTimestamp(data.timestamp);
-        }
+      setStatus(data.status);
+      setAssignment(data.assignment);
+      setIcsFile(data.icsFile);
+      
+      // If there's a timestamp, format it for display
+      if (data.timestamp) {
+        setConfirmationTimestamp(data.timestamp);
       }
 
     } catch (error: any) {
-      console.error("Error checking status:", error);
-      setError("Unable to check assignment status");
-    } finally {
-      setInitialLoading(false);
-    }
-  };
-
-  const handleConfirmation = async (action: 'confirm' | 'decline') => {
-    if (!token) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const clientInfo = getClientInfo();
-      
-      const { data, error: confirmError } = await supabase.functions.invoke('handle-confirmation', {
-        body: {
-          token,
-          action,
-          ...clientInfo
-        }
-      });
-
-      if (confirmError) {
-        throw confirmError;
-      }
-
-      if (data.success || data.status?.includes('already_')) {
-        setAssignment(data.assignment);
-        setStatus(data.status || (action === 'confirm' ? 'confirmed' : 'declined'));
-        
-        // Set confirmation timestamp
-        if (data.timestamp) {
-          setConfirmationTimestamp(data.timestamp);
-        }
-        
-        if (data.icsFile && action === 'confirm') {
-          setIcsContent(data.icsFile);
-          // Auto-download the ICS file
-          const blob = new Blob([data.icsFile], { type: 'text/calendar' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${data.assignment.eventName.replace(/[^a-z0-9]/gi, '_')}.ics`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }
-
-        const message = action === 'confirm' 
-          ? "Successfully confirmed your assignment!" 
-          : "Successfully declined the assignment.";
-        
-        toast({
-          title: "Success",
-          description: message,
-        });
-      }
-    } catch (error: any) {
-      console.error("Confirmation error:", error);
-      setError(error.message || "An error occurred during confirmation");
-      toast({
-        title: "Error",
-        description: error.message || "Failed to process confirmation",
-        variant: "destructive",
-      });
+      console.error("Error checking assignment status:", error);
+      setError(error.message || "Failed to check assignment status");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleConfirmation = async (confirmAction: 'confirm' | 'decline') => {
+    if (!token) return;
+
+    try {
+      setConfirming(true);
+      console.log(`Processing ${confirmAction} action for token:`, token);
+
+      const { data, error } = await supabase.functions.invoke('handle-confirmation', {
+        body: {
+          token: token,
+          action: confirmAction
+        }
+      });
+
+      if (error) {
+        console.error(`Error ${confirmAction}ing:`, error);
+        throw error;
+      }
+
+      console.log(`${confirmAction} response:`, data);
+
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+
+      setStatus(data.status);
+      setIcsFile(data.icsFile);
+      
+      // Set the confirmation timestamp from the response
+      if (data.timestamp) {
+        setConfirmationTimestamp(data.timestamp);
+      }
+
+      // Refresh the assignment data
+      await checkAssignmentStatus();
+
+    } catch (error: any) {
+      console.error(`Error ${confirmAction}ing assignment:`, error);
+      setError(error.message || `Failed to ${confirmAction} assignment`);
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   const downloadICS = () => {
-    if (!icsContent || !assignment) return;
-    
-    const blob = new Blob([icsContent], { type: 'text/calendar' });
-    const url = URL.createObjectURL(blob);
+    if (!icsFile || !assignment) return;
+
+    const blob = new Blob([icsFile], { type: 'text/calendar' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${assignment.eventName.replace(/[^a-z0-9]/gi, '_')}.ics`;
+    link.download = `${assignment.eventName.replace(/\s+/g, '_')}_confirmation.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(url);
   };
 
-  const formatTime12Hour = (time24: string) => {
-    const [hours, minutes] = time24.split(':');
-    const hour = parseInt(hours, 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  // Auto-load status if we have assignment data from URL params
-  useEffect(() => {
-    const eventName = searchParams.get('event');
-    const staffName = searchParams.get('staff');
-    const eventDate = searchParams.get('date');
-    const startTime = searchParams.get('start');
-    const endTime = searchParams.get('end');
-    const location = searchParams.get('location');
-
-    if (eventName && staffName && eventDate && startTime && endTime && location) {
-      setAssignment({
-        id: '',
-        eventName,
-        staffName,
-        eventDate,
-        startTime,
-        endTime,
-        location
-      });
+  const formatDateTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'MMMM d, yyyy \'at\' h:mm a');
+    } catch (error) {
+      return dateString;
     }
-  }, [searchParams]);
+  };
 
-  // Check status on load
-  useEffect(() => {
-    if (token) {
-      checkCurrentStatus();
-    } else {
-      setError("No confirmation token provided");
-      setInitialLoading(false);
-    }
-  }, [token]);
-
-  if (initialLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="flex items-center justify-center p-8">
+          <CardContent className="p-6">
             <div className="text-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading assignment details...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p>Loading assignment details...</p>
             </div>
           </CardContent>
         </Card>
@@ -244,19 +182,13 @@ export default function ConfirmAssignmentPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-6 h-6 text-destructive" />
-            </div>
-            <CardTitle className="text-destructive">Error</CardTitle>
+          <CardHeader>
+            <CardTitle className="text-center text-destructive">Error</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button
-              onClick={() => window.location.reload()}
-              variant="outline"
-            >
-              Try Again
+          <CardContent>
+            <p className="text-center text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => navigate('/')} className="w-full">
+              Go to Homepage
             </Button>
           </CardContent>
         </Card>
@@ -264,164 +196,118 @@ export default function ConfirmAssignmentPage() {
     );
   }
 
-  if (status === 'already_confirmed' || status === 'confirmed') {
+  if (!assignment) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle className="text-green-700 dark:text-green-400">Assignment Confirmed</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {assignment && (
-              <>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-foreground">{assignment.eventName}</h3>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {formatDate(assignment.eventDate)}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-2" />
-                      {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      {assignment.location}
-                    </div>
-                  </div>
-                </div>
-                <Badge variant="default" className="w-full justify-center py-2">
-                  ✓ Confirmed
-                </Badge>
-                {confirmationTimestamp && (
-                  <div className="text-center text-xs text-muted-foreground">
-                    Confirmed on: {formatTimestamp(confirmationTimestamp)}
-                  </div>
-                )}
-                {icsContent && (
-                  <Button
-                    onClick={downloadICS}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Calendar Event
-                  </Button>
-                )}
-              </>
-            )}
-            <p className="text-center text-sm text-muted-foreground">
-              You have already confirmed this assignment. Thank you!
-            </p>
+          <CardContent className="p-6">
+            <p className="text-center">No assignment found.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  if (status === 'already_declined' || status === 'declined') {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <X className="w-6 h-6 text-red-600 dark:text-red-400" />
-            </div>
-            <CardTitle className="text-red-700 dark:text-red-400">Assignment Declined</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {assignment && (
-              <>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-foreground">{assignment.eventName}</h3>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      {formatDate(assignment.eventDate)}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="w-4 h-4 mr-2" />
-                      {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      {assignment.location}
-                    </div>
-                  </div>
-                </div>
-                <Badge variant="destructive" className="w-full justify-center py-2">
-                  ✗ Declined
-                </Badge>
-                {confirmationTimestamp && (
-                  <div className="text-center text-xs text-muted-foreground">
-                    Declined on: {formatTimestamp(confirmationTimestamp)}
-                  </div>
-                )}
-              </>
-            )}
-            <p className="text-center text-sm text-muted-foreground">
-              You have declined this assignment.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const getStatusBadge = () => {
+    switch (status) {
+      case 'already_confirmed':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
+      case 'already_declined':
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Declined</Badge>;
+      default:
+        return <Badge variant="secondary">Pending</Badge>;
+    }
+  };
+
+  const isAlreadyProcessed = status === 'already_confirmed' || status === 'already_declined';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-foreground">Event Assignment Confirmation</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Please confirm or decline your assignment for this event
-          </p>
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-center">Event Assignment Confirmation</CardTitle>
+          <div className="text-center">
+            {getStatusBadge()}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {assignment && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-foreground">{assignment.eventName}</h3>
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    {formatDate(assignment.eventDate)}
-                  </div>
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    {formatTime12Hour(assignment.startTime)} - {formatTime12Hour(assignment.endTime)}
-                  </div>
-                  <div className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {assignment.location}
-                  </div>
-                </div>
+          {/* Event Details */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">{assignment.eventName}</h3>
+            <div className="grid gap-3 text-sm">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{format(new Date(assignment.eventDate), 'MMMM d, yyyy')}</span>
               </div>
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{assignment.startTime} - {assignment.endTime}</span>
+              </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>{assignment.location}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Staff Information */}
+          <div className="border-t pt-4">
+            <p className="text-sm text-muted-foreground">Assigned to:</p>
+            <p className="font-medium">{assignment.staffName}</p>
+          </div>
+
+          {/* Confirmation Timestamp */}
+          {confirmationTimestamp && (
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground">
+                {status === 'already_confirmed' ? 'Confirmed on:' : 'Declined on:'}
+              </p>
+              <p className="font-medium">{formatDateTime(confirmationTimestamp)}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button
-              onClick={() => handleConfirmation('confirm')}
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              {loading ? 'Processing...' : 'Confirm'}
-            </Button>
-            <Button
-              onClick={() => handleConfirmation('decline')}
-              disabled={loading}
-              variant="destructive"
-            >
-              <X className="w-4 h-4 mr-2" />
-              {loading ? 'Processing...' : 'Decline'}
-            </Button>
-          </div>
+          {/* Action Buttons */}
+          {!isAlreadyProcessed && (
+            <div className="flex gap-4 pt-4">
+              <Button
+                onClick={() => handleConfirmation('confirm')}
+                disabled={confirming}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {confirming ? 'Processing...' : 'Confirm Attendance'}
+              </Button>
+              <Button
+                onClick={() => handleConfirmation('decline')}
+                disabled={confirming}
+                variant="destructive"
+                className="flex-1"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                {confirming ? 'Processing...' : 'Decline'}
+              </Button>
+            </div>
+          )}
+
+          {/* Calendar Download */}
+          {status === 'already_confirmed' && icsFile && (
+            <div className="border-t pt-4">
+              <Button onClick={downloadICS} variant="outline" className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Download Calendar Event
+              </Button>
+            </div>
+          )}
+
+          {/* Message for processed assignments */}
+          {isAlreadyProcessed && (
+            <div className="text-center text-muted-foreground text-sm">
+              {status === 'already_confirmed' 
+                ? 'You have already confirmed your attendance for this event.'
+                : 'You have already declined this assignment.'
+              }
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
