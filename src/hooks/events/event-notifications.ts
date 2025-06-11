@@ -62,7 +62,7 @@ export const sendEventNotifications = async (
           description: `${notificationData.eventName} has been created successfully. Email notifications are being sent.`,
         });
 
-        // Create assignments with proper error handling
+        // Create assignments with proper error handling - use insert instead of upsert
         const assignmentPromises = staffData.map(async (staff) => {
           const confirmationToken = uuidv4();
           const expiryDate = new Date();
@@ -70,15 +70,13 @@ export const sendEventNotifications = async (
 
           const { error: assignmentError } = await supabase
             .from("staff_assignments")
-            .upsert({
+            .insert({
               user_id: user.id,
               event_id: notificationData.eventId,
               staff_id: staff.id,
               confirmation_token: confirmationToken,
               confirmation_token_expires_at: expiryDate.toISOString(),
               confirmation_status: 'pending'
-            }, {
-              onConflict: 'event_id,staff_id'
             });
 
           if (assignmentError) {
