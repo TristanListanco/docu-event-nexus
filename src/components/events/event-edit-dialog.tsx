@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { Event, EventType, StaffMember } from "@/types/models";
 import { Checkbox } from "@/components/ui/checkbox";
 import MultiStaffSelector from "@/components/events/multi-staff-selector";
+import { getAvailableStaff } from "@/hooks/staff/staff-availability";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -154,6 +155,25 @@ export default function EventEditDialog({
       setIsSubmitting(false);
     }
   };
+
+  // Get available staff for the event time, considering schedule conflicts
+  const getAvailableStaffForEvent = () => {
+    if (!formData.date || !formData.startTime || !formData.endTime) {
+      return { videographers: [], photographers: [] };
+    }
+
+    const formattedDate = format(formData.date, 'yyyy-MM-dd');
+    return getAvailableStaff(
+      staff,
+      formattedDate,
+      formData.startTime,
+      formData.endTime,
+      formData.ignoreScheduleConflicts,
+      formData.ccsOnlyEvent
+    );
+  };
+
+  const availableStaff = getAvailableStaffForEvent();
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -292,7 +312,7 @@ export default function EventEditDialog({
           <Label>Videographers</Label>
           <MultiStaffSelector
             role="Videographer"
-            availableStaff={staff.filter(s => s.roles.includes("Videographer"))}
+            availableStaff={availableStaff.videographers}
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
             excludeStaffIds={selectedPhotographers}
@@ -303,7 +323,7 @@ export default function EventEditDialog({
           <Label>Photographers</Label>
           <MultiStaffSelector
             role="Photographer"
-            availableStaff={staff.filter(s => s.roles.includes("Photographer"))}
+            availableStaff={availableStaff.photographers}
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
             excludeStaffIds={selectedVideographers}

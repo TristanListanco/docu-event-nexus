@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,41 @@ export default function EventDetailsPage() {
     if (eventId) {
       loadAssignmentStatuses();
     }
+  }, [eventId]);
+
+  // Set up real-time subscription for assignment status changes
+  useEffect(() => {
+    if (!eventId) return;
+
+    const channel = supabase
+      .channel('assignment-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'staff_assignments',
+          filter: `event_id=eq.${eventId}`
+        },
+        (payload) => {
+          console.log('Assignment status updated:', payload);
+          const { staff_id, confirmation_status, confirmed_at, declined_at } = payload.new;
+          
+          setStaffAssignments(prev => ({
+            ...prev,
+            [staff_id]: {
+              confirmationStatus: confirmation_status,
+              confirmedAt: confirmed_at,
+              declinedAt: declined_at,
+            }
+          }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [eventId]);
 
   useEffect(() => {
