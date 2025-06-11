@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export default function ConfirmAssignmentPage() {
   const [error, setError] = useState<string | null>(null);
   const [icsContent, setIcsContent] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [confirmationTimestamp, setConfirmationTimestamp] = useState<string | null>(null);
 
   // Get IP address for confirmation
   const getClientInfo = () => {
@@ -69,6 +71,10 @@ export default function ConfirmAssignmentPage() {
         if (data.icsFile && (data.status === 'confirmed' || data.status === 'already_confirmed')) {
           setIcsContent(data.icsFile);
         }
+        // Set confirmation timestamp if available
+        if (data.timestamp) {
+          setConfirmationTimestamp(data.timestamp);
+        }
       }
 
     } catch (error: any) {
@@ -103,6 +109,11 @@ export default function ConfirmAssignmentPage() {
       if (data.success || data.status?.includes('already_')) {
         setAssignment(data.assignment);
         setStatus(data.status || (action === 'confirm' ? 'confirmed' : 'declined'));
+        
+        // Set confirmation timestamp
+        if (data.timestamp) {
+          setConfirmationTimestamp(data.timestamp);
+        }
         
         if (data.icsFile && action === 'confirm') {
           setIcsContent(data.icsFile);
@@ -168,6 +179,17 @@ export default function ConfirmAssignmentPage() {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
+    });
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    return new Date(timestamp).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
     });
   };
 
@@ -275,6 +297,11 @@ export default function ConfirmAssignmentPage() {
                 <Badge variant="default" className="w-full justify-center py-2">
                   ✓ Confirmed
                 </Badge>
+                {confirmationTimestamp && (
+                  <div className="text-center text-xs text-muted-foreground">
+                    Confirmed on: {formatTimestamp(confirmationTimestamp)}
+                  </div>
+                )}
                 {icsContent && (
                   <Button
                     onClick={downloadICS}
@@ -329,6 +356,11 @@ export default function ConfirmAssignmentPage() {
                 <Badge variant="destructive" className="w-full justify-center py-2">
                   ✗ Declined
                 </Badge>
+                {confirmationTimestamp && (
+                  <div className="text-center text-xs text-muted-foreground">
+                    Declined on: {formatTimestamp(confirmationTimestamp)}
+                  </div>
+                )}
               </>
             )}
             <p className="text-center text-sm text-muted-foreground">

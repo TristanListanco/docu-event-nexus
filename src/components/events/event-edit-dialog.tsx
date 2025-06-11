@@ -90,9 +90,9 @@ export default function EventEditDialog({
         ccsOnlyEvent: event.ccsOnlyEvent || false,
       });
 
-      // Set selected staff
-      const videographerIds = event.videographers?.map(v => v.staffId) || [];
-      const photographerIds = event.photographers?.map(p => p.staffId) || [];
+      // Set selected staff - ensure unique IDs only
+      const videographerIds = Array.from(new Set(event.videographers?.map(v => v.staffId) || []));
+      const photographerIds = Array.from(new Set(event.photographers?.map(p => p.staffId) || []));
       
       setSelectedVideographers(videographerIds);
       setSelectedPhotographers(photographerIds);
@@ -159,10 +159,10 @@ export default function EventEditDialog({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="edit-name">Name</Label>
           <Input
             type="text"
-            id="name"
+            id="edit-name"
             name="name"
             value={formData.name}
             onChange={handleInputChange}
@@ -171,7 +171,7 @@ export default function EventEditDialog({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="edit-date">Date</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -180,6 +180,7 @@ export default function EventEditDialog({
                   "w-full justify-start text-left font-normal",
                   !formData.date && "text-muted-foreground"
                 )}
+                id="edit-date"
               >
                 {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
                   <span>Pick a date</span>
@@ -203,10 +204,10 @@ export default function EventEditDialog({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="startTime">Start Time</Label>
+          <Label htmlFor="edit-startTime">Start Time</Label>
           <Input
             type="time"
-            id="startTime"
+            id="edit-startTime"
             name="startTime"
             value={formData.startTime}
             onChange={handleInputChange}
@@ -215,10 +216,10 @@ export default function EventEditDialog({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="endTime">End Time</Label>
+          <Label htmlFor="edit-endTime">End Time</Label>
           <Input
             type="time"
-            id="endTime"
+            id="edit-endTime"
             name="endTime"
             value={formData.endTime}
             onChange={handleInputChange}
@@ -228,10 +229,10 @@ export default function EventEditDialog({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="edit-location">Location</Label>
         <Input
           type="text"
-          id="location"
+          id="edit-location"
           name="location"
           value={formData.location}
           onChange={handleInputChange}
@@ -240,9 +241,9 @@ export default function EventEditDialog({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="organizer">Organizer</Label>
+        <Label htmlFor="edit-organizer">Organizer</Label>
         <Textarea
-          id="organizer"
+          id="edit-organizer"
           name="organizer"
           value={formData.organizer}
           onChange={handleInputChange}
@@ -251,9 +252,9 @@ export default function EventEditDialog({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="type">Type</Label>
+        <Label htmlFor="edit-type">Type</Label>
         <Select onValueChange={handleSelectChange} value={formData.type}>
-          <SelectTrigger>
+          <SelectTrigger id="edit-type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -269,20 +270,20 @@ export default function EventEditDialog({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="ignoreScheduleConflicts"
+            id="edit-ignoreScheduleConflicts"
             checked={formData.ignoreScheduleConflicts}
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
           />
-          <Label htmlFor="ignoreScheduleConflicts" className="text-sm">Ignore Conflicts</Label>
+          <Label htmlFor="edit-ignoreScheduleConflicts" className="text-sm">Ignore Conflicts</Label>
         </div>
         
         <div className="flex items-center space-x-2">
           <Checkbox
-            id="ccsOnlyEvent"
+            id="edit-ccsOnlyEvent"
             checked={formData.ccsOnlyEvent}
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
           />
-          <Label htmlFor="ccsOnlyEvent" className="text-sm">CCS Only Event</Label>
+          <Label htmlFor="edit-ccsOnlyEvent" className="text-sm">CCS Only Event</Label>
         </div>
       </div>
 

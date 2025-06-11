@@ -8,8 +8,6 @@ import {
   MapPin, 
   Video,
   Camera,
-  Edit,
-  Trash2,
   UserX,
   ArrowLeft
 } from "lucide-react";
@@ -22,6 +20,7 @@ import { Event, StaffMember } from "@/types/models";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import EventDeleteDialog from "@/components/events/event-delete-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
+import EventsHeader from "@/components/events/events-header";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -180,10 +179,16 @@ export default function EventDetailsPage() {
 
   if (loading || staffLoading) {
     return (
-      <div className="flex items-center justify-center p-12 h-screen">
-        <div className="text-center">
-          <CalendarIcon className="h-8 w-8 animate-pulse mx-auto text-primary" />
-          <p className="mt-2 text-lg">Loading event details...</p>
+      <div className="flex h-screen flex-col">
+        <EventsHeader 
+          onAddEvent={() => {}}
+          showEventActions={false}
+        />
+        <div className="flex items-center justify-center p-12 flex-1">
+          <div className="text-center">
+            <CalendarIcon className="h-8 w-8 animate-pulse mx-auto text-primary" />
+            <p className="mt-2 text-lg">Loading event details...</p>
+          </div>
         </div>
       </div>
     );
@@ -191,18 +196,24 @@ export default function EventDetailsPage() {
 
   if (!event) {
     return (
-      <div className="flex items-center justify-center p-12 h-screen">
-        <div className="text-center">
-          <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground" />
-          <p className="mt-2 text-lg">Event not found</p>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/events")}
-            className="mt-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Events
-          </Button>
+      <div className="flex h-screen flex-col">
+        <EventsHeader 
+          onAddEvent={() => {}}
+          showEventActions={false}
+        />
+        <div className="flex items-center justify-center p-12 flex-1">
+          <div className="text-center">
+            <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+            <p className="mt-2 text-lg">Event not found</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/events")}
+              className="mt-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Events
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -231,50 +242,32 @@ export default function EventDetailsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/events")}
-              className="p-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
-              <p className="text-muted-foreground">{event.logId}</p>
-            </div>
-          </div>
-          
-          {/* Mobile Action Buttons in Header */}
-          {isMobile && (
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setEditDialogOpen(true)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
+      <EventsHeader 
+        onAddEvent={() => {}}
+        event={event}
+        onEditEvent={() => setEditDialogOpen(true)}
+        onDeleteEvent={() => setDeleteDialogOpen(true)}
+        showEventActions={true}
+      />
       
       <div className="p-4 grid gap-4 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-4">
+        <div className="md:col-span-3 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Event Details</CardTitle>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Event Details</CardTitle>
+                  <p className="text-muted-foreground">{event.logId}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/events")}
+                  className="p-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -413,33 +406,6 @@ export default function EventDetailsPage() {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Desktop Action Buttons in Sidebar */}
-        {!isMobile && (
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Administration</CardTitle>
-                <CardDescription>Manage event settings and assignments</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button className="w-full" onClick={() => setEditDialogOpen(true)}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Event
-                </Button>
-                
-                <Button 
-                  variant="destructive" 
-                  className="w-full"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Event
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
 
       {/* Edit Event Dialog */}

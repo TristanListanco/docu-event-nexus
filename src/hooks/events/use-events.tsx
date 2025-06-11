@@ -333,15 +333,18 @@ export function useEvents() {
         throw error;
       }
 
-      // Handle staff assignments
-      await updateStaffAssignments(user.id, eventId, videographerIds, photographerIds);
+      // Handle staff assignments - ensure unique IDs only
+      const uniqueVideographerIds = videographerIds ? Array.from(new Set(videographerIds)) : undefined;
+      const uniquePhotographerIds = photographerIds ? Array.from(new Set(photographerIds)) : undefined;
+      
+      await updateStaffAssignments(user.id, eventId, uniqueVideographerIds, uniquePhotographerIds);
 
       // Send update notifications if there are meaningful changes and assigned staff
       if (hasChanges) {
         const allAssignedIds = [
-          ...(videographerIds ? videographerIds.filter(id => id && id !== "none") : 
+          ...(uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none") : 
              currentEvent.videographers?.map(v => v.staffId) || []),
-          ...(photographerIds ? photographerIds.filter(id => id && id !== "none") : 
+          ...(uniquePhotographerIds ? uniquePhotographerIds.filter(id => id && id !== "none") : 
              currentEvent.photographers?.map(p => p.staffId) || [])
         ];
 
@@ -370,7 +373,7 @@ export function useEvents() {
               changes: changes
             },
             allAssignedIds,
-            videographerIds ? videographerIds.filter(id => id && id !== "none") : 
+            uniqueVideographerIds ? uniqueVideographerIds.filter(id => id && id !== "none") : 
               currentEvent.videographers?.map(v => v.staffId) || [],
             true
           );
