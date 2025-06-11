@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,16 +59,18 @@ export default function EventDetailsPage() {
     try {
       console.log("Loading assignment statuses for event:", eventId);
       
-      // Get assignment details including confirmation status
+      // Get assignment details including confirmation status, ordered by created_at to get the most recent
       const { data: assignments, error } = await supabase
         .from("staff_assignments")
         .select(`
           staff_id,
           confirmation_status,
           confirmed_at,
-          declined_at
+          declined_at,
+          created_at
         `)
-        .eq("event_id", eventId);
+        .eq("event_id", eventId)
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error("Error loading assignment statuses:", error);
@@ -78,16 +79,20 @@ export default function EventDetailsPage() {
 
       console.log("Loaded assignments:", assignments);
 
+      // Group by staff_id and take the most recent assignment for each staff member
       const assignmentMap = assignments?.reduce((acc, assignment) => {
-        acc[assignment.staff_id] = {
-          confirmationStatus: assignment.confirmation_status,
-          confirmedAt: assignment.confirmed_at,
-          declinedAt: assignment.declined_at,
-        };
+        // Only set if we haven't seen this staff member yet (since we're ordered by created_at desc)
+        if (!acc[assignment.staff_id]) {
+          acc[assignment.staff_id] = {
+            confirmationStatus: assignment.confirmation_status,
+            confirmedAt: assignment.confirmed_at,
+            declinedAt: assignment.declined_at,
+          };
+        }
         return acc;
       }, {} as Record<string, any>) || {};
 
-      console.log("Assignment map:", assignmentMap);
+      console.log("Assignment map (latest per staff):", assignmentMap);
       setStaffAssignments(assignmentMap);
     } catch (error) {
       console.error("Error loading assignment statuses:", error);
@@ -111,27 +116,16 @@ export default function EventDetailsPage() {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'staff_assignments',
           filter: `event_id=eq.${eventId}`
         },
         (payload) => {
-          console.log('Real-time assignment status update received:', payload);
-          const { staff_id, confirmation_status, confirmed_at, declined_at } = payload.new;
+          console.log('Real-time assignment status change received:', payload);
           
-          setStaffAssignments(prev => {
-            const updated = {
-              ...prev,
-              [staff_id]: {
-                confirmationStatus: confirmation_status,
-                confirmedAt: confirmed_at,
-                declinedAt: declined_at,
-              }
-            };
-            console.log('Updated staff assignments state:', updated);
-            return updated;
-          });
+          // Reload assignment statuses to get the latest state
+          loadAssignmentStatuses();
         }
       )
       .subscribe((status) => {
@@ -157,18 +151,18 @@ export default function EventDetailsPage() {
         
         // Find assigned staff when both event and staff data are available
         if (staff.length > 0) {
-          // Find assigned videographers
+          // Find assigned videographers - get unique staff IDs first
+          const uniqueVideographerIds = [...new Set(foundEvent.videographers?.map(v => v.staffId) || [])];
           const videographers = staff.filter(s => {
-            const isAssignedAsVideographer = foundEvent.videographers && 
-              foundEvent.videographers.some(v => v.staffId === s.id);
+            const isAssignedAsVideographer = uniqueVideographerIds.includes(s.id);
             const hasVideographerRole = s.roles.includes("Videographer");
             return isAssignedAsVideographer && hasVideographerRole;
           });
           
-          // Find assigned photographers
+          // Find assigned photographers - get unique staff IDs first
+          const uniquePhotographerIds = [...new Set(foundEvent.photographers?.map(p => p.staffId) || [])];
           const photographers = staff.filter(s => {
-            const isAssignedAsPhotographer = foundEvent.photographers && 
-              foundEvent.photographers.some(p => p.staffId === s.id);
+            const isAssignedAsPhotographer = uniquePhotographerIds.includes(s.id);
             const hasPhotographerRole = s.roles.includes("Photographer");
             return isAssignedAsPhotographer && hasPhotographerRole;
           });
@@ -209,7 +203,7 @@ export default function EventDetailsPage() {
     console.log(`Status for staff ${staffId}:`, status);
     
     if (status === 'confirmed') {
-      return <Badge variant="default" className="text-xs">Confirmed</Badge>;
+      return <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">Confirmed</Badge>;
     } else if (status === 'declined') {
       return <Badge variant="destructive" className="text-xs">Declined</Badge>;
     } else {
