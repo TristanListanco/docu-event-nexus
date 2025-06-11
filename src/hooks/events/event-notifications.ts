@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -58,10 +59,10 @@ export const sendEventNotifications = async (
         // Show immediate success feedback
         toast({
           title: "Event Created",
-          description: `${notificationData.eventName} has been created successfully. Email notifications are being sent in the background.`,
+          description: `${notificationData.eventName} has been created successfully. Email notifications are being sent.`,
         });
 
-        // Create assignments with better error handling
+        // Create assignments with proper error handling
         const assignmentPromises = staffData.map(async (staff) => {
           const confirmationToken = uuidv4();
           const expiryDate = new Date();
@@ -89,10 +90,12 @@ export const sendEventNotifications = async (
           return staff;
         });
 
+        // Wait for all assignments to be created first
         await Promise.all(assignmentPromises);
+        console.log("All assignments created successfully");
 
-        // Send confirmation emails asynchronously using background task
-        console.log("Sending confirmation emails in background...");
+        // Send confirmation emails
+        console.log("Sending confirmation emails...");
         const emailPromises = staffData.map(async (staff) => {
           if (!staff.email) {
             console.log(`Skipping ${staff.name} - no email provided`);
@@ -102,7 +105,7 @@ export const sendEventNotifications = async (
           const staffRole = videographerIds.includes(staff.id) ? "Videographer" : "Photographer";
           
           try {
-            const { error: emailError } = await supabase.functions.invoke('confirmation-email', {
+            const { data, error: emailError } = await supabase.functions.invoke('confirmation-email', {
               body: {
                 eventId: notificationData.eventId,
                 staffId: staff.id,
@@ -123,7 +126,7 @@ export const sendEventNotifications = async (
               console.error(`Error sending confirmation email to ${staff.name}:`, emailError);
               return { success: false, staff: staff.name, error: emailError };
             } else {
-              console.log(`Confirmation email sent to ${staff.name}`);
+              console.log(`Confirmation email sent to ${staff.name}:`, data);
               return { success: true, staff: staff.name };
             }
           } catch (error) {
@@ -132,31 +135,32 @@ export const sendEventNotifications = async (
           }
         });
 
-        // Process emails in background without blocking UI
-        Promise.all(emailPromises).then((emailResults) => {
-          const successCount = emailResults.filter(result => result.success).length;
-          const failureCount = emailResults.filter(result => !result.success).length;
+        // Wait for all emails to be sent
+        const emailResults = await Promise.all(emailPromises);
+        const successCount = emailResults.filter(result => result.success).length;
+        const failureCount = emailResults.filter(result => !result.success).length;
 
-          if (successCount === staffData.length) {
-            console.log(`All ${successCount} confirmation emails sent successfully`);
-          } else if (successCount > 0) {
-            console.log(`${successCount} emails sent successfully, ${failureCount} failed`);
-            toast({
-              title: "Partial Email Success",
-              description: `${successCount} emails sent, ${failureCount} failed to send.`,
-              variant: "default",
-            });
-          } else {
-            console.error("All email notifications failed to send");
-            toast({
-              title: "Email Sending Failed",
-              description: "Failed to send email notifications to staff members.",
-              variant: "destructive",
-            });
-          }
-        }).catch((error) => {
-          console.error("Error in background email processing:", error);
-        });
+        if (successCount === staffData.length) {
+          console.log(`All ${successCount} confirmation emails sent successfully`);
+          toast({
+            title: "Success",
+            description: `Event created and ${successCount} email notifications sent successfully.`,
+          });
+        } else if (successCount > 0) {
+          console.log(`${successCount} emails sent successfully, ${failureCount} failed`);
+          toast({
+            title: "Partial Success",
+            description: `Event created. ${successCount} emails sent, ${failureCount} failed to send.`,
+            variant: "default",
+          });
+        } else {
+          console.error("All email notifications failed to send");
+          toast({
+            title: "Email Sending Failed",
+            description: "Event created but failed to send email notifications to staff members.",
+            variant: "destructive",
+          });
+        }
 
       } else {
         // For updates, use the existing notification function

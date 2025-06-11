@@ -38,27 +38,58 @@ const getClientIP = (req: Request): string => {
   return 'unknown';
 };
 
-// Function to generate ICS file content
+// Function to generate ICS file content with correct timezone
 const generateICSContent = (eventData: any, staffName: string): string => {
-  const startDate = new Date(`${eventData.date}T${eventData.start_time}`);
-  const endDate = new Date(`${eventData.date}T${eventData.end_time}`);
+  // Create date objects in Philippine timezone (UTC+8)
+  const eventDate = eventData.date; // Format: YYYY-MM-DD
+  const startTime = eventData.start_time; // Format: HH:MM
+  const endTime = eventData.end_time; // Format: HH:MM
   
-  const formatDate = (date: Date) => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  // Parse times and create proper datetime strings for Philippine timezone
+  const startDateTime = `${eventDate}T${startTime}:00`;
+  const endDateTime = `${eventDate}T${endTime}:00`;
+  
+  // Format for ICS (YYYYMMDDTHHMMSS - local time)
+  const formatDateForICS = (dateTimeStr: string) => {
+    return dateTimeStr.replace(/[-:]/g, '').replace('T', 'T');
   };
+  
+  const startFormatted = formatDateForICS(startDateTime);
+  const endFormatted = formatDateForICS(endDateTime);
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Event Management//Event Calendar//EN
+BEGIN:VTIMEZONE
+TZID:Asia/Manila
+BEGIN:STANDARD
+DTSTART:19701101T000000
+TZOFFSETFROM:+0800
+TZOFFSETTO:+0800
+TZNAME:PST
+END:STANDARD
+END:VTIMEZONE
 BEGIN:VEVENT
 UID:${eventData.id}@eventmanagement.com
-DTSTART:${formatDate(startDate)}
-DTEND:${formatDate(endDate)}
+DTSTAMP:${now}
+DTSTART;TZID=Asia/Manila:${startFormatted}
+DTEND;TZID=Asia/Manila:${endFormatted}
 SUMMARY:${eventData.name}
 DESCRIPTION:You have confirmed your attendance for this event.\\nRole: Staff Member\\nOrganizer: ${eventData.organizer || 'N/A'}
 LOCATION:${eventData.location}
 STATUS:CONFIRMED
 ATTENDEE:CN=${staffName}
+BEGIN:VALARM
+TRIGGER:-PT360M
+ACTION:DISPLAY
+DESCRIPTION:Event reminder (6 hours): ${eventData.name}
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT60M
+ACTION:DISPLAY
+DESCRIPTION:Event reminder (1 hour): ${eventData.name}
+END:VALARM
 END:VEVENT
 END:VCALENDAR`;
 };
