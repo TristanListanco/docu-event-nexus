@@ -22,7 +22,7 @@ export default function MultiStaffSelector({
   availableStaff,
   selectedStaffIds,
   onSelectionChange,
-  maxSelection = 2,
+  maxSelection = 3, // Changed from 2 to 3
   disabled = false,
   excludeStaffIds = []
 }: MultiStaffSelectorProps) {
