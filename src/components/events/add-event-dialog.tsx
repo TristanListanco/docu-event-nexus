@@ -363,7 +363,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
               </div>
               
               {/* Send Email Notifications checkbox */}
-              <div className="flex items-center space-x-2">
+              {/* <div className="flex items-center space-x-2">
                 <Checkbox
                   id="sendEmails"
                   checked={sendEmailNotifications}
@@ -373,7 +373,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                   <Mail className="h-4 w-4 mr-2" />
                   Send email notifications to assigned staff
                 </Label>
-              </div>
+              </div> */}
             </div>
             
             {/* Staff Assignment Section */}
