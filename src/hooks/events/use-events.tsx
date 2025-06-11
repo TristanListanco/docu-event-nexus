@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../use-auth";
@@ -379,48 +378,47 @@ export function useEvents() {
         );
       }
 
+      // Calculate existing assigned staff for update notifications
+      const existingVideographerIds = uniqueVideographerIds ? 
+        uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [];
+      const existingPhotographerIds = uniquePhotographerIds ? 
+        uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [];
+      
+      const existingAssignedStaffIds = [...existingVideographerIds, ...existingPhotographerIds];
+
       // Send update notifications if there are meaningful changes to existing assignments
-      if (hasChanges) {
-        const existingVideographerIds = uniqueVideographerIds ? 
-          uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [];
-        const existingPhotographerIds = uniquePhotographerIds ? 
-          uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [];
-        
-        const existingAssignedStaffIds = [...existingVideographerIds, ...existingPhotographerIds];
+      if (hasChanges && existingAssignedStaffIds.length > 0) {
+        const updatedEventData = {
+          name: eventData.name || currentEvent.name,
+          date: eventData.date || currentEvent.date,
+          startTime: eventData.startTime || currentEvent.startTime,
+          endTime: eventData.endTime || currentEvent.endTime,
+          location: eventData.location || currentEvent.location,
+          organizer: eventData.organizer || currentEvent.organizer,
+          type: eventData.type || currentEvent.type
+        };
 
-        if (existingAssignedStaffIds.length > 0) {
-          const updatedEventData = {
-            name: eventData.name || currentEvent.name,
-            date: eventData.date || currentEvent.date,
-            startTime: eventData.startTime || currentEvent.startTime,
-            endTime: eventData.endTime || currentEvent.endTime,
-            location: eventData.location || currentEvent.location,
-            organizer: eventData.organizer || currentEvent.organizer,
-            type: eventData.type || currentEvent.type
-          };
-
-          await sendEventNotifications(
-            {
-              eventId: eventId,
-              eventName: updatedEventData.name,
-              eventDate: updatedEventData.date,
-              startTime: updatedEventData.startTime,
-              endTime: updatedEventData.endTime,
-              location: updatedEventData.location,
-              organizer: updatedEventData.organizer,
-              type: updatedEventData.type,
-              isUpdate: true,
-              changes: changes
-            },
-            existingAssignedStaffIds,
-            existingVideographerIds,
-            true
-          );
-        }
+        await sendEventNotifications(
+          {
+            eventId: eventId,
+            eventName: updatedEventData.name,
+            eventDate: updatedEventData.date,
+            startTime: updatedEventData.startTime,
+            endTime: updatedEventData.endTime,
+            location: updatedEventData.location,
+            organizer: updatedEventData.organizer,
+            type: updatedEventData.type,
+            isUpdate: true,
+            changes: changes
+          },
+          existingAssignedStaffIds,
+          existingVideographerIds,
+          true
+        );
       }
 
       // Show success message if no notifications were sent
-      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || !existingAssignedStaffIds || existingAssignedStaffIds.length === 0)) {
+      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || existingAssignedStaffIds.length === 0)) {
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",
