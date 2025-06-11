@@ -91,9 +91,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Assignment found:", assignment.id);
 
-    // Step 2: Generate confirmation links
-    const confirmUrl = `${Deno.env.get('SUPABASE_URL')?.replace('//', '//').replace('supabase.co', 'lovableproject.com')}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
-    const declineUrl = `${Deno.env.get('SUPABASE_URL')?.replace('//', '//').replace('supabase.co', 'lovableproject.com')}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
+    // Step 2: Generate confirmation links using the production URL
+    const baseUrl = "https://docu-event-scheduling.vercel.app";
+    const confirmUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
+    const declineUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
     
     console.log("Confirmation URL:", confirmUrl);
     console.log("Decline URL:", declineUrl);
