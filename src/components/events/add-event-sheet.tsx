@@ -154,12 +154,15 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
       const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
       const ccsOnlyEvent = staffAvailabilityMode === "ccs";
 
+      // Format the date in YYYY-MM-DD format while preserving the local date
+      const formattedDate = date.toLocaleDateString('en-CA'); // This will give YYYY-MM-DD format
+
       // Save the event with multiple staff assignments
       const eventId = await addEvent(
         {
           name,
           logId,
-          date: date.toISOString().split('T')[0],
+          date: formattedDate,
           startTime,
           endTime,
           location,

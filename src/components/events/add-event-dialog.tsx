@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,8 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
+  const prevSelectedVideographers = useRef<string[]>([]);
+  const prevSelectedPhotographers = useRef<string[]>([]);
 
   // Check availability whenever date/time/staffAvailabilityMode changes
   useEffect(() => {
@@ -75,10 +77,12 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
       );
       
       if (videographersStillAvailable.length !== selectedVideographers.length) {
+        prevSelectedVideographers.current = selectedVideographers;
         setSelectedVideographers(videographersStillAvailable);
       }
       
       if (photographersStillAvailable.length !== selectedPhotographers.length) {
+        prevSelectedPhotographers.current = selectedPhotographers;
         setSelectedPhotographers(photographersStillAvailable);
       }
     } else {
@@ -86,7 +90,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
+  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -159,7 +163,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
         {
           name,
           logId,
-          date: date.toISOString().split('T')[0],
+          date: format(date, 'yyyy-MM-dd'),
           startTime,
           endTime,
           location,

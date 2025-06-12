@@ -39,7 +39,7 @@ import {
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Event, EventType, StaffMember } from "@/types/models";
+import { Event, EventType } from "@/types/models";
 import { Checkbox } from "@/components/ui/checkbox";
 import MultiStaffSelector from "@/components/events/multi-staff-selector";
 import { getAvailableStaff } from "@/hooks/staff/staff-availability";

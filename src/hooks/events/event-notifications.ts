@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -197,26 +196,12 @@ export const sendEventNotifications = async (
         }
 
       } else {
-        // For updates, use the existing notification function
-        const { error: notificationError } = await supabase.functions.invoke('send-event-notification', {
-          body: {
-            ...notificationData,
-            assignedStaff: staffData.map(staff => ({
-              id: staff.id,
-              name: staff.name,
-              email: staff.email,
-              role: videographerIds.includes(staff.id) ? "Videographer" : "Photographer"
-            }))
-          }
-        });
-
-        if (notificationError) {
-          console.error("Error sending update notifications:", notificationError);
-        }
+        // For updates, do not send emails
+        console.log("Skipping email notifications for updated event");
 
         toast({
           title: "Event Updated",
-          description: `${notificationData.eventName} has been updated and email notifications sent to assigned staff.`,
+          description: `${notificationData.eventName} has been updated. Email notifications were not sent.`,
         });
       }
     }
