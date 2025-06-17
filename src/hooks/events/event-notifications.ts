@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
@@ -51,8 +52,58 @@ export const sendEventNotifications = async (
     }
 
     if (staffData && staffData.length > 0) {
-      // For new assignments, create staff assignments first
-      if (!isUpdate) {
+      if (isUpdate) {
+        // For updates, send update emails using the send-event-notification function
+        console.log("Sending update notifications...");
+        
+        // Show immediate feedback
+        toast({
+          title: "Event Updated",
+          description: `${notificationData.eventName} has been updated. Sending email notifications...`,
+        });
+
+        // Prepare staff data with roles for the notification function
+        const staffWithRoles = staffData.map(staff => ({
+          id: staff.id,
+          name: staff.name,
+          email: staff.email,
+          role: videographerIds.includes(staff.id) ? "Videographer" : "Photographer"
+        }));
+
+        // Send update notifications using the send-event-notification function
+        const { data: notificationResponse, error: notificationError } = await supabase.functions.invoke('send-event-notification', {
+          body: {
+            eventId: notificationData.eventId,
+            eventName: notificationData.eventName,
+            eventDate: notificationData.eventDate,
+            startTime: notificationData.startTime,
+            endTime: notificationData.endTime,
+            location: notificationData.location,
+            organizer: notificationData.organizer,
+            type: notificationData.type,
+            assignedStaff: staffWithRoles,
+            isUpdate: true,
+            changes: notificationData.changes
+          }
+        });
+
+        if (notificationError) {
+          console.error("Error sending update notifications:", notificationError);
+          toast({
+            title: "Event Updated",
+            description: `${notificationData.eventName} has been updated, but failed to send email notifications. Error: ${notificationError.message}`,
+            variant: "destructive",
+          });
+        } else {
+          console.log("Update notifications sent successfully:", notificationResponse);
+          toast({
+            title: "Event Updated",
+            description: `${notificationData.eventName} has been updated and email notifications sent successfully.`,
+          });
+        }
+
+      } else {
+        // For new assignments, create staff assignments first
         console.log("Creating staff assignments for new event...");
         
         // Show immediate success feedback
@@ -194,15 +245,6 @@ export const sendEventNotifications = async (
             variant: "destructive",
           });
         }
-
-      } else {
-        // For updates, do not send emails
-        console.log("Skipping email notifications for updated event");
-
-        toast({
-          title: "Event Updated",
-          description: `${notificationData.eventName} has been updated. Email notifications were not sent.`,
-        });
       }
     }
   } catch (error) {

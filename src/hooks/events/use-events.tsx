@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../use-auth";
@@ -358,7 +359,7 @@ export function useEvents() {
       
       const allAssignedStaffIds = [...allCurrentVideographerIds, ...allCurrentPhotographerIds];
 
-      // Always send notifications when there are changes and assigned staff
+      // Send notifications when there are changes or new staff and there are assigned staff
       if ((hasChanges || newlyAssignedStaffIds.length > 0) && allAssignedStaffIds.length > 0) {
         const updatedEventData = {
           name: eventData.name || currentEvent.name,
@@ -370,7 +371,11 @@ export function useEvents() {
           type: eventData.type || currentEvent.type
         };
 
-        const isUpdate = newlyAssignedStaffIds.length < allAssignedStaffIds.length || hasChanges;
+        // Determine if this should be treated as an update (has changes to existing event details)
+        // or as new assignments (only new staff added)
+        const isUpdate = hasChanges || (newlyAssignedStaffIds.length < allAssignedStaffIds.length);
+
+        console.log("Sending notifications:", { hasChanges, newlyAssignedStaffIds, allAssignedStaffIds, isUpdate });
 
         await sendEventNotifications(
           {
@@ -390,6 +395,17 @@ export function useEvents() {
           isUpdate
         );
       } else if (allAssignedStaffIds.length === 0) {
+        toast({
+          title: "Event Updated",
+          description: "The event has been successfully updated.",
+        });
+      } else {
+        // This case should not happen, but let's log it for debugging
+        console.log("No notifications sent - conditions not met:", { 
+          hasChanges, 
+          newlyAssignedStaffIds: newlyAssignedStaffIds.length, 
+          allAssignedStaffIds: allAssignedStaffIds.length 
+        });
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",
