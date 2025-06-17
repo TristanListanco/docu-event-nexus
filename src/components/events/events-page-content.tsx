@@ -90,26 +90,35 @@ export default function EventsPageContent({
   }, {} as Record<string, Event[]>);
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto animate-fade-in">
       <div className="container mx-auto p-6">
-        <EventsPageFilters onFiltersChange={handleFiltersChange} />
+        <div className="animate-slide-in-right">
+          <EventsPageFilters onFiltersChange={handleFiltersChange} />
+        </div>
 
         {filteredAndSortedEvents.length === 0 ? (
-          <EventsEmptyState searchQuery={searchQuery} />
+          <div className="animate-fade-in-up">
+            <EventsEmptyState searchQuery={searchQuery} />
+          </div>
         ) : (
           <div className="space-y-6">
-            {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
-              <EventMonthGroup
-                key={monthYear}
-                monthYear={monthYear}
-                events={monthEvents}
-                onEventClick={onEventClick}
-                onEditEvent={onEditEvent}
-                onDeleteEvent={onDeleteEvent}
-                getEventStatus={getEventStatus}
-                isCollapsed={collapsedMonths.has(monthYear)}
-                onToggleCollapse={() => toggleMonthCollapse(monthYear)}
-              />
+            {Object.entries(groupedEvents).map(([monthYear, monthEvents], index) => (
+              <div 
+                key={monthYear} 
+                className="animate-fade-in-up stagger-animation"
+                style={{ '--stagger': index } as React.CSSProperties}
+              >
+                <EventMonthGroup
+                  monthYear={monthYear}
+                  events={monthEvents}
+                  onEventClick={onEventClick}
+                  onEditEvent={onEditEvent}
+                  onDeleteEvent={onDeleteEvent}
+                  getEventStatus={getEventStatus}
+                  isCollapsed={collapsedMonths.has(monthYear)}
+                  onToggleCollapse={() => toggleMonthCollapse(monthYear)}
+                />
+              </div>
             ))}
           </div>
         )}

@@ -55,19 +55,21 @@ export default function EventsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading events...</div>
+      <div className="flex h-screen items-center justify-center animate-fade-in">
+        <div className="text-lg loading-pulse">Loading events...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      <EventsHeader 
-        onAddEvent={handleAddEvent} 
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-      />
+    <div className="flex h-screen flex-col animate-fade-in">
+      <div className="animate-slide-in-right">
+        <EventsHeader 
+          onAddEvent={handleAddEvent} 
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
+      </div>
       
       <EventsPageContent
         events={events}

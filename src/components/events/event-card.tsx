@@ -49,28 +49,28 @@ export default function EventCard({
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover-lift transition-all duration-300 animate-fade-in-up border-border/50 hover:border-primary/20"
       onClick={() => onEventClick(event)}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between">
-          <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center">
-            <Calendar className="h-5 w-5 text-primary" />
+          <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center transition-colors duration-200 hover:bg-primary/20">
+            <Calendar className="h-5 w-5 text-primary transition-transform duration-200 hover:scale-110" />
           </div>
-          <Badge variant="outline" className="bg-primary/10 text-primary">
+          <Badge variant="outline" className="bg-primary/10 text-primary transition-colors duration-200 hover:bg-primary/20">
             {event.type}
           </Badge>
         </div>
-        <CardTitle className="mt-2">{event.name}</CardTitle>
-        <p className="text-muted-foreground text-sm">
+        <CardTitle className="mt-2 transition-colors duration-200 hover:text-primary">{event.name}</CardTitle>
+        <p className="text-muted-foreground text-sm transition-colors duration-200">
           {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
         </p>
       </CardHeader>
       <CardContent>
-        <p className="text-sm">📍 {event.location}</p>
-        <p className="text-sm">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</p>
+        <p className="text-sm transition-colors duration-200 hover:text-foreground">📍 {event.location}</p>
+        <p className="text-sm transition-colors duration-200 hover:text-foreground">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</p>
         <div className="flex justify-start mt-2">
-          <Badge className={getStatusBadgeColor(dynamicStatus)}>
+          <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
             {dynamicStatus}
           </Badge>
         </div>

@@ -49,7 +49,7 @@ export default function EventListItem({
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover-lift transition-all duration-300 animate-fade-in border-border/50 hover:border-primary/20"
       onClick={() => onEventClick(event)}
     >
       <CardContent className="p-4">
@@ -57,30 +57,30 @@ export default function EventListItem({
         <div className="flex flex-col space-y-3 sm:hidden">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0">
-                <Calendar className="h-4 w-4 text-primary" />
+              <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0 transition-colors duration-200 hover:bg-primary/20">
+                <Calendar className="h-4 w-4 text-primary transition-transform duration-200 hover:scale-110" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{event.name}</h3>
+                <h3 className="font-medium truncate transition-colors duration-200 hover:text-primary">{event.name}</h3>
               </div>
             </div>
-            <Badge className={getStatusBadgeColor(dynamicStatus)}>
+            <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
               {dynamicStatus}
             </Badge>
           </div>
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="bg-primary/10 text-primary text-xs">
+            <Badge variant="outline" className="bg-primary/10 text-primary text-xs transition-colors duration-200 hover:bg-primary/20">
               {event.type}
             </Badge>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground transition-colors duration-200">
               {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
             </span>
           </div>
           <div className="space-y-1">
-            <div className="flex items-center text-sm text-muted-foreground">
+            <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
               <span className="flex items-center">📍 <span className="ml-1 truncate">{event.location}</span></span>
             </div>
-            <div className="flex items-center text-sm text-muted-foreground">
+            <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
               <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
             </div>
           </div>
@@ -89,25 +89,25 @@ export default function EventListItem({
         {/* Desktop Layout */}
         <div className="hidden sm:flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
-            <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0">
-              <Calendar className="h-4 w-4 text-primary" />
+            <div className="rounded-full bg-primary/10 w-8 h-8 flex items-center justify-center flex-shrink-0 transition-colors duration-200 hover:bg-primary/20">
+              <Calendar className="h-4 w-4 text-primary transition-transform duration-200 hover:scale-110" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-1">
-                <h3 className="font-medium truncate">{event.name}</h3>
-                <Badge variant="outline" className="bg-primary/10 text-primary text-xs flex-shrink-0">
+                <h3 className="font-medium truncate transition-colors duration-200 hover:text-primary">{event.name}</h3>
+                <Badge variant="outline" className="bg-primary/10 text-primary text-xs flex-shrink-0 transition-colors duration-200 hover:bg-primary/20">
                   {event.type}
                 </Badge>
               </div>
               <div className="flex items-center space-x-4 text-sm text-muted-foreground flex-wrap gap-y-1">
-                <span className="flex items-center">📍 <span className="ml-1 truncate max-w-[200px] lg:max-w-none">{event.location}</span></span>
-                <span className="flex-shrink-0">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
-                <span className="flex-shrink-0">{event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
+                <span className="flex items-center transition-colors duration-200 hover:text-foreground">📍 <span className="ml-1 truncate max-w-[200px] lg:max-w-none">{event.location}</span></span>
+                <span className="flex-shrink-0 transition-colors duration-200 hover:text-foreground">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
+                <span className="flex-shrink-0 transition-colors duration-200">🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
               </div>
             </div>
           </div>
           <div className="flex items-center space-x-2 flex-shrink-0">
-            <Badge className={getStatusBadgeColor(dynamicStatus)}>
+            <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
               {dynamicStatus}
             </Badge>
           </div>
