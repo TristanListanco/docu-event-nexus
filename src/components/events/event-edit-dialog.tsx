@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -16,7 +15,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -127,7 +125,7 @@ export default function EventEditDialog({
       // Format date properly to avoid timezone issues
       const formattedDate = format(formData.date, 'yyyy-MM-dd');
 
-      // Update event
+      // Update event with automatic email sending
       await updateEvent(
         event.id,
         {
@@ -156,7 +154,7 @@ export default function EventEditDialog({
     }
   };
 
-  // Get available staff for the event time, considering schedule conflicts
+  // Get available staff for the event time, considering schedule conflicts and leave dates
   const getAvailableStaffForEvent = () => {
     if (!formData.date || !formData.startTime || !formData.endTime) {
       return { videographers: [], photographers: [] };
@@ -316,6 +314,7 @@ export default function EventEditDialog({
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
             excludeStaffIds={selectedPhotographers}
+            maxSelection={3}
           />
         </div>
 
@@ -327,13 +326,14 @@ export default function EventEditDialog({
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
             excludeStaffIds={selectedVideographers}
+            maxSelection={3}
           />
         </div>
       </div>
 
       <div className="flex justify-end pt-4">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Updating..." : "Save changes"}
+          {isSubmitting ? "Saving Changes..." : "Save Changes"}
         </Button>
       </div>
     </form>
@@ -346,7 +346,7 @@ export default function EventEditDialog({
           <SheetHeader>
             <SheetTitle>Edit Event</SheetTitle>
             <SheetDescription>
-              Make changes to your event here. Click save when you're done.
+              Make changes to your event here. Changes will be emailed to assigned staff.
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
@@ -363,7 +363,7 @@ export default function EventEditDialog({
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
           <DialogDescription>
-            Make changes to your event here. Click save when you're done.
+            Make changes to your event here. Changes will be emailed to assigned staff.
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto flex-1 px-1">

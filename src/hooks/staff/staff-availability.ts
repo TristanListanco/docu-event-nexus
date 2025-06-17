@@ -17,7 +17,7 @@ export const getAvailableStaff = (
   const ccsSubjectCodes = ['BCA', 'CCC', 'CSC', 'ISY', 'ITE', 'ITN', 'ITD'];
 
   const availableStaff = staff.filter(member => {
-    // Check if member is on leave
+    // Check if member is on leave for the event date
     const isOnLeave = member.leaveDates.some(leave => 
       eventDate >= leave.startDate && eventDate <= leave.endDate
     );
@@ -65,4 +65,12 @@ export const getAvailableStaff = (
       member.roles.includes("Photographer")
     ),
   };
+};
+
+// Helper function to check if a staff member is currently on leave
+export const isStaffOnLeaveToday = (staffMember: StaffMember): boolean => {
+  const today = new Date().toISOString().split('T')[0];
+  return staffMember.leaveDates.some(leave => 
+    today >= leave.startDate && today <= leave.endDate
+  );
 };

@@ -274,7 +274,7 @@ export function useEvents() {
         throw new Error("Event not found");
       }
 
-      // Track changes for notifications
+      // Track changes for notifications - including location and organizer
       const changes: any = {};
       if (eventData.name && eventData.name !== currentEvent.name) {
         changes.name = { old: currentEvent.name, new: eventData.name };
@@ -291,8 +291,8 @@ export function useEvents() {
       if (eventData.location && eventData.location !== currentEvent.location) {
         changes.location = { old: currentEvent.location, new: eventData.location };
       }
-      if (eventData.organizer && eventData.organizer !== currentEvent.organizer) {
-        changes.organizer = { old: currentEvent.organizer, new: eventData.organizer };
+      if (eventData.organizer !== undefined && eventData.organizer !== currentEvent.organizer) {
+        changes.organizer = { old: currentEvent.organizer || "", new: eventData.organizer };
       }
       if (eventData.type && eventData.type !== currentEvent.type) {
         changes.type = { old: currentEvent.type, new: eventData.type };
@@ -350,53 +350,27 @@ export function useEvents() {
       
       await updateStaffAssignments(user.id, eventId, uniqueVideographerIds, uniquePhotographerIds);
 
-      // Send notifications for newly assigned staff
-      if (newlyAssignedStaffIds.length > 0) {
-        const updatedEventData = {
-          name: eventData.name || currentEvent.name,
-          date: eventData.date || currentEvent.date,
-          startTime: eventData.startTime || currentEvent.startTime,
-          endTime: eventData.endTime || currentEvent.endTime,
-          location: eventData.location || currentEvent.location,
-          organizer: eventData.organizer || currentEvent.organizer,
-          type: eventData.type || currentEvent.type
-        };
-
-        await sendEventNotifications(
-          {
-            eventId: eventId,
-            eventName: updatedEventData.name,
-            eventDate: updatedEventData.date,
-            startTime: updatedEventData.startTime,
-            endTime: updatedEventData.endTime,
-            location: updatedEventData.location,
-            organizer: updatedEventData.organizer,
-            type: updatedEventData.type
-          },
-          newlyAssignedStaffIds,
-          newVideographerIds
-        );
-      }
-
-      // Calculate existing assigned staff for update notifications
-      const existingVideographerIds = uniqueVideographerIds ? 
-        uniqueVideographerIds.filter(id => id && id !== "none" && currentVideographerIds.includes(id)) : [];
-      const existingPhotographerIds = uniquePhotographerIds ? 
-        uniquePhotographerIds.filter(id => id && id !== "none" && currentPhotographerIds.includes(id)) : [];
+      // Calculate all assigned staff for notifications
+      const allCurrentVideographerIds = uniqueVideographerIds ? 
+        uniqueVideographerIds.filter(id => id && id !== "none") : [];
+      const allCurrentPhotographerIds = uniquePhotographerIds ? 
+        uniquePhotographerIds.filter(id => id && id !== "none") : [];
       
-      const existingAssignedStaffIds = [...existingVideographerIds, ...existingPhotographerIds];
+      const allAssignedStaffIds = [...allCurrentVideographerIds, ...allCurrentPhotographerIds];
 
-      // Send update notifications if there are meaningful changes to existing assignments
-      if (hasChanges && existingAssignedStaffIds.length > 0) {
+      // Always send notifications when there are changes and assigned staff
+      if ((hasChanges || newlyAssignedStaffIds.length > 0) && allAssignedStaffIds.length > 0) {
         const updatedEventData = {
           name: eventData.name || currentEvent.name,
           date: eventData.date || currentEvent.date,
           startTime: eventData.startTime || currentEvent.startTime,
           endTime: eventData.endTime || currentEvent.endTime,
           location: eventData.location || currentEvent.location,
-          organizer: eventData.organizer || currentEvent.organizer,
+          organizer: eventData.organizer !== undefined ? eventData.organizer : currentEvent.organizer,
           type: eventData.type || currentEvent.type
         };
+
+        const isUpdate = newlyAssignedStaffIds.length < allAssignedStaffIds.length || hasChanges;
 
         await sendEventNotifications(
           {
@@ -406,19 +380,16 @@ export function useEvents() {
             startTime: updatedEventData.startTime,
             endTime: updatedEventData.endTime,
             location: updatedEventData.location,
-            organizer: updatedEventData.organizer,
+            organizer: updatedEventData.organizer || "",
             type: updatedEventData.type,
-            isUpdate: true,
-            changes: changes
+            isUpdate: isUpdate,
+            changes: hasChanges ? changes : undefined
           },
-          existingAssignedStaffIds,
-          existingVideographerIds,
-          true
+          allAssignedStaffIds,
+          allCurrentVideographerIds,
+          isUpdate
         );
-      }
-
-      // Show success message if no notifications were sent
-      if (newlyAssignedStaffIds.length === 0 && (!hasChanges || existingAssignedStaffIds.length === 0)) {
+      } else if (allAssignedStaffIds.length === 0) {
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",

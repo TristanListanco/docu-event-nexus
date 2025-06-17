@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { StaffMember } from "@/types/models";
@@ -7,6 +8,7 @@ import StaffListItem from "@/components/staff/staff-list-item";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
+import { isStaffOnLeaveToday } from "@/hooks/staff/staff-availability";
 
 export default function StaffPage() {
   const { staff, loading, loadStaff } = useStaff();
@@ -63,14 +65,6 @@ export default function StaffPage() {
     await loadStaff();
   };
 
-  // Check if staff member is on leave today
-  const isStaffOnLeave = (staffMember: StaffMember) => {
-    const today = new Date().toISOString().split('T')[0];
-    return staffMember.leaveDates.some(leave => 
-      today >= leave.startDate && today <= leave.endDate
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -101,7 +95,7 @@ export default function StaffPage() {
                 staff={member}
                 onEdit={() => handleEdit(member)}
                 onDelete={() => handleDelete(member)}
-                isOnLeave={isStaffOnLeave(member)}
+                isOnLeave={isStaffOnLeaveToday(member)}
               />
             ))}
           </div>
