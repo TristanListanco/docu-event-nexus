@@ -23,6 +23,7 @@ import SendInvitationButton from "@/components/events/send-invitation-button";
 import EventsHeader from "@/components/events/events-header";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import EventDetailsSkeleton from "@/components/loading/event-details-skeleton";
 
 // Helper function to convert 24-hour time to 12-hour format
 const formatTime12Hour = (time24: string) => {
@@ -231,37 +232,24 @@ export default function EventDetailsPage() {
   };
 
   if (loading || staffLoading) {
-    return (
-      <div className="flex h-screen flex-col">
-        <EventsHeader 
-          onAddEvent={() => {}}
-          showEventActions={false}
-        />
-        <div className="flex items-center justify-center p-12 flex-1">
-          <div className="text-center">
-            <CalendarIcon className="h-8 w-8 animate-pulse mx-auto text-primary" />
-            <p className="mt-2 text-lg">Loading event details...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <EventDetailsSkeleton />;
   }
 
   if (!event) {
     return (
-      <div className="flex h-screen flex-col">
+      <div className="flex h-screen flex-col animate-fade-in">
         <EventsHeader 
           onAddEvent={() => {}}
           showEventActions={false}
         />
-        <div className="flex items-center justify-center p-12 flex-1">
-          <div className="text-center">
-            <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+        <div className="flex items-center justify-center p-12 flex-1 animate-fade-in-up">
+          <div className="text-center animate-scale-in">
+            <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground animate-bounce-gentle" />
             <p className="mt-2 text-lg">Event not found</p>
             <Button 
               variant="outline" 
               onClick={() => navigate("/events")}
-              className="mt-4"
+              className="mt-4 hover-lift"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Events
@@ -294,29 +282,31 @@ export default function EventDetailsPage() {
   const formattedDate = event.date ? format(new Date(event.date), 'MMMM d, yyyy') : 'No date specified';
 
   return (
-    <div className="flex flex-col h-full">
-      <EventsHeader 
-        onAddEvent={() => {}}
-        event={event}
-        onEditEvent={() => setEditDialogOpen(true)}
-        onDeleteEvent={() => setDeleteDialogOpen(true)}
-        showEventActions={true}
-      />
+    <div className="flex flex-col h-full animate-fade-in">
+      <div className="animate-slide-in-right">
+        <EventsHeader 
+          onAddEvent={() => {}}
+          event={event}
+          onEditEvent={() => setEditDialogOpen(true)}
+          onDeleteEvent={() => setDeleteDialogOpen(true)}
+          showEventActions={true}
+        />
+      </div>
       
-      <div className="p-4 grid gap-4 md:grid-cols-3">
+      <div className="p-4 grid gap-4 md:grid-cols-3 animate-fade-in-up">
         <div className="md:col-span-3 space-y-4">
-          <Card>
+          <Card className="animate-scale-in hover-lift transition-all duration-300">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Event Details</CardTitle>
-                  <p className="text-muted-foreground">{event.logId}</p>
+                  <CardTitle className="transition-colors duration-200 hover:text-primary">Event Details</CardTitle>
+                  <p className="text-muted-foreground transition-colors duration-200">{event.logId}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate("/events")}
-                  className="p-2"
+                  className="p-2 hover-scale transition-all duration-200"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
@@ -324,59 +314,60 @@ export default function EventDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8 animate-fade-in-up">
                   <div className="flex items-center">
-                    <Badge className={`${getStatusColor(dynamicStatus)} mr-2`}>
+                    <Badge className={`${getStatusColor(dynamicStatus)} mr-2 transition-all duration-200 hover:scale-105`}>
                       {dynamicStatus}
                     </Badge>
-                    <Badge variant="outline">{event.type}</Badge>
+                    <Badge variant="outline" className="transition-all duration-200 hover:scale-105">{event.type}</Badge>
                   </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
+                  <div className="flex items-center text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground">
+                    <CalendarIcon className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
                     {formattedDate}
                   </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                    <Clock className="h-4 w-4 mr-2" />
+                  <div className="flex items-center text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground">
+                    <Clock className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
                     {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}
                   </div>
                 </div>
                 
-                <div>
-                  <div className="flex items-center text-sm">
-                    <MapPin className="h-4 w-4 mr-2" />
+                <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 1 } as React.CSSProperties}>
+                  <div className="flex items-center text-sm transition-colors duration-200 hover:text-foreground">
+                    <MapPin className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
                     <span>{event.location}</span>
                   </div>
                 </div>
 
                 {event.organizer && (
-                  <div>
-                    <div className="flex items-center text-sm">
+                  <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 2 } as React.CSSProperties}>
+                    <div className="flex items-center text-sm transition-colors duration-200 hover:text-foreground">
                       <span className="font-medium mr-2">Organizer/s:</span>
                       <span>{event.organizer}</span>
                     </div>
                   </div>
                 )}
                 
-                <Separator />
+                <Separator className="animate-fade-in-up stagger-animation" style={{ '--stagger': 3 } as React.CSSProperties} />
                 
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Assigned Staff</h3>
+                <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 4 } as React.CSSProperties}>
+                  <h3 className="text-sm font-medium mb-2 transition-colors duration-200 hover:text-primary">Assigned Staff</h3>
                   <div className="space-y-3">
                     {/* Videographers Section */}
-                    <div>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                        <Video className="h-3 w-3 mr-1" />
+                    <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 5 } as React.CSSProperties}>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center transition-colors duration-200 hover:text-foreground">
+                        <Video className="h-3 w-3 mr-1 transition-transform duration-200 hover:scale-110" />
                         Videographers
                       </h4>
                       {assignedVideographers.length > 0 ? (
-                        assignedVideographers.map((videographer) => (
+                        assignedVideographers.map((videographer, index) => (
                           <div 
                             key={`videographer-${videographer.id}`}
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md hover-lift transition-all duration-300 animate-fade-in-up stagger-animation"
+                            style={{ '--stagger': 6 + index } as React.CSSProperties}
                           >
                             <div className="flex items-center gap-2">
-                              <Video className="h-4 w-4 mr-2 text-primary" />
-                              <span className="text-sm">{videographer.name}</span>
+                              <Video className="h-4 w-4 mr-2 text-primary transition-transform duration-200 hover:scale-110" />
+                              <span className="text-sm transition-colors duration-200 hover:text-primary">{videographer.name}</span>
                               {getConfirmationBadge(videographer.id)}
                             </div>
                             {shouldShowInviteButton(videographer.id) && (
@@ -401,28 +392,29 @@ export default function EventDetailsPage() {
                           </div>
                         ))
                       ) : (
-                        <div className="flex items-center p-2 bg-muted/30 rounded-md">
-                          <UserX className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground italic">No Videographer Selected</span>
+                        <div className="flex items-center p-2 bg-muted/30 rounded-md animate-fade-in-up">
+                          <UserX className="h-4 w-4 mr-2 text-muted-foreground transition-transform duration-200 hover:scale-110" />
+                          <span className="text-sm text-muted-foreground italic transition-colors duration-200">No Videographer Selected</span>
                         </div>
                       )}
                     </div>
 
                     {/* Photographers Section */}
-                    <div>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                        <Camera className="h-3 w-3 mr-1" />
+                    <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 8 } as React.CSSProperties}>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center transition-colors duration-200 hover:text-foreground">
+                        <Camera className="h-3 w-3 mr-1 transition-transform duration-200 hover:scale-110" />
                         Photographers
                       </h4>
                       {assignedPhotographers.length > 0 ? (
-                        assignedPhotographers.map((photographer) => (
+                        assignedPhotographers.map((photographer, index) => (
                           <div 
                             key={`photographer-${photographer.id}`}
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md"
+                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md hover-lift transition-all duration-300 animate-fade-in-up stagger-animation"
+                            style={{ '--stagger': 9 + index } as React.CSSProperties}
                           >
                             <div className="flex items-center gap-2">
-                              <Camera className="h-4 w-4 mr-2 text-primary" />
-                              <span className="text-sm">{photographer.name}</span>
+                              <Camera className="h-4 w-4 mr-2 text-primary transition-transform duration-200 hover:scale-110" />
+                              <span className="text-sm transition-colors duration-200 hover:text-primary">{photographer.name}</span>
                               {getConfirmationBadge(photographer.id)}
                             </div>
                             {shouldShowInviteButton(photographer.id) && (
@@ -447,9 +439,9 @@ export default function EventDetailsPage() {
                           </div>
                         ))
                       ) : (
-                        <div className="flex items-center p-2 bg-muted/30 rounded-md">
-                          <UserX className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground italic">No Photographer Selected</span>
+                        <div className="flex items-center p-2 bg-muted/30 rounded-md animate-fade-in-up">
+                          <UserX className="h-4 w-4 mr-2 text-muted-foreground transition-transform duration-200 hover:scale-110" />
+                          <span className="text-sm text-muted-foreground italic transition-colors duration-200">No Photographer Selected</span>
                         </div>
                       )}
                     </div>

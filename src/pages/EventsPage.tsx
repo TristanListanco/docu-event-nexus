@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/events/use-events";
@@ -8,6 +7,7 @@ import EventsPageContent from "@/components/events/events-page-content";
 import EventActionsManager from "@/components/events/event-actions-manager";
 import AddEventDialog from "@/components/events/add-event-dialog";
 import AddEventSheet from "@/components/events/add-event-sheet";
+import EventsPageSkeleton from "@/components/loading/events-page-skeleton";
 import { getEventStatus } from "@/components/events/event-status-utils";
 import { Event } from "@/types/models";
 
@@ -54,11 +54,7 @@ export default function EventsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center animate-fade-in">
-        <div className="text-lg loading-pulse">Loading events...</div>
-      </div>
-    );
+    return <EventsPageSkeleton />;
   }
 
   return (
