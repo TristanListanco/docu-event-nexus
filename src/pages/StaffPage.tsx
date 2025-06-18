@@ -8,6 +8,7 @@ import StaffListItem from "@/components/staff/staff-list-item";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
+import StaffPageSkeleton from "@/components/loading/staff-page-skeleton";
 import { isStaffOnLeaveToday } from "@/hooks/staff/staff-availability";
 
 export default function StaffPage() {
@@ -66,19 +67,17 @@ export default function StaffPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading staff...</div>
-      </div>
-    );
+    return <StaffPageSkeleton />;
   }
 
   return (
-    <div className="flex h-screen flex-col">
-      <StaffHeader onAddStaff={() => setAddDialogOpen(true)} />
+    <div className="flex h-screen flex-col animate-fade-in">
+      <div className="animate-slide-in-right">
+        <StaffHeader onAddStaff={() => setAddDialogOpen(true)} />
+      </div>
       
       <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6">
+        <div className="container mx-auto p-6 animate-fade-in-up">
           <StaffViewControls
             sortBy={sortBy}
             onSortByChange={setSortBy}
@@ -89,19 +88,24 @@ export default function StaffPage() {
           />
 
           <div className="space-y-4">
-            {filteredAndSortedStaff.map((member) => (
-              <StaffListItem
+            {filteredAndSortedStaff.map((member, index) => (
+              <div
                 key={member.id}
-                staff={member}
-                onEdit={() => handleEdit(member)}
-                onDelete={() => handleDelete(member)}
-                isOnLeave={isStaffOnLeaveToday(member)}
-              />
+                className="animate-fade-in-up stagger-animation"
+                style={{ '--stagger': index } as React.CSSProperties}
+              >
+                <StaffListItem
+                  staff={member}
+                  onEdit={() => handleEdit(member)}
+                  onDelete={() => handleDelete(member)}
+                  isOnLeave={isStaffOnLeaveToday(member)}
+                />
+              </div>
             ))}
           </div>
 
           {filteredAndSortedStaff.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-8 animate-fade-in">
               <p className="text-muted-foreground">
                 {searchQuery ? "No staff members found matching your search." : "No staff members found."}
               </p>

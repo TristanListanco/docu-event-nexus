@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
@@ -19,7 +18,8 @@ export function useStaff() {
   const { 
     data: staff = [], 
     isLoading: loading, 
-    refetch: loadStaff 
+    refetch: loadStaff,
+    isFetching
   } = useQuery({
     queryKey: ['staff', user?.id],
     queryFn: async () => {
@@ -29,7 +29,15 @@ export function useStaff() {
       return await loadStaffFromDatabase(user.id);
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 15 * 60 * 1000, // 15 minutes - staff data doesn't change frequently
+    gcTime: 60 * 60 * 1000, // 1 hour cache time
+    refetchOnWindowFocus: false,
+    // Use background refetch for better UX
+    refetchInterval: false,
+    // Optimize for mobile devices
+    networkMode: 'online',
+    // Keep previous data while fetching new data
+    placeholderData: (previousData) => previousData,
   });
 
   const addStaff = async (staffData: Omit<StaffMember, "id">) => {
@@ -129,5 +137,7 @@ export function useStaff() {
     updateStaff,
     deleteStaff,
     getAvailableStaff: getAvailableStaffForEvent,
+    // Add isFetching to distinguish between initial load and background refresh
+    isRefreshing: isFetching && !loading,
   };
 }
