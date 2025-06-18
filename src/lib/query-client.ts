@@ -1,3 +1,4 @@
+
 import { QueryClient } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient({
@@ -33,12 +34,19 @@ export const queryClient = new QueryClient({
 if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      // Only invalidate if we've been away for more than 5 minutes
+      // Only invalidate if we've been away for more than 15 minutes (increased from 5)
       const lastActive = localStorage.getItem('lastActive');
       const now = Date.now();
       
-      if (!lastActive || now - parseInt(lastActive) > 5 * 60 * 1000) {
-        queryClient.invalidateQueries();
+      // Be more conservative about invalidating - only if away for a long time
+      if (!lastActive || now - parseInt(lastActive) > 15 * 60 * 1000) {
+        // Only invalidate specific queries that really need fresh data
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            // Only invalidate queries that are likely to have changed
+            return query.queryKey.includes('events') || query.queryKey.includes('notifications');
+          }
+        });
       }
     } else {
       // Store when we became inactive
