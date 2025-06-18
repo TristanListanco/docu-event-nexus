@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "../use-auth";
@@ -258,7 +257,7 @@ export function useEvents() {
 
   const updateEvent = async (
     eventId: string, 
-    eventData: Partial<Omit<Event, "id" | "videographers" | "photographers">>,
+    eventData: Partial<Omit<Event, "id" | "videographers" | "photographers"> & { sendEmailNotifications?: boolean }>,
     videographerIds?: string[],
     photographerIds?: string[]
   ) => {
@@ -300,6 +299,7 @@ export function useEvents() {
       }
 
       const hasChanges = Object.keys(changes).length > 0;
+      const shouldSendEmails = eventData.sendEmailNotifications !== false; // Default to true
 
       // Update the event
       const updateData: any = {};
@@ -359,8 +359,8 @@ export function useEvents() {
       
       const allAssignedStaffIds = [...allCurrentVideographerIds, ...allCurrentPhotographerIds];
 
-      // Send notifications when there are changes or new staff and there are assigned staff
-      if ((hasChanges || newlyAssignedStaffIds.length > 0) && allAssignedStaffIds.length > 0) {
+      // Send notifications only if email sending is enabled and there are changes/new staff and assigned staff
+      if (shouldSendEmails && (hasChanges || newlyAssignedStaffIds.length > 0) && allAssignedStaffIds.length > 0) {
         const updatedEventData = {
           name: eventData.name || currentEvent.name,
           date: eventData.date || currentEvent.date,
@@ -399,12 +399,18 @@ export function useEvents() {
           title: "Event Updated",
           description: "The event has been successfully updated.",
         });
+      } else if (!shouldSendEmails) {
+        toast({
+          title: "Event Updated",
+          description: "The event has been successfully updated without sending email notifications.",
+        });
       } else {
         // This case should not happen, but let's log it for debugging
         console.log("No notifications sent - conditions not met:", { 
           hasChanges, 
           newlyAssignedStaffIds: newlyAssignedStaffIds.length, 
-          allAssignedStaffIds: allAssignedStaffIds.length 
+          allAssignedStaffIds: allAssignedStaffIds.length,
+          shouldSendEmails
         });
         toast({
           title: "Event Updated",

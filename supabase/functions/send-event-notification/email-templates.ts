@@ -34,6 +34,127 @@ export function generateChangesHtml(changes: any): string {
   return changesHtml;
 }
 
+export function generateUpdateEmailTemplate(data: {
+  staffName: string;
+  eventName: string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  organizer: string;
+  type: string;
+  changes: any;
+}): string {
+  const eventDate = new Date(data.eventDate).toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const changesHtml = generateChangesHtml(data.changes);
+  const organizerSection = data.organizer 
+    ? `<p><strong>Organizer:</strong> ${data.organizer}</p>`
+    : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Event Updated!</h2>
+      
+      ${changesHtml}
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #2563eb; margin-top: 0;">Updated Event Details</h3>
+        <p><strong>Event:</strong> ${data.eventName}</p>
+        <p><strong>Type:</strong> ${data.type}</p>
+        ${organizerSection}
+        <p><strong>Date:</strong> ${eventDate}</p>
+        <p><strong>Time:</strong> ${data.startTime} - ${data.endTime} (Philippine Standard Time)</p>
+        <p><strong>Location:</strong> ${data.location}</p>
+      </div>
+      
+      <p>Hi ${data.staffName},</p>
+      <p>The event <strong>${data.eventName}</strong> has been updated. Please review the changes above and update your calendar accordingly.</p>
+      
+      <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>📅 Updated Calendar File Attached</strong></p>
+        <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to update this event in your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event (Philippine Standard Time).</p>
+      </div>
+      
+      <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
+      
+      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+      <p style="color: #666; font-size: 12px;">This is an automated notification from the CCS Event Management System.</p>
+    </div>
+  `;
+}
+
+export function generateConfirmationEmailTemplate(data: {
+  staffName: string;
+  staffRole: string;
+  eventName: string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  organizer: string;
+  type: string;
+  confirmationUrl: string;
+}): string {
+  const eventDate = new Date(data.eventDate).toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const organizerSection = data.organizer 
+    ? `<p><strong>Organizer:</strong> ${data.organizer}</p>`
+    : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">You've Been Assigned to an Event!</h2>
+      
+      <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #2563eb; margin-top: 0;">Event Details</h3>
+        <p><strong>Event:</strong> ${data.eventName}</p>
+        <p><strong>Type:</strong> ${data.type}</p>
+        ${organizerSection}
+        <p><strong>Role:</strong> ${data.staffRole}</p>
+        <p><strong>Date:</strong> ${eventDate}</p>
+        <p><strong>Time:</strong> ${data.startTime} - ${data.endTime} (Philippine Standard Time)</p>
+        <p><strong>Location:</strong> ${data.location}</p>
+      </div>
+      
+      <p>Hi ${data.staffName},</p>
+      <p>You have been assigned as the <strong>${data.staffRole}</strong> for the upcoming event: <strong>${data.eventName}</strong>.</p>
+      
+      <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <h3 style="color: #2563eb; margin-top: 0;">📋 Please Confirm Your Assignment</h3>
+        <p style="margin: 10px 0;">Click the button below to confirm or decline this assignment:</p>
+        <a href="${data.confirmationUrl}" 
+           style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
+          Confirm Assignment
+        </a>
+        <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
+          Once confirmed, you'll be able to download the calendar file to add this event to your calendar.
+        </p>
+        <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ffc107;">
+          <p style="font-size: 12px; color: #856404; margin: 0;">
+            ⏰ <strong>Important:</strong> This confirmation link will expire in 7 days. Please respond as soon as possible to secure your assignment.
+          </p>
+        </div>
+      </div>
+      
+      <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
+      
+      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+      <p style="color: #666; font-size: 12px;">This is an automated notification from the CCS Event Management System.</p>
+    </div>
+  `;
+}
+
 export function generateEmailTemplate(
   staff: { name: string; role: string; confirmationToken: string | null },
   notificationData: NotificationRequest,

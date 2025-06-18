@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -69,6 +68,7 @@ export default function EventEditDialog({
     type: "General" as EventType,
     ignoreScheduleConflicts: false,
     ccsOnlyEvent: false,
+    sendEmailNotifications: true,
   });
   
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
@@ -87,6 +87,7 @@ export default function EventEditDialog({
         type: event.type,
         ignoreScheduleConflicts: event.ignoreScheduleConflicts || false,
         ccsOnlyEvent: event.ccsOnlyEvent || false,
+        sendEmailNotifications: true,
       });
 
       // Set selected staff - ensure unique IDs only
@@ -125,7 +126,7 @@ export default function EventEditDialog({
       // Format date properly to avoid timezone issues
       const formattedDate = format(formData.date, 'yyyy-MM-dd');
 
-      // Update event with automatic email sending
+      // Update event with controlled email sending
       await updateEvent(
         event.id,
         {
@@ -138,6 +139,7 @@ export default function EventEditDialog({
           type: formData.type,
           ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
           ccsOnlyEvent: formData.ccsOnlyEvent,
+          sendEmailNotifications: formData.sendEmailNotifications,
         },
         selectedVideographers,
         selectedPhotographers
@@ -305,6 +307,15 @@ export default function EventEditDialog({
         </div>
       </div>
 
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="edit-sendEmailNotifications"
+          checked={formData.sendEmailNotifications}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, sendEmailNotifications: !!checked }))}
+        />
+        <Label htmlFor="edit-sendEmailNotifications" className="text-sm">Send email notifications to assigned staff</Label>
+      </div>
+
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Videographers</Label>
@@ -346,7 +357,7 @@ export default function EventEditDialog({
           <SheetHeader>
             <SheetTitle>Edit Event</SheetTitle>
             <SheetDescription>
-              Make changes to your event here. Changes will be emailed to assigned staff.
+              Make changes to your event here. Email notifications can be controlled via checkbox.
             </SheetDescription>
           </SheetHeader>
           <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
@@ -363,7 +374,7 @@ export default function EventEditDialog({
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
           <DialogDescription>
-            Make changes to your event here. Changes will be emailed to assigned staff.
+            Make changes to your event here. Email notifications can be controlled via checkbox.
           </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto flex-1 px-1">
