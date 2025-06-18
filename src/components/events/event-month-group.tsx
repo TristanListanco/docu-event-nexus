@@ -47,7 +47,6 @@ export default function EventMonthGroup({
         
         <CollapsibleContent 
           className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden"
-          forceMount={false}
         >
           <div className="pb-6">
             {/* Mobile uses grid view, desktop/tablet uses list view */}
