@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/events/use-events";
@@ -12,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Event, EventType } from "@/types/models";
-import { MultiStaffSelector } from "./multi-staff-selector";
+import MultiStaffSelector from "./multi-staff-selector";
 import { Calendar, Clock, MapPin, User, Tag, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -33,7 +32,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [organizer, setOrganizer] = useState("");
-  const [type, setType] = useState<EventType>("Documentation");
+  const [type, setType] = useState<EventType>("General");
   const [videographerIds, setVideographerIds] = useState<string[]>([]);
   const [photographerIds, setPhotographerIds] = useState<string[]>([]);
   const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
@@ -48,7 +47,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
     setEndTime("");
     setLocation("");
     setOrganizer("");
-    setType("Documentation");
+    setType("General");
     setVideographerIds([]);
     setPhotographerIds([]);
     setIgnoreScheduleConflicts(false);
@@ -151,9 +150,11 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Documentation">Documentation</SelectItem>
-                      <SelectItem value="Live Streaming">Live Streaming</SelectItem>
-                      <SelectItem value="Photo & Video">Photo & Video</SelectItem>
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="SPECOM">SPECOM</SelectItem>
+                      <SelectItem value="LITCOM">LITCOM</SelectItem>
+                      <SelectItem value="CUACOM">CUACOM</SelectItem>
+                      <SelectItem value="SPODACOM">SPODACOM</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -252,17 +253,23 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
               
               <div className="space-y-4">
                 <MultiStaffSelector
-                  staff={staff}
-                  eventDate={date}
-                  startTime={startTime}
-                  endTime={endTime}
-                  selectedVideographerIds={videographerIds}
-                  selectedPhotographerIds={photographerIds}
-                  onVideographerChange={setVideographerIds}
-                  onPhotographerChange={setPhotographerIds}
-                  ignoreScheduleConflicts={ignoreScheduleConflicts}
-                  ccsOnlyEvent={ccsOnlyEvent}
-                  loading={staffLoading}
+                  role="Videographer"
+                  availableStaff={staff}
+                  selectedStaffIds={videographerIds}
+                  onSelectionChange={setVideographerIds}
+                  maxSelection={3}
+                  disabled={staffLoading}
+                  excludeStaffIds={photographerIds}
+                />
+                
+                <MultiStaffSelector
+                  role="Photographer"
+                  availableStaff={staff}
+                  selectedStaffIds={photographerIds}
+                  onSelectionChange={setPhotographerIds}
+                  maxSelection={3}
+                  disabled={staffLoading}
+                  excludeStaffIds={videographerIds}
                 />
               </div>
             </CardContent>
