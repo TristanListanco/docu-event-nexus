@@ -3,10 +3,11 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { User } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 
 type AuthContextType = {
   user: User | null;
+  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
@@ -17,63 +18,80 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check active sessions and set user
-    const getSession = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          throw error;
-        }
-        
-        if (data.session) {
-          setUser(data.session.user);
-        }
-      } catch (error: any) {
-        console.error("Error getting session:", error.message);
-      } finally {
+    let mounted = true;
+
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (!mounted) return;
+      
+      // Handle session changes synchronously to avoid re-renders
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      // Only set loading to false after we've processed the auth change
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
         setLoading(false);
       }
-    };
-    
-    getSession();
-    
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
     });
 
-    return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting session:", error.message);
+        }
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error: any) {
+        console.error("Error in getInitialSession:", error.message);
+        if (mounted) {
+          setLoading(false);
+        }
       }
+    };
+
+    getInitialSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setLoading(true);
+      
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
       
       if (error) {
         throw error;
       }
       
-      navigate("/events");
-      toast({
-        title: "Signed in successfully",
-        description: "Welcome back!",
-      });
+      // Don't navigate immediately, let the auth state change handle it
+      setTimeout(() => {
+        navigate("/events");
+        toast({
+          title: "Signed in successfully",
+          description: "Welcome back!",
+        });
+      }, 100);
     } catch (error: any) {
       console.error("Error signing in:", error.message);
       toast({
@@ -81,15 +99,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Please try again",
         variant: "destructive",
       });
-      throw error; // Re-throw error to handle in component
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    setLoading(true);
     try {
+      setLoading(true);
+      
+      const redirectUrl = `${window.location.origin}/`;
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -97,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name,
           },
+          emailRedirectTo: redirectUrl
         },
       });
       
@@ -116,15 +138,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         description: error.message || "Please try again",
         variant: "destructive",
       });
-      throw error; // Re-throw error to be properly caught by consumer
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
@@ -149,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

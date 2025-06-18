@@ -1,434 +1,347 @@
-import { useState, useEffect, useRef } from "react";
-import { useToast } from "@/hooks/use-toast";
+
+import { useState, useCallback } from "react";
+import { useStaff } from "@/hooks/use-staff";
+import { useEvents } from "@/hooks/events/use-events";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useEvents } from "@/hooks/events/use-events";
-import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, EventType } from "@/types/models";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { CalendarIcon, Clock, Mail, GraduationCap } from "lucide-react";
-import MultiStaffSelector from "@/components/events/multi-staff-selector";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/hooks/use-toast";
+import { Event, EventType } from "@/types/models";
+import { MultiStaffSelector } from "./multi-staff-selector";
+import { Calendar, Clock, MapPin, User, Tag, AlertCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface AddEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEventAdded?: () => void;
+  onEventAdded: () => void;
 }
 
 export default function AddEventDialog({ open, onOpenChange, onEventAdded }: AddEventDialogProps) {
+  const { staff, loading: staffLoading } = useStaff();
+  const { addEvent } = useEvents();
+
+  // Form state
   const [name, setName] = useState("");
-  const [logId, setLogId] = useState("");
-  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
   const [organizer, setOrganizer] = useState("");
-  const [type, setType] = useState<EventType>("General");
-  const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
+  const [type, setType] = useState<EventType>("Documentation");
+  const [videographerIds, setVideographerIds] = useState<string[]>([]);
+  const [photographerIds, setPhotographerIds] = useState<string[]>([]);
+  const [ignoreScheduleConflicts, setIgnoreScheduleConflicts] = useState(false);
+  const [ccsOnlyEvent, setCcsOnlyEvent] = useState(false);
   const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
-  const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
-  const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const { addEvent } = useEvents();
-  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Store available staff
-  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
-  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
-  const [scheduleCalculated, setScheduleCalculated] = useState(false);
-  const prevSelectedVideographers = useRef<string[]>([]);
-  const prevSelectedPhotographers = useRef<string[]>([]);
+  const resetForm = useCallback(() => {
+    setName("");
+    setDate("");
+    setStartTime("");
+    setEndTime("");
+    setLocation("");
+    setOrganizer("");
+    setType("Documentation");
+    setVideographerIds([]);
+    setPhotographerIds([]);
+    setIgnoreScheduleConflicts(false);
+    setCcsOnlyEvent(false);
+    setSendEmailNotifications(true);
+    setIsSubmitting(false);
+  }, []);
 
-  // Check availability whenever date/time/staffAvailabilityMode changes
-  useEffect(() => {
-    if (date && startTime && endTime) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
-      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
-      
-      const { videographers, photographers } = getAvailableStaff(
-        formattedDate,
-        startTime,
-        endTime,
-        ignoreScheduleConflicts,
-        ccsOnlyEvent
-      );
-      
-      setAvailableVideographers(videographers);
-      setAvailablePhotographers(photographers);
-      setScheduleCalculated(true);
-      
-      // Reset selections if the previously selected staff members are no longer available
-      const videographersStillAvailable = selectedVideographers.filter(id => 
-        videographers.some(v => v.id === id)
-      );
-      const photographersStillAvailable = selectedPhotographers.filter(id => 
-        photographers.some(p => p.id === id)
-      );
-      
-      if (videographersStillAvailable.length !== selectedVideographers.length) {
-        prevSelectedVideographers.current = selectedVideographers;
-        setSelectedVideographers(videographersStillAvailable);
-      }
-      
-      if (photographersStillAvailable.length !== selectedPhotographers.length) {
-        prevSelectedPhotographers.current = selectedPhotographers;
-        setSelectedPhotographers(photographersStillAvailable);
-      }
-    } else {
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
-      setScheduleCalculated(false);
-    }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff]);
-  
-  // Function to generate a unique log ID
-  const generateLogId = () => {
-    const prefix = "EVNT";
-    const randomId = Math.random().toString(36).substring(2, 9).toUpperCase();
-    const newLogId = `${prefix}-${randomId}`;
-    setLogId(newLogId);
-  };
-
-  // Generate log ID on component mount and when dialog opens
-  useEffect(() => {
-    if (open) {
-      generateLogId();
-    }
-  }, [open]);
-
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setName("");
-      setLogId("");
-      setDate(undefined);
-      setStartTime("");
-      setEndTime("");
-      setLocation("");
-      setOrganizer("");
-      setType("General");
-      setStaffAvailabilityMode("normal");
-      setSendEmailNotifications(true);
-      setSelectedVideographers([]);
-      setSelectedPhotographers([]);
-      setSubmitting(false);
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
-      setScheduleCalculated(false);
-    }
-  }, [open]);
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    if (isSubmitting) return;
 
     try {
-      if (!name || !logId || !date || !startTime || !endTime || !location) {
+      setIsSubmitting(true);
+
+      if (!name || !date || !startTime || !endTime || !location) {
         toast({
           title: "Missing Fields",
           description: "Please fill in all required fields.",
           variant: "destructive",
         });
-        setSubmitting(false);
-        return;
-      }
-      
-      if (new Date(`${date.toISOString().split('T')[0]}T${endTime}`) <= new Date(`${date.toISOString().split('T')[0]}T${startTime}`)) {
-        toast({
-          title: "Invalid Time",
-          description: "End time must be later than start time.",
-          variant: "destructive",
-        });
-        setSubmitting(false);
         return;
       }
 
-      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
-      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+      const eventData: Omit<Event, "id" | "videographers" | "photographers"> = {
+        name,
+        logId: "", // Will be generated by the hook
+        date,
+        startTime,
+        endTime,
+        location,
+        organizer: organizer || null,
+        type,
+        status: "Upcoming",
+        ignoreScheduleConflicts,
+        ccsOnlyEvent,
+        isBigEvent: false,
+        bigEventId: null
+      };
 
-      // Save the event with multiple staff assignments
-      const eventId = await addEvent(
-        {
-          name,
-          logId,
-          date: format(date, 'yyyy-MM-dd'),
-          startTime,
-          endTime,
-          location,
-          organizer: organizer || undefined,
-          type,
-          status: "Upcoming",
-          ignoreScheduleConflicts,
-          ccsOnlyEvent,
-          isBigEvent: false,
-          bigEventId: null
-        },
-        selectedVideographers,
-        selectedPhotographers,
+      await addEvent(
+        eventData,
+        videographerIds,
+        photographerIds,
         sendEmailNotifications
       );
 
-      if (eventId) {
-        toast({
-          title: "Event Created",
-          description: "The event has been created successfully.",
-        });
-        onOpenChange(false);
-        onEventAdded?.();
-      }
+      resetForm();
+      onOpenChange(false);
+      onEventAdded();
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Error adding event:", error);
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const getStaffAvailabilityDescription = () => {
-    switch (staffAvailabilityMode) {
-      case "ignore":
-        return "Showing all staff members (schedule conflicts ignored)";
-      case "ccs":
-        return "Showing staff members available for the selected time slot (CCS classes suspended)";
-      default:
-        return "Showing only staff members available for the selected time slot";
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !isSubmitting) {
+      resetForm();
     }
+    onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>Add New Event</DialogTitle>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in">
+        <DialogHeader className="animate-slide-in-right">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
+            <Calendar className="h-5 w-5 text-primary" />
+            Add New Event
+          </DialogTitle>
         </DialogHeader>
-        
-        <ScrollArea className="max-h-[calc(90vh-80px)] px-6 pb-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Name field */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Event Name *</Label>
-              <Input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Event Name"
-                required
-                className="w-full"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="organizer">Organizer/s</Label>
-              <Input
-                id="organizer"
-                type="text"
-                value={organizer}
-                onChange={(e) => setOrganizer(e.target.value)}
-                placeholder="Event Organizer/s"
-                className="w-full"
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Event Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="center">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      disabled={(date) =>
-                        date < new Date(new Date().setHours(0, 0, 0, 0))
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+
+        <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
+          {/* Basic Information */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Tag className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Basic Information</h3>
               </div>
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Event Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter event name"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="type">Event Type *</Label>
+                  <Select value={type} onValueChange={(value) => setType(value as EventType)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Documentation">Documentation</SelectItem>
+                      <SelectItem value="Live Streaming">Live Streaming</SelectItem>
+                      <SelectItem value="Photo & Video">Photo & Video</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="organizer">Organizer</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="organizer"
+                    value={organizer}
+                    onChange={(e) => setOrganizer(e.target.value)}
+                    placeholder="Enter organizer name"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Date & Time */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Date & Time</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="startTime">Start Time *</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="pl-8"
-                      required
-                    />
-                  </div>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
                 </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="endTime">End Time *</Label>
-                  <div className="relative">
-                    <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      className="pl-8"
-                      required
-                    />
-                  </div>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="location">Event Location *</Label>
-              <Input
-                id="location"
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Event Location"
-                required
-                className="w-full"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="type">Event Type</Label>
-              <Select value={type} onValueChange={(value) => setType(value as EventType)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SPECOM">SPECOM</SelectItem>
-                  <SelectItem value="LITCOM">LITCOM</SelectItem>
-                  <SelectItem value="CUACOM">CUACOM</SelectItem>
-                  <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                  <SelectItem value="General">General</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Options Section */}
-            <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
-              <h3 className="text-lg font-semibold">Options</h3>
-              
-              {/* Staff Availability Mode */}
-              <div className="space-y-3">
-                <Label>Staff Availability</Label>
-                <RadioGroup
-                  value={staffAvailabilityMode}
-                  onValueChange={setStaffAvailabilityMode}
-                  className="grid gap-3"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="normal" id="normal" />
-                    <Label htmlFor="normal" className="font-normal">
-                      Normal (respect schedule conflicts)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="ignore" id="ignore" />
-                    <Label htmlFor="ignore" className="font-normal">
-                      Show all staff (ignore schedule conflicts)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="ccs" id="ccs" />
-                    <Label htmlFor="ccs" className="flex items-center font-normal">
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
-                    </Label>
-                  </div>
-                </RadioGroup>
+            </CardContent>
+          </Card>
+
+          {/* Location */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Location</h3>
               </div>
               
-              {/* Send Email Notifications checkbox */}
-              {/* <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="sendEmails"
-                  checked={sendEmailNotifications}
-                  onCheckedChange={(checked) => setSendEmailNotifications(!!checked)}
+              <div className="space-y-2">
+                <Label htmlFor="location">Location *</Label>
+                <Textarea
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Enter event location"
+                  required
+                  rows={2}
                 />
-                <Label htmlFor="sendEmails" className="flex items-center">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send email notifications to assigned staff
-                </Label>
-              </div> */}
-            </div>
-            
-            {/* Staff Assignment Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Staff Assignment</h3>
-              <div className="bg-muted/20 p-4 rounded-lg border space-y-4">
-                {!scheduleCalculated && (
-                  <p className="text-sm text-muted-foreground">
-                    Please select date and time to see available staff
-                  </p>
-                )}
-                
-                {scheduleCalculated && (
-                  <p className="text-sm text-muted-foreground">
-                    {getStaffAvailabilityDescription()}
-                  </p>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <MultiStaffSelector
-                    role="Videographer"
-                    availableStaff={availableVideographers}
-                    selectedStaffIds={selectedVideographers}
-                    onSelectionChange={setSelectedVideographers}
-                    disabled={!scheduleCalculated}
-                    excludeStaffIds={selectedPhotographers}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Staff Assignment */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Staff Assignment</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <MultiStaffSelector
+                  staff={staff}
+                  eventDate={date}
+                  startTime={startTime}
+                  endTime={endTime}
+                  selectedVideographerIds={videographerIds}
+                  selectedPhotographerIds={photographerIds}
+                  onVideographerChange={setVideographerIds}
+                  onPhotographerChange={setPhotographerIds}
+                  ignoreScheduleConflicts={ignoreScheduleConflicts}
+                  ccsOnlyEvent={ccsOnlyEvent}
+                  loading={staffLoading}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Options */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Options</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Ignore Schedule Conflicts</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow assignment even if staff has scheduling conflicts
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ignoreScheduleConflicts}
+                    onCheckedChange={setIgnoreScheduleConflicts}
                   />
-                  
-                  <MultiStaffSelector
-                    role="Photographer"
-                    availableStaff={availablePhotographers}
-                    selectedStaffIds={selectedPhotographers}
-                    onSelectionChange={setSelectedPhotographers}
-                    disabled={!scheduleCalculated}
-                    excludeStaffIds={selectedVideographers}
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>CCS Only Event</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show only CCS staff members for assignment
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ccsOnlyEvent}
+                    onCheckedChange={setCcsOnlyEvent}
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Send Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Notify assigned staff via email
+                    </p>
+                  </div>
+                  <Switch
+                    checked={sendEmailNotifications}
+                    onCheckedChange={setSendEmailNotifications}
                   />
                 </div>
               </div>
-            </div>
-            
-            {/* Submit button */}
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Creating Event..." : "Create Event"}
-              </Button>
-            </div>
-          </form>
-        </ScrollArea>
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-4 animate-fade-in-up">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="hover-scale"
+            >
+              {isSubmitting ? "Creating..." : "Create Event"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

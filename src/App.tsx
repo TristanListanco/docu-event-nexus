@@ -22,13 +22,43 @@ import NotFound from "./pages/NotFound";
 import ConfirmAssignmentPage from "./pages/ConfirmAssignmentPage";
 import MainLayout from "./components/layout/main-layout";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes cache time
+      retry: (failureCount, error) => {
+        // Don't retry on auth errors or client errors (4xx)
+        if (error && typeof error === 'object' && 'status' in error) {
+          const status = error.status as number;
+          if (status >= 400 && status < 500) return false;
+        }
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
+      refetchOnReconnect: 'always',
+      networkMode: 'online',
+    },
+    mutations: {
+      retry: 1,
+      networkMode: 'online',
+    },
+  },
+});
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-background animate-fade-in">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
