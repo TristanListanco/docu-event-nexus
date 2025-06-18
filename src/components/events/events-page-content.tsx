@@ -101,7 +101,7 @@ export default function EventsPageContent({
             <EventsEmptyState searchQuery={searchQuery} />
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {Object.entries(groupedEvents).map(([monthYear, monthEvents], index) => (
               <div 
                 key={monthYear} 
