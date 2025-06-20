@@ -1,16 +1,58 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Get allowed origins from environment variables
+const allowedOrigins = [
+  Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app",
+  "http://localhost:5173", // Development
+  "http://localhost:3000"  // Alternative development port
+];
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10; // 10 requests per minute per IP
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+// Rate limiting function
+const checkRateLimit = (ip: string): boolean => {
+  const now = Date.now();
+  const record = rateLimitStore.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    // First request or window expired
+    rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+  
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    return false; // Rate limit exceeded
+  }
+  
+  record.count++;
+  return true;
+};
+
+// Clean up old rate limit records
+const cleanupRateLimitStore = () => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimitStore.entries()) {
+    if (now > record.resetTime) {
+      rateLimitStore.delete(ip);
+    }
+  }
+};
+
+// Clean up every 5 minutes
+setInterval(cleanupRateLimitStore, 5 * 60 * 1000);
 
 interface ConfirmationRequest {
   token: string;
@@ -95,8 +137,27 @@ END:VCALENDAR`;
 };
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    const origin = req.headers.get('Origin');
+    const headers = { ...corsHeaders };
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      headers['Access-Control-Allow-Origin'] = origin;
+    }
+    
+    return new Response(null, { headers });
+  }
+
+  // Handle actual requests
+  const origin = req.headers.get('Origin');
+  const headers = { 
+    "Content-Type": "application/json",
+    ...corsHeaders 
+  };
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
   }
 
   try {
@@ -111,6 +172,18 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Client IP (detected):", detectedIP);
     console.log("Timestamp:", new Date().toISOString());
     
+    // Check rate limit
+    if (!checkRateLimit(detectedIP)) {
+      console.error("Rate limit exceeded");
+      return new Response(
+        JSON.stringify({ 
+          error: "Rate limit exceeded",
+          code: "RATE_LIMIT_EXCEEDED"
+        }),
+        { status: 429, headers }
+      );
+    }
+
     // Step 1: Find the assignment by token
     console.log("Step 1: Looking up assignment by token...");
     const { data: assignment, error: fetchError } = await supabase
@@ -137,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
           error: "Invalid or expired confirmation token",
           code: "INVALID_TOKEN"
         }),
-        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 404, headers }
       );
     }
 
@@ -158,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
           error: "Confirmation token has expired",
           code: "TOKEN_EXPIRED"
         }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers }
       );
     }
 
@@ -189,7 +262,7 @@ const handler = async (req: Request): Promise<Response> => {
           timestamp: assignment.confirmation_status === 'confirmed' ? assignment.confirmed_at :
                     assignment.confirmation_status === 'declined' ? assignment.declined_at : null
         }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers }
       );
     }
 
@@ -209,7 +282,7 @@ const handler = async (req: Request): Promise<Response> => {
           icsFile: icsContent,
           timestamp: assignment.confirmed_at
         }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers }
       );
     }
 
@@ -222,7 +295,7 @@ const handler = async (req: Request): Promise<Response> => {
           assignment: assignmentData,
           timestamp: assignment.declined_at
         }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 200, headers }
       );
     }
 
@@ -301,7 +374,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers,
       }
     );
 
@@ -317,7 +390,7 @@ const handler = async (req: Request): Promise<Response> => {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers,
       }
     );
   }
