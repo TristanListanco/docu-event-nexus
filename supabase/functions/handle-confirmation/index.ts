@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 const corsHeaders = {
   "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : "",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
 };
 
 // Get allowed origins from environment variables
@@ -172,6 +173,10 @@ const handler = async (req: Request): Promise<Response> => {
         if (process.env.NODE_ENV === 'development') {
           console.log(msg, data);
         }
+      },
+      error: (msg: string, error?: any) => {
+        // Always log errors but sanitize sensitive data
+        console.error(msg, error ? { message: error.message, code: error.code } : '');
       }
     };
 
