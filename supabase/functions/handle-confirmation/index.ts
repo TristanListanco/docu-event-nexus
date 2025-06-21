@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
+  "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : "",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -166,15 +167,23 @@ const handler = async (req: Request): Promise<Response> => {
     
     const detectedIP = getClientIP(req);
     
-    console.log("=== ASSIGNMENT CONFIRMATION REQUEST ===");
-    console.log("Token:", token);
-    console.log("Action:", action);
-    console.log("Client IP (detected):", detectedIP);
-    console.log("Timestamp:", new Date().toISOString());
+    const logger = {
+      debug: (msg: string, data?: any) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(msg, data);
+        }
+      }
+    };
+
+    logger.debug("=== ASSIGNMENT CONFIRMATION REQUEST ===");
+    logger.debug("Token:", token);
+    logger.debug("Action:", action);
+    logger.debug("Client IP (detected):", detectedIP);
+    logger.debug("Timestamp:", new Date().toISOString());
     
     // Check rate limit
     if (!checkRateLimit(detectedIP)) {
-      console.error("Rate limit exceeded");
+      logger.debug("Rate limit exceeded");
       return new Response(
         JSON.stringify({ 
           error: "Rate limit exceeded",
@@ -185,7 +194,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Step 1: Find the assignment by token
-    console.log("Step 1: Looking up assignment by token...");
+    logger.debug("Step 1: Looking up assignment by token...");
     const { data: assignment, error: fetchError } = await supabase
       .from('staff_assignments')
       .select(`
@@ -204,7 +213,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (fetchError || !assignment) {
-      console.error("Assignment not found for token:", token);
+      logger.debug("Assignment not found for token:", token);
       return new Response(
         JSON.stringify({ 
           error: "Invalid or expired confirmation token",
@@ -214,7 +223,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Assignment found:", {
+    logger.debug("Assignment found:", {
       id: assignment.id,
       eventName: assignment.events?.name,
       staffName: assignment.staff_members?.name,
@@ -222,10 +231,10 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Step 2: Check if token is expired
-    console.log("Step 2: Checking token expiry...");
+    logger.debug("Step 2: Checking token expiry...");
     if (assignment.confirmation_token_expires_at && 
         new Date() > new Date(assignment.confirmation_token_expires_at)) {
-      console.error("Token expired");
+      logger.debug("Token expired");
       return new Response(
         JSON.stringify({ 
           error: "Confirmation token has expired",
@@ -267,9 +276,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Step 3: Check if already processed
-    console.log("Step 3: Checking if already processed...");
+    logger.debug("Step 3: Checking if already processed...");
     if (assignment.confirmation_status === 'confirmed') {
-      console.log("Assignment already confirmed");
+      logger.debug("Assignment already confirmed");
       
       // Generate ICS file for confirmed events
       const icsContent = generateICSContent(assignment.events, assignment.staff_members?.name || 'Staff Member');
@@ -287,7 +296,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (assignment.confirmation_status === 'declined') {
-      console.log("Assignment already declined");
+      logger.debug("Assignment already declined");
       return new Response(
         JSON.stringify({ 
           message: "Assignment already declined",
@@ -300,7 +309,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Step 4: Update assignment status
-    console.log(`Step 4: Processing ${action} action...`);
+    logger.debug(`Step 4: Processing ${action} action...`);
     const now = new Date().toISOString();
     const updateData = action === 'confirm' 
       ? {
@@ -320,14 +329,14 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', assignment.id);
 
     if (updateError) {
-      console.error("Error updating assignment:", updateError);
+      logger.error("Error updating assignment:", updateError);
       throw updateError;
     }
 
-    console.log(`Assignment ${action}ed successfully`);
+    logger.debug(`Assignment ${action}ed successfully`);
 
     // Step 5: Create notification for the admin
-    console.log("Step 5: Creating notification for admin...");
+    logger.debug("Step 5: Creating notification for admin...");
     const notificationMessage = action === 'confirm' 
       ? `${assignment.staff_members?.name} confirmed their assignment for ${assignment.events?.name}`
       : `${assignment.staff_members?.name} declined their assignment for ${assignment.events?.name}`;
@@ -345,10 +354,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (notificationError) {
-      console.error("Error creating notification:", notificationError);
+      logger.error("Error creating notification:", notificationError);
       // Don't fail the request if notification creation fails
     } else {
-      console.log("Notification created successfully");
+      logger.debug("Notification created successfully");
     }
 
     // Step 6: Generate ICS file for confirmed events
@@ -357,11 +366,11 @@ const handler = async (req: Request): Promise<Response> => {
       icsContent = generateICSContent(assignment.events, assignment.staff_members?.name || 'Staff Member');
     }
 
-    console.log("=== CONFIRMATION ACTION COMPLETED ===");
-    console.log(`Action: ${action.toUpperCase()}`);
-    console.log("Staff member:", assignment.staff_members?.name);
-    console.log("Event:", assignment.events?.name);
-    console.log("Final status:", updateData.confirmation_status);
+    logger.debug("=== CONFIRMATION ACTION COMPLETED ===");
+    logger.debug(`Action: ${action.toUpperCase()}`);
+    logger.debug("Staff member:", assignment.staff_members?.name);
+    logger.debug("Event:", assignment.events?.name);
+    logger.debug("Final status:", updateData.confirmation_status);
 
     return new Response(
       JSON.stringify({ 
@@ -379,9 +388,9 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("=== CONFIRMATION ERROR ===");
-    console.error("Error message:", error.message);
-    console.error("Full error:", error);
+    logger.error("=== CONFIRMATION ERROR ===");
+    logger.error("Error message:", error.message);
+    logger.error("Full error:", error);
     
     return new Response(
       JSON.stringify({ 
