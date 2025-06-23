@@ -1,4 +1,3 @@
-
 import { NotificationRequest } from "./types.ts";
 
 export function generateChangesHtml(changes: any): string {
@@ -237,3 +236,190 @@ export function generateEmailTemplate(
 
   return { subject: emailSubject, html: emailHtml };
 }
+
+export const generateEventUpdateEmailHtml = (eventData: any, staffName: string, changes?: any): string => {
+  const changeDetails = changes ? Object.entries(changes).map(([key, change]: [string, any]) => {
+    const fieldName = key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1');
+    return `<li><strong>${fieldName}:</strong> ${change.old} → ${change.new}</li>`;
+  }).join('') : '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Event Updated</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .event-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+        .changes { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .changes ul { margin: 0; padding-left: 20px; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>📅 Event Updated</h1>
+      </div>
+      <div class="content">
+        <p>Hello ${staffName},</p>
+        <p>An event you're assigned to has been updated. Here are the current details:</p>
+        
+        <div class="event-details">
+          <h3>📋 Event Details</h3>
+          <p><strong>Event:</strong> ${eventData.eventName}</p>
+          <p><strong>Date:</strong> ${new Date(eventData.eventDate).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</p>
+          <p><strong>Time:</strong> ${eventData.startTime} - ${eventData.endTime}</p>
+          <p><strong>Location:</strong> ${eventData.location}</p>
+          ${eventData.organizer ? `<p><strong>Organizer:</strong> ${eventData.organizer}</p>` : ''}
+          <p><strong>Type:</strong> ${eventData.type}</p>
+        </div>
+
+        ${changeDetails ? `
+        <div class="changes">
+          <h3>🔄 What Changed</h3>
+          <ul>${changeDetails}</ul>
+        </div>
+        ` : ''}
+        
+        <p>Please make note of these updates and ensure your availability for the event.</p>
+        <p>If you have any questions or concerns about these changes, please contact the event organizer.</p>
+      </div>
+      <div class="footer">
+        <p>This is an automated notification from the Event Management System.</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+export const generateEventNotificationEmailHtml = (eventData: any, staffName: string): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Event Assignment</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .event-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+        .confirmation-section { background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        .button { display: inline-block; padding: 12px 24px; margin: 10px 5px; border-radius: 6px; text-decoration: none; font-weight: bold; text-align: center; }
+        .btn-confirm { background-color: #28a745; color: white; }
+        .btn-decline { background-color: #dc3545; color: white; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>📅 Event Assignment</h1>
+      </div>
+      <div class="content">
+        <p>Hello ${staffName},</p>
+        <p>You have been assigned to work on an upcoming event. Please review the details below:</p>
+        
+        <div class="event-details">
+          <h3>📋 Event Details</h3>
+          <p><strong>Event:</strong> ${eventData.eventName}</p>
+          <p><strong>Date:</strong> ${new Date(eventData.eventDate).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</p>
+          <p><strong>Time:</strong> ${eventData.startTime} - ${eventData.endTime}</p>
+          <p><strong>Location:</strong> ${eventData.location}</p>
+          ${eventData.organizer ? `<p><strong>Organizer:</strong> ${eventData.organizer}</p>` : ''}
+          <p><strong>Type:</strong> ${eventData.type}</p>
+        </div>
+        
+        <div class="confirmation-section">
+          <h3>⚡ Action Required</h3>
+          <p>Please confirm your availability for this event by clicking one of the buttons below:</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="CONFIRMATION_LINK" class="button btn-confirm">✅ Confirm Attendance</a>
+            <a href="DECLINE_LINK" class="button btn-decline">❌ Cannot Attend</a>
+          </div>
+          <p><em>Note: Your response helps us plan better for the event. Please respond as soon as possible.</em></p>
+        </div>
+        
+        <p>Thank you for your dedication to our events!</p>
+      </div>
+      <div class="footer">
+        <p>This is an automated notification from the Event Management System.</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+export const generateEventReminderEmailHtml = (eventData: any, staffName: string): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Event Reminder</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #ff7e5f 0%, #feb47b 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+        .event-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff7e5f; }
+        .reminder-section { background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>⏰ Event Reminder</h1>
+      </div>
+      <div class="content">
+        <p>Hello ${staffName},</p>
+        <p>This is a friendly reminder about your upcoming event assignment:</p>
+        
+        <div class="event-details">
+          <h3>📋 Event Details</h3>
+          <p><strong>Event:</strong> ${eventData.eventName}</p>
+          <p><strong>Date:</strong> ${new Date(eventData.eventDate).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</p>
+          <p><strong>Time:</strong> ${eventData.startTime} - ${eventData.endTime}</p>
+          <p><strong>Location:</strong> ${eventData.location}</p>
+          ${eventData.organizer ? `<p><strong>Organizer:</strong> ${eventData.organizer}</p>` : ''}
+          <p><strong>Type:</strong> ${eventData.type}</p>
+        </div>
+        
+        <div class="reminder-section">
+          <h3>📝 Important Notes</h3>
+          <ul>
+            <li>Please arrive 15 minutes before the scheduled time</li>
+            <li>Bring all necessary equipment and materials</li>
+            <li>Contact the organizer if you have any last-minute issues</li>
+            <li>Check the weather and dress appropriately</li>
+          </ul>
+        </div>
+        
+        <p>We appreciate your commitment and look forward to a successful event!</p>
+      </div>
+      <div class="footer">
+        <p>This is an automated reminder from the Event Management System.</p>
+      </div>
+    </body>
+    </html>
+  `;
+};
