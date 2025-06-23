@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/events/use-events";
@@ -20,15 +21,6 @@ import MultiStaffSelector from "./multi-staff-selector";
 import { Calendar as CalendarIconLarge, Clock, MapPin, User, Tag, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAvailableStaff } from "@/hooks/staff/staff-availability";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface AddEventDialogProps {
   open: boolean;
@@ -95,7 +87,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTimeError, setShowTimeError] = useState(false);
+  const [timeValidationError, setTimeValidationError] = useState("");
 
   // Save form state to localStorage whenever it changes
   useEffect(() => {
@@ -116,14 +108,34 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const resetForm = useCallback(() => {
     setFormState(initialFormState);
     setIsSubmitting(false);
+    setTimeValidationError("");
     if (typeof window !== 'undefined') {
       localStorage.removeItem(FORM_STORAGE_KEY);
     }
   }, []);
 
+  // Validate time function
+  const validateTime = useCallback((startTime: string, endTime: string) => {
+    if (!startTime || !endTime) {
+      setTimeValidationError("");
+      return true;
+    }
+    
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    if (end <= start) {
+      setTimeValidationError("End time must be later than start time");
+      return false;
+    }
+    
+    setTimeValidationError("");
+    return true;
+  }, []);
+
   // Get available staff for the event time, considering schedule conflicts and leave dates
   const getAvailableStaffForEvent = () => {
-    if (!formState.date || !formState.startTime || !formState.endTime) {
+    if (!formState.date || !formState.startTime || !formState.endTime || timeValidationError) {
       return { videographers: [], photographers: [] };
     }
 
@@ -141,31 +153,17 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const availableStaff = getAvailableStaffForEvent();
 
   // Check if date and time are selected for staff selection validation
-  const canSelectStaff = formState.date && formState.startTime && formState.endTime;
-
-  // Validate time function
-  const validateTime = useCallback((startTime: string, endTime: string) => {
-    if (!startTime || !endTime) return true;
-    
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    
-    return end > start;
-  }, []);
+  const canSelectStaff = formState.date && formState.startTime && formState.endTime && !timeValidationError;
 
   // Handle time changes with validation
   const handleStartTimeChange = (value: string) => {
     updateFormState({ startTime: value });
-    if (value && formState.endTime && !validateTime(value, formState.endTime)) {
-      setShowTimeError(true);
-    }
+    validateTime(value, formState.endTime);
   };
 
   const handleEndTimeChange = (value: string) => {
     updateFormState({ endTime: value });
-    if (formState.startTime && value && !validateTime(formState.startTime, value)) {
-      setShowTimeError(true);
-    }
+    validateTime(formState.startTime, value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -186,7 +184,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
 
       // Validate time
       if (!validateTime(formState.startTime, formState.endTime)) {
-        setShowTimeError(true);
         return;
       }
 
@@ -346,6 +343,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                       value={formState.startTime}
                       onChange={(e) => handleStartTimeChange(e.target.value)}
                       required
+                      className={cn(timeValidationError && "border-red-500")}
                     />
                   </div>
                   
@@ -357,9 +355,17 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                       value={formState.endTime}
                       onChange={(e) => handleEndTimeChange(e.target.value)}
                       required
+                      className={cn(timeValidationError && "border-red-500")}
                     />
                   </div>
                 </div>
+                
+                {timeValidationError && (
+                  <div className="text-sm text-red-500 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    {timeValidationError}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -397,10 +403,15 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-amber-800">
                       <AlertCircle className="h-4 w-4" />
-                      <p className="text-sm font-medium">Date and time required</p>
+                      <p className="text-sm font-medium">
+                        {timeValidationError ? "Invalid time range" : "Date and time required"}
+                      </p>
                     </div>
                     <p className="text-sm text-amber-700 mt-1">
-                      Please select event date and time first to see available staff for assignment.
+                      {timeValidationError 
+                        ? "Please fix the time validation error to see available staff for assignment."
+                        : "Please select event date and time first to see available staff for assignment."
+                      }
                     </p>
                   </div>
                 )}
@@ -499,7 +510,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !!timeValidationError}
                 className="hover-scale"
               >
                 {isSubmitting ? "Creating..." : "Create Event"}
@@ -508,23 +519,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* Time Validation Error Dialog */}
-      <AlertDialog open={showTimeError} onOpenChange={setShowTimeError}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Invalid Time Range</AlertDialogTitle>
-            <AlertDialogDescription>
-              The end time must be later than the start time. Please adjust your time selection.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowTimeError(false)}>
-              OK
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

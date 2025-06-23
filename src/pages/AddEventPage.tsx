@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -16,17 +17,8 @@ import { useStaff } from "@/hooks/use-staff";
 import { StaffMember, EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Mail, GraduationCap } from "lucide-react";
+import { CalendarIcon, Clock, Mail, GraduationCap, AlertCircle } from "lucide-react";
 import MultiStaffSelector from "@/components/events/multi-staff-selector";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -42,7 +34,7 @@ export default function AddEventPage() {
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [showTimeError, setShowTimeError] = useState(false);
+  const [timeValidationError, setTimeValidationError] = useState("");
   const { addEvent } = useEvents();
   const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
   const { toast } = useToast();
@@ -53,9 +45,28 @@ export default function AddEventPage() {
   const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
 
+  // Validate time function
+  const validateTime = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) {
+      setTimeValidationError("");
+      return true;
+    }
+    
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    if (end <= start) {
+      setTimeValidationError("End time must be later than start time");
+      return false;
+    }
+    
+    setTimeValidationError("");
+    return true;
+  };
+
   // Check availability whenever date/time/staffAvailabilityMode changes
   useEffect(() => {
-    if (date && startTime && endTime) {
+    if (date && startTime && endTime && !timeValidationError) {
       const formattedDate = format(date, 'yyyy-MM-dd');
       const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
       const ccsOnlyEvent = staffAvailabilityMode === "ccs";
@@ -93,7 +104,7 @@ export default function AddEventPage() {
       setAvailablePhotographers([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
+  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers, timeValidationError]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -107,16 +118,6 @@ export default function AddEventPage() {
   useEffect(() => {
     generateLogId();
   }, []);
-
-  // Validate time function
-  const validateTime = (startTime: string, endTime: string) => {
-    if (!startTime || !endTime) return true;
-    
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    
-    return end > start;
-  };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -136,7 +137,6 @@ export default function AddEventPage() {
       
       // Validate time
       if (!validateTime(startTime, endTime)) {
-        setShowTimeError(true);
         setSubmitting(false);
         return;
       }
@@ -190,6 +190,8 @@ export default function AddEventPage() {
         return "Showing only staff members available for the selected time slot";
     }
   };
+
+  const canSelectStaff = date && startTime && endTime && !timeValidationError;
 
   return (
     <>
@@ -276,8 +278,11 @@ export default function AddEventPage() {
                             id="startTime"
                             type="time"
                             value={startTime}
-                            onChange={(e) => setStartTime(e.target.value)}
-                            className="pl-8"
+                            onChange={(e) => {
+                              setStartTime(e.target.value);
+                              validateTime(e.target.value, endTime);
+                            }}
+                            className={cn("pl-8", timeValidationError && "border-red-500")}
                             required
                           />
                         </div>
@@ -290,14 +295,24 @@ export default function AddEventPage() {
                             id="endTime"
                             type="time"
                             value={endTime}
-                            onChange={(e) => setEndTime(e.target.value)}
-                            className="pl-8"
+                            onChange={(e) => {
+                              setEndTime(e.target.value);
+                              validateTime(startTime, e.target.value);
+                            }}
+                            className={cn("pl-8", timeValidationError && "border-red-500")}
                             required
                           />
                         </div>
                       </div>
                     </div>
                   </div>
+
+                  {timeValidationError && (
+                    <div className="text-sm text-red-500 flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4" />
+                      {timeValidationError}
+                    </div>
+                  )}
                   
                   <div className="space-y-2">
                     <Label htmlFor="location">Event Location</Label>
@@ -380,13 +395,24 @@ export default function AddEventPage() {
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Staff Assignment</h3>
                     <div className="bg-muted/20 p-4 rounded-lg border space-y-4">
-                      {!scheduleCalculated && (
-                        <p className="text-sm text-muted-foreground">
-                          Please select date and time to see available staff
-                        </p>
+                      {!canSelectStaff && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-amber-800">
+                            <AlertCircle className="h-4 w-4" />
+                            <p className="text-sm font-medium">
+                              {timeValidationError ? "Invalid time range" : "Date and time required"}
+                            </p>
+                          </div>
+                          <p className="text-sm text-amber-700 mt-1">
+                            {timeValidationError 
+                              ? "Please fix the time validation error to see available staff for assignment."
+                              : "Please select date and time to see available staff"
+                            }
+                          </p>
+                        </div>
                       )}
                       
-                      {scheduleCalculated && (
+                      {canSelectStaff && scheduleCalculated && (
                         <p className="text-sm text-muted-foreground">
                           {getStaffAvailabilityDescription()}
                         </p>
@@ -399,7 +425,7 @@ export default function AddEventPage() {
                           selectedStaffIds={selectedVideographers}
                           onSelectionChange={setSelectedVideographers}
                           excludeStaffIds={selectedPhotographers}
-                          disabled={!scheduleCalculated}
+                          disabled={!canSelectStaff}
                         />
                         
                         <MultiStaffSelector
@@ -408,7 +434,7 @@ export default function AddEventPage() {
                           selectedStaffIds={selectedPhotographers}
                           onSelectionChange={setSelectedPhotographers}
                           excludeStaffIds={selectedVideographers}
-                          disabled={!scheduleCalculated}
+                          disabled={!canSelectStaff}
                         />
                       </div>
                     </div>
@@ -416,7 +442,7 @@ export default function AddEventPage() {
                   
                   {/* Submit button - Sticky at bottom */}
                   <div className="sticky bottom-0 bg-background pt-4 border-t">
-                    <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+                    <Button type="submit" disabled={submitting || !!timeValidationError} className="w-full sm:w-auto">
                       {submitting ? "Creating Event..." : "Create Event"}
                     </Button>
                   </div>
@@ -426,23 +452,6 @@ export default function AddEventPage() {
           </div>
         </div>
       </div>
-
-      {/* Time Validation Error Dialog */}
-      <AlertDialog open={showTimeError} onOpenChange={setShowTimeError}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Invalid Time Range</AlertDialogTitle>
-            <AlertDialogDescription>
-              The end time must be later than the start time. Please adjust your time selection.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowTimeError(false)}>
-              OK
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
