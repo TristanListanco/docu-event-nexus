@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -41,6 +40,15 @@ import { Event, EventType } from "@/types/models";
 import { Checkbox } from "@/components/ui/checkbox";
 import MultiStaffSelector from "@/components/events/multi-staff-selector";
 import { getAvailableStaff } from "@/hooks/staff/staff-availability";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -75,6 +83,7 @@ export default function EventEditDialog({
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTimeError, setShowTimeError] = useState(false);
 
   useEffect(() => {
     if (open && event) {
@@ -100,9 +109,26 @@ export default function EventEditDialog({
     }
   }, [open, event?.id]);
 
+  const validateTime = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) return true;
+    
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    return end > start;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Validate time when either time field changes
+    if (name === 'startTime' || name === 'endTime') {
+      const newFormData = { ...formData, [name]: value };
+      if (newFormData.startTime && newFormData.endTime && !validateTime(newFormData.startTime, newFormData.endTime)) {
+        setShowTimeError(true);
+      }
+    }
   };
 
   const handleSelectChange = (value: EventType) => {
@@ -121,6 +147,12 @@ export default function EventEditDialog({
       // Validate form data
       if (!formData.name || !formData.date || !formData.startTime || !formData.endTime || !formData.location) {
         alert("Please fill in all required fields.");
+        return;
+      }
+
+      // Validate time
+      if (!validateTime(formData.startTime, formData.endTime)) {
+        setShowTimeError(true);
         return;
       }
 
@@ -351,37 +383,56 @@ export default function EventEditDialog({
     </form>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[90vh]">
-          <SheetHeader>
-            <SheetTitle>Edit Event</SheetTitle>
-            <SheetDescription>
-              Make changes to your event here. Email notifications can be controlled via checkbox.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
-            {formContent}
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+  const dialogContent = (
+    <>
+      {isMobile ? (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent side="bottom" className="h-[90vh]">
+            <SheetHeader>
+              <SheetTitle>Edit Event</SheetTitle>
+              <SheetDescription>
+                Make changes to your event here. Email notifications can be controlled via checkbox.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
+              {formContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+              <DialogDescription>
+                Make changes to your event here. Email notifications can be controlled via checkbox.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="overflow-y-auto flex-1 px-1">
+              {formContent}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>
-            Make changes to your event here. Email notifications can be controlled via checkbox.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-y-auto flex-1 px-1">
-          {formContent}
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Time Validation Error Dialog */}
+      <AlertDialog open={showTimeError} onOpenChange={setShowTimeError}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Invalid Time Range</AlertDialogTitle>
+            <AlertDialogDescription>
+              The end time must be later than the start time. Please adjust your time selection.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowTimeError(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
+
+  return dialogContent;
 }
