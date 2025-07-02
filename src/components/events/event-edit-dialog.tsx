@@ -34,7 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Event, EventType } from "@/types/models";
@@ -75,6 +75,7 @@ export default function EventEditDialog({
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [timeValidationError, setTimeValidationError] = useState("");
 
   useEffect(() => {
     if (open && event) {
@@ -97,12 +98,37 @@ export default function EventEditDialog({
       
       setSelectedVideographers(videographerIds);
       setSelectedPhotographers(photographerIds);
+      setTimeValidationError("");
     }
   }, [open, event?.id]);
+
+  const validateTime = (startTime: string, endTime: string) => {
+    if (!startTime || !endTime) {
+      setTimeValidationError("");
+      return true;
+    }
+    
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    
+    if (end <= start) {
+      setTimeValidationError("End time must be later than start time");
+      return false;
+    }
+    
+    setTimeValidationError("");
+    return true;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Validate time when either time field changes
+    if (name === 'startTime' || name === 'endTime') {
+      const newFormData = { ...formData, [name]: value };
+      validateTime(newFormData.startTime, newFormData.endTime);
+    }
   };
 
   const handleSelectChange = (value: EventType) => {
@@ -121,6 +147,11 @@ export default function EventEditDialog({
       // Validate form data
       if (!formData.name || !formData.date || !formData.startTime || !formData.endTime || !formData.location) {
         alert("Please fill in all required fields.");
+        return;
+      }
+
+      // Validate time
+      if (!validateTime(formData.startTime, formData.endTime)) {
         return;
       }
 
@@ -159,7 +190,7 @@ export default function EventEditDialog({
 
   // Get available staff for the event time, considering schedule conflicts and leave dates
   const getAvailableStaffForEvent = () => {
-    if (!formData.date || !formData.startTime || !formData.endTime) {
+    if (!formData.date || !formData.startTime || !formData.endTime || timeValidationError) {
       return { videographers: [], photographers: [] };
     }
 
@@ -175,6 +206,7 @@ export default function EventEditDialog({
   };
 
   const availableStaff = getAvailableStaffForEvent();
+  const canSelectStaff = formData.date && formData.startTime && formData.endTime && !timeValidationError;
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -233,6 +265,7 @@ export default function EventEditDialog({
             value={formData.startTime}
             onChange={handleInputChange}
             required
+            className={cn(timeValidationError && "border-red-500")}
           />
         </div>
         
@@ -245,9 +278,17 @@ export default function EventEditDialog({
             value={formData.endTime}
             onChange={handleInputChange}
             required
+            className={cn(timeValidationError && "border-red-500")}
           />
         </div>
       </div>
+
+      {timeValidationError && (
+        <div className="text-sm text-red-500 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          {timeValidationError}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="edit-location">Location</Label>
@@ -317,16 +358,34 @@ export default function EventEditDialog({
         <Label htmlFor="edit-sendEmailNotifications" className="text-sm">Send email notifications to assigned staff</Label>
       </div>
 
+      {!canSelectStaff && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-amber-800">
+            <AlertCircle className="h-4 w-4" />
+            <p className="text-sm font-medium">
+              {timeValidationError ? "Invalid time range" : "Complete date and time required"}
+            </p>
+          </div>
+          <p className="text-sm text-amber-700 mt-1">
+            {timeValidationError 
+              ? "Please fix the time validation error to see available staff for assignment."
+              : "Please ensure event date and time are properly set to see available staff for assignment."
+            }
+          </p>
+        </div>
+      )}
+
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Videographers</Label>
           <MultiStaffSelector
             role="Videographer"
-            availableStaff={availableStaff.videographers}
+            availableStaff={canSelectStaff ? availableStaff.videographers : []}
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
             excludeStaffIds={selectedPhotographers}
             maxSelection={3}
+            disabled={!canSelectStaff}
           />
         </div>
 
@@ -334,54 +393,57 @@ export default function EventEditDialog({
           <Label>Photographers</Label>
           <MultiStaffSelector
             role="Photographer"
-            availableStaff={availableStaff.photographers}
+            availableStaff={canSelectStaff ? availableStaff.photographers : []}
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
             excludeStaffIds={selectedVideographers}
             maxSelection={3}
+            disabled={!canSelectStaff}
           />
         </div>
       </div>
 
       <div className="flex justify-end pt-4">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || !!timeValidationError}>
           {isSubmitting ? "Saving Changes..." : "Save Changes"}
         </Button>
       </div>
     </form>
   );
 
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[90vh]">
-          <SheetHeader>
-            <SheetTitle>Edit Event</SheetTitle>
-            <SheetDescription>
-              Make changes to your event here. Email notifications can be controlled via checkbox.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
-            {formContent}
-          </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>
-            Make changes to your event here. Email notifications can be controlled via checkbox.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-y-auto flex-1 px-1">
-          {formContent}
-        </div>
-      </DialogContent>
-    </Dialog>
+  const dialogContent = (
+    <>
+      {isMobile ? (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent side="bottom" className="h-[90vh]">
+            <SheetHeader>
+              <SheetTitle>Edit Event</SheetTitle>
+              <SheetDescription>
+                Make changes to your event here. Email notifications can be controlled via checkbox.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="overflow-y-auto h-[calc(100%-8rem)] py-4">
+              {formContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+              <DialogDescription>
+                Make changes to your event here. Email notifications can be controlled via checkbox.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="overflow-y-auto flex-1 px-1">
+              {formContent}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
+
+  return dialogContent;
 }
