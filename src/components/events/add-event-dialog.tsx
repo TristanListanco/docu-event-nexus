@@ -56,7 +56,7 @@ const initialFormState: FormState = {
   photographerIds: [],
   ignoreScheduleConflicts: false,
   ccsOnlyEvent: false,
-  sendEmailNotifications: false,
+  sendEmailNotifications: true,
 };
 
 // Storage key for form persistence
@@ -87,7 +87,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeValidationError, setTimeValidationError] = useState("");
 
   // Save form state to localStorage whenever it changes
   useEffect(() => {
@@ -108,34 +107,14 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const resetForm = useCallback(() => {
     setFormState(initialFormState);
     setIsSubmitting(false);
-    setTimeValidationError("");
     if (typeof window !== 'undefined') {
       localStorage.removeItem(FORM_STORAGE_KEY);
     }
   }, []);
 
-  // Validate time function
-  const validateTime = useCallback((startTime: string, endTime: string) => {
-    if (!startTime || !endTime) {
-      setTimeValidationError("");
-      return true;
-    }
-    
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    
-    if (end <= start) {
-      setTimeValidationError("End time must be later than start time");
-      return false;
-    }
-    
-    setTimeValidationError("");
-    return true;
-  }, []);
-
   // Get available staff for the event time, considering schedule conflicts and leave dates
   const getAvailableStaffForEvent = () => {
-    if (!formState.date || !formState.startTime || !formState.endTime || timeValidationError) {
+    if (!formState.date || !formState.startTime || !formState.endTime) {
       return { videographers: [], photographers: [] };
     }
 
@@ -153,18 +132,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   const availableStaff = getAvailableStaffForEvent();
 
   // Check if date and time are selected for staff selection validation
-  const canSelectStaff = formState.date && formState.startTime && formState.endTime && !timeValidationError;
-
-  // Handle time changes with validation
-  const handleStartTimeChange = (value: string) => {
-    updateFormState({ startTime: value });
-    validateTime(value, formState.endTime);
-  };
-
-  const handleEndTimeChange = (value: string) => {
-    updateFormState({ endTime: value });
-    validateTime(formState.startTime, value);
-  };
+  const canSelectStaff = formState.date && formState.startTime && formState.endTime;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,11 +147,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
           description: "Please fill in all required fields.",
           variant: "destructive",
         });
-        return;
-      }
-
-      // Validate time
-      if (!validateTime(formState.startTime, formState.endTime)) {
         return;
       }
 
@@ -232,293 +195,277 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in">
-          <DialogHeader className="animate-slide-in-right">
-            <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
-              <CalendarIconLarge className="h-5 w-5 text-primary" />
-              Add New Event
-            </DialogTitle>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto animate-fade-in">
+        <DialogHeader className="animate-slide-in-right">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
+            <CalendarIconLarge className="h-5 w-5 text-primary" />
+            Add New Event
+          </DialogTitle>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
-            {/* Basic Information */}
-            <Card className="animate-fade-in-up">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Tag className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Basic Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Event Name *</Label>
-                    <Input
-                      id="name"
-                      value={formState.name}
-                      onChange={(e) => updateFormState({ name: e.target.value })}
-                      placeholder="Enter event name"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Event Type *</Label>
-                    <Select value={formState.type} onValueChange={(value) => updateFormState({ type: value as EventType })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="General">General</SelectItem>
-                        <SelectItem value="SPECOM">SPECOM</SelectItem>
-                        <SelectItem value="LITCOM">LITCOM</SelectItem>
-                        <SelectItem value="CUACOM">CUACOM</SelectItem>
-                        <SelectItem value="SPODACOM">SPODACOM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
+        <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in-up">
+          {/* Basic Information */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Tag className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Basic Information</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="organizer">Organizer</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="organizer"
-                      value={formState.organizer}
-                      onChange={(e) => updateFormState({ organizer: e.target.value })}
-                      placeholder="Enter organizer name"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Date & Time */}
-            <Card className="animate-fade-in-up">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Date & Time</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !formState.date && "text-muted-foreground"
-                          )}
-                        >
-                          {formState.date ? format(formState.date, "MMMM dd, yyyy") : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formState.date}
-                          onSelect={(date) => updateFormState({ date })}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                          initialFocus
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="startTime">Start Time *</Label>
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={formState.startTime}
-                      onChange={(e) => handleStartTimeChange(e.target.value)}
-                      required
-                      className={cn(timeValidationError && "border-red-500")}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="endTime">End Time *</Label>
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={formState.endTime}
-                      onChange={(e) => handleEndTimeChange(e.target.value)}
-                      required
-                      className={cn(timeValidationError && "border-red-500")}
-                    />
-                  </div>
-                </div>
-                
-                {timeValidationError && (
-                  <div className="text-sm text-red-500 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {timeValidationError}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Location */}
-            <Card className="animate-fade-in-up">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Location</h3>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
-                  <Textarea
-                    id="location"
-                    value={formState.location}
-                    onChange={(e) => updateFormState({ location: e.target.value })}
-                    placeholder="Enter event location"
+                  <Label htmlFor="name">Event Name *</Label>
+                  <Input
+                    id="name"
+                    value={formState.name}
+                    onChange={(e) => updateFormState({ name: e.target.value })}
+                    placeholder="Enter event name"
                     required
-                    rows={2}
                   />
                 </div>
-              </CardContent>
-            </Card>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="type">Event Type *</Label>
+                  <Select value={formState.type} onValueChange={(value) => updateFormState({ type: value as EventType })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+                      <SelectItem value="SPECOM">SPECOM</SelectItem>
+                      <SelectItem value="LITCOM">LITCOM</SelectItem>
+                      <SelectItem value="CUACOM">CUACOM</SelectItem>
+                      <SelectItem value="SPODACOM">SPODACOM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-            {/* Staff Assignment */}
-            <Card className="animate-fade-in-up">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Staff Assignment</h3>
+              <div className="space-y-2">
+                <Label htmlFor="organizer">Organizer</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="organizer"
+                    value={formState.organizer}
+                    onChange={(e) => updateFormState({ organizer: e.target.value })}
+                    placeholder="Enter organizer name"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Date & Time */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Date & Time</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formState.date && "text-muted-foreground"
+                        )}
+                      >
+                        {formState.date ? format(formState.date, "MMMM dd, yyyy") : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formState.date}
+                        onSelect={(date) => updateFormState({ date })}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 
-                {!canSelectStaff && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-amber-800">
-                      <AlertCircle className="h-4 w-4" />
-                      <p className="text-sm font-medium">
-                        {timeValidationError ? "Invalid time range" : "Date and time required"}
-                      </p>
-                    </div>
-                    <p className="text-sm text-amber-700 mt-1">
-                      {timeValidationError 
-                        ? "Please fix the time validation error to see available staff for assignment."
-                        : "Please select event date and time first to see available staff for assignment."
-                      }
+                <div className="space-y-2">
+                  <Label htmlFor="startTime">Start Time *</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={formState.startTime}
+                    onChange={(e) => updateFormState({ startTime: e.target.value })}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="endTime">End Time *</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={formState.endTime}
+                    onChange={(e) => updateFormState({ endTime: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Location */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <MapPin className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Location</h3>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="location">Location *</Label>
+                <Textarea
+                  id="location"
+                  value={formState.location}
+                  onChange={(e) => updateFormState({ location: e.target.value })}
+                  placeholder="Enter event location"
+                  required
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Staff Assignment */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Staff Assignment</h3>
+              </div>
+              
+              {!canSelectStaff && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-amber-800">
+                    <AlertCircle className="h-4 w-4" />
+                    <p className="text-sm font-medium">Date and time required</p>
+                  </div>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Please select event date and time first to see available staff for assignment.
+                  </p>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <MultiStaffSelector
+                  role="Videographer"
+                  availableStaff={canSelectStaff ? availableStaff.videographers : []}
+                  selectedStaffIds={formState.videographerIds}
+                  onSelectionChange={(ids) => updateFormState({ videographerIds: ids })}
+                  maxSelection={3}
+                  disabled={staffLoading || !canSelectStaff}
+                  excludeStaffIds={formState.photographerIds}
+                />
+                
+                <MultiStaffSelector
+                  role="Photographer"
+                  availableStaff={canSelectStaff ? availableStaff.photographers : []}
+                  selectedStaffIds={formState.photographerIds}
+                  onSelectionChange={(ids) => updateFormState({ photographerIds: ids })}
+                  maxSelection={3}
+                  disabled={staffLoading || !canSelectStaff}
+                  excludeStaffIds={formState.videographerIds}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Options */}
+          <Card className="animate-fade-in-up">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <h3 className="font-medium">Options</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Ignore Schedule Conflicts</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow assignment even if staff has scheduling conflicts
                     </p>
                   </div>
-                )}
-                
-                <div className="space-y-4">
-                  <MultiStaffSelector
-                    role="Videographer"
-                    availableStaff={canSelectStaff ? availableStaff.videographers : []}
-                    selectedStaffIds={formState.videographerIds}
-                    onSelectionChange={(ids) => updateFormState({ videographerIds: ids })}
-                    maxSelection={3}
-                    disabled={staffLoading || !canSelectStaff}
-                    excludeStaffIds={formState.photographerIds}
-                  />
-                  
-                  <MultiStaffSelector
-                    role="Photographer"
-                    availableStaff={canSelectStaff ? availableStaff.photographers : []}
-                    selectedStaffIds={formState.photographerIds}
-                    onSelectionChange={(ids) => updateFormState({ photographerIds: ids })}
-                    maxSelection={3}
-                    disabled={staffLoading || !canSelectStaff}
-                    excludeStaffIds={formState.videographerIds}
+                  <Switch
+                    checked={formState.ignoreScheduleConflicts}
+                    onCheckedChange={(checked) => updateFormState({ ignoreScheduleConflicts: checked })}
                   />
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Options */}
-            <Card className="animate-fade-in-up">
-              <CardContent className="p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <AlertCircle className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Options</h3>
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>CCS Only Event</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show only CCS staff members for assignment
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formState.ccsOnlyEvent}
+                    onCheckedChange={(checked) => updateFormState({ ccsOnlyEvent: checked })}
+                  />
                 </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Ignore Schedule Conflicts</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow assignment even if staff has scheduling conflicts
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formState.ignoreScheduleConflicts}
-                      onCheckedChange={(checked) => updateFormState({ ignoreScheduleConflicts: checked })}
-                    />
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Send Email Notifications</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Notify assigned staff via email
+                    </p>
                   </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>CCS Only Event</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Show only CCS staff members for assignment
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formState.ccsOnlyEvent}
-                      onCheckedChange={(checked) => updateFormState({ ccsOnlyEvent: checked })}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Send Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Notify assigned staff via email
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formState.sendEmailNotifications}
-                      onCheckedChange={(checked) => updateFormState({ sendEmailNotifications: checked })}
-                    />
-                  </div>
+                  <Switch
+                    checked={formState.sendEmailNotifications}
+                    onCheckedChange={(checked) => updateFormState({ sendEmailNotifications: checked })}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-4 animate-fade-in-up">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  resetForm();
-                  handleOpenChange(false);
-                }}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting || !!timeValidationError}
-                className="hover-scale"
-              >
-                {isSubmitting ? "Creating..." : "Create Event"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-4 animate-fade-in-up">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                handleOpenChange(false);
+              }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="hover-scale"
+            >
+              {isSubmitting ? "Creating..." : "Create Event"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

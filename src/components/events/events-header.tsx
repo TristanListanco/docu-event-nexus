@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw, Edit, Trash2, XCircle } from "lucide-react";
+import { Plus, RefreshCw, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import NotificationsPanel from "@/components/notifications/notifications-panel";
 import { Event } from "@/types/models";
@@ -13,7 +13,6 @@ interface EventsHeaderProps {
   event?: Event;
   onEditEvent?: () => void;
   onDeleteEvent?: () => void;
-  onCancelEvent?: () => void;
   showEventActions?: boolean;
 }
 
@@ -24,7 +23,6 @@ export default function EventsHeader({
   event,
   onEditEvent,
   onDeleteEvent,
-  onCancelEvent,
   showEventActions = false
 }: EventsHeaderProps) {
   return (
@@ -80,28 +78,6 @@ export default function EventsHeader({
               >
                 <Edit className="h-4 w-4" />
               </Button>
-              
-              {onCancelEvent && event?.status !== "Cancelled" && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onCancelEvent}
-                    className="hidden sm:flex border-orange-500 text-orange-600 hover:bg-orange-50"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancel Event
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onCancelEvent}
-                    className="sm:hidden border-orange-500 text-orange-600 hover:bg-orange-50"
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
               
               <Button
                 variant="destructive"

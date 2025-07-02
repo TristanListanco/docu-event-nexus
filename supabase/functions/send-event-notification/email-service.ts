@@ -2,10 +2,6 @@
 
 import nodemailer from "npm:nodemailer@6.9.8";
 
-export async function sendEmail(options: { to: string; subject: string; html: string; replyTo?: string }) {
-  return sendEmailWithNodemailer(options.to, options.subject, options.html);
-}
-
 export async function sendEmailWithNodemailer(to: string, subject: string, html: string, icsContent?: string) {
   const gmailUser = Deno.env.get("GMAIL_USER");
   const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
