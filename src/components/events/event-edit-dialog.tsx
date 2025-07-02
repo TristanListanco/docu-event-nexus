@@ -89,7 +89,7 @@ export default function EventEditDialog({
         type: event.type,
         ignoreScheduleConflicts: event.ignoreScheduleConflicts || false,
         ccsOnlyEvent: event.ccsOnlyEvent || false,
-        sendEmailNotifications: true,
+    sendEmailNotifications: false,
       });
 
       // Set selected staff - ensure unique IDs only

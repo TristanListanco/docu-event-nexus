@@ -30,7 +30,7 @@ export default function AddEventPage() {
   const [organizer, setOrganizer] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
-  const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);

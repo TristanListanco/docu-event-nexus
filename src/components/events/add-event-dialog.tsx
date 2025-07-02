@@ -56,7 +56,7 @@ const initialFormState: FormState = {
   photographerIds: [],
   ignoreScheduleConflicts: false,
   ccsOnlyEvent: false,
-  sendEmailNotifications: true,
+  sendEmailNotifications: false,
 };
 
 // Storage key for form persistence

@@ -37,17 +37,12 @@ export const generateEmailTemplate = (data: {
       
       <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
         <h3 style="color: #2563eb; margin-top: 0;">📋 Please Confirm Your Assignment</h3>
-        <p style="margin: 10px 0;">Click one of the buttons below to confirm or decline this assignment:</p>
+        <p style="margin: 10px 0;">Click the button below to view and respond to this assignment:</p>
         
         <div style="margin: 20px 0;">
           <a href="${data.confirmUrl}" 
              style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px;">
             ✅ Confirm Assignment
-          </a>
-          
-          <a href="${data.declineUrl}" 
-             style="display: inline-block; background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 0 10px;">
-            ❌ Decline Assignment
           </a>
         </div>
         

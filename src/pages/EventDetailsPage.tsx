@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
@@ -37,9 +38,10 @@ const formatTime12Hour = (time24: string) => {
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { events, loading, loadEvents } = useEvents();
+  const { events, loading, loadEvents, updateEvent } = useEvents();
   const { staff, loading: staffLoading } = useStaff();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
   const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
@@ -189,6 +191,33 @@ export default function EventDetailsPage() {
     navigate("/events");
   };
 
+  const handleCancelEvent = async () => {
+    if (!event) return;
+    
+    try {
+      await updateEvent(event.id, { 
+        status: "Cancelled",
+        sendEmailNotifications: true 
+      });
+      
+      // Refresh the page data
+      loadEvents();
+      loadAssignmentStatuses();
+      
+      toast({
+        title: "Event Cancelled",
+        description: "The event has been cancelled and notifications sent to assigned staff.",
+      });
+    } catch (error) {
+      console.error("Error cancelling event:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel the event. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getConfirmationBadge = (staffId: string) => {
     const assignment = staffAssignments[staffId];
     console.log(`Getting badge for staff ${staffId}:`, assignment);
@@ -289,6 +318,7 @@ export default function EventDetailsPage() {
           event={event}
           onEditEvent={() => setEditDialogOpen(true)}
           onDeleteEvent={() => setDeleteDialogOpen(true)}
+          onCancelEvent={handleCancelEvent}
           showEventActions={true}
         />
       </div>

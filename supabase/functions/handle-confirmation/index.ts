@@ -1,18 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigins.includes(origin) ? origin : "",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
-};
-
 // Get allowed origins from environment variables
 const allowedOrigins = [
   Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app",
   "http://localhost:5173", // Development
   "http://localhost:3000"  // Alternative development port
 ];
+
+const corsHeaders = {
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
+};
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
