@@ -333,7 +333,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', assignment.id);
 
     if (updateError) {
-      logger.error("Error updating assignment:", updateError);
+      console.error("Error updating assignment:", updateError);
       throw updateError;
     }
 
