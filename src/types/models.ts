@@ -1,3 +1,4 @@
+
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
 

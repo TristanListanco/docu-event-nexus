@@ -386,7 +386,7 @@ export type Database = {
     }
     Enums: {
       attendance_status: "Pending" | "Completed" | "Absent" | "Excused"
-      event_status: "Upcoming" | "Ongoing" | "Completed"
+      event_status: "Upcoming" | "Ongoing" | "Completed" | "Cancelled"
       event_type: "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General"
       staff_role: "Videographer" | "Photographer" | "Working Com"
     }
@@ -505,7 +505,7 @@ export const Constants = {
   public: {
     Enums: {
       attendance_status: ["Pending", "Completed", "Absent", "Excused"],
-      event_status: ["Upcoming", "Ongoing", "Completed"],
+      event_status: ["Upcoming", "Ongoing", "Completed", "Cancelled"],
       event_type: ["SPECOM", "LITCOM", "CUACOM", "SPODACOM", "General"],
       staff_role: ["Videographer", "Photographer", "Working Com"],
     },
