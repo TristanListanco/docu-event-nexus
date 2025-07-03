@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -37,7 +38,7 @@ const formatTime12Hour = (time24: string) => {
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { events, loading, loadEvents } = useEvents();
+  const { events, loading, loadEvents, cancelEvent } = useEvents();
   const { staff, loading: staffLoading } = useStaff();
   const isMobile = useIsMobile();
   const [event, setEvent] = useState<Event | null>(null);
@@ -47,6 +48,7 @@ export default function EventDetailsPage() {
   
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   useEffect(() => {
     if (events.length === 0 && !loading) {
@@ -189,6 +191,16 @@ export default function EventDetailsPage() {
     navigate("/events");
   };
 
+  const handleCancelEvent = async () => {
+    if (!event) return;
+    
+    const success = await cancelEvent(event.id);
+    if (success) {
+      setCancelDialogOpen(false);
+      // The event list will be reloaded by the cancelEvent function
+    }
+  };
+
   const getConfirmationBadge = (staffId: string) => {
     const assignment = staffAssignments[staffId];
     console.log(`Getting badge for staff ${staffId}:`, assignment);
@@ -302,14 +314,26 @@ export default function EventDetailsPage() {
                   <CardTitle className="transition-colors duration-200 hover:text-primary">Event Details</CardTitle>
                   <p className="text-muted-foreground transition-colors duration-200">{event.logId}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate("/events")}
-                  className="p-2 hover-scale transition-all duration-200"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  {event.status !== "Cancelled" && dynamicStatus === "Upcoming" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setCancelDialogOpen(true)}
+                      className="hover-scale transition-all duration-200"
+                    >
+                      Cancel Event
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/events")}
+                    className="p-2 hover-scale transition-all duration-200"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -471,6 +495,34 @@ export default function EventDetailsPage() {
           event={event}
           onEventDeleted={handleAfterDelete}
         />
+      )}
+
+      {/* Cancel Event Dialog */}
+      {event && (
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Event</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel "{event.name}"? This action will:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Mark the event as cancelled</li>
+                  <li>Send cancellation notifications to all assigned staff</li>
+                  <li>This action cannot be undone</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep Event</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelEvent}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Cancel Event
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

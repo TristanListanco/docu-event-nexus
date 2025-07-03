@@ -5,7 +5,7 @@ import { Event, EventStatus, EventType, AttendanceStatus } from "@/types/models"
 import { toast } from "../use-toast";
 import { generateLogId } from "./event-log-generator";
 import { fetchStaffAssignmentsWithRoles } from "./staff-assignment-mapper";
-import { sendEventNotifications } from "./event-notifications";
+import { sendEventNotifications, sendCancellationNotifications } from "./event-notifications";
 import { insertStaffAssignments, updateStaffAssignments } from "./event-staff-operations";
 
 export function useEvents() {
@@ -72,7 +72,7 @@ export function useEvents() {
     eventData: Omit<Event, "id" | "videographers" | "photographers">,
     videographerIds: string[],
     photographerIds: string[],
-    sendEmailNotifications: boolean = true
+    sendEmailNotifications: boolean = false // Changed default to false
   ) => {
     try {
       if (!user) {
@@ -112,7 +112,7 @@ export function useEvents() {
       
       await insertStaffAssignments(user.id, eventData_.id, videographerIds, photographerIds);
 
-      // Send email notifications only if requested and there are assigned staff
+      // Send email notifications only if explicitly requested
       if (sendEmailNotifications && allAssignedStaffIds.length > 0) {
         await sendEventNotifications(
           {
@@ -131,7 +131,7 @@ export function useEvents() {
       } else {
         const message = sendEmailNotifications 
           ? `${eventData.name} has been successfully created.`
-          : `${eventData.name} has been created without sending email notifications.`;
+          : `${eventData.name} has been created. You can send invitations manually from the event details page.`;
         
         toast({
           title: "Event Created",
@@ -299,7 +299,7 @@ export function useEvents() {
       }
 
       const hasChanges = Object.keys(changes).length > 0;
-      const shouldSendEmails = eventData.sendEmailNotifications !== false; // Default to true
+      const shouldSendEmails = eventData.sendEmailNotifications === true; // Only send if explicitly true
 
       // Update the event
       const updateData: any = {};
@@ -359,7 +359,7 @@ export function useEvents() {
       
       const allAssignedStaffIds = [...allCurrentVideographerIds, ...allCurrentPhotographerIds];
 
-      // Send notifications only if email sending is enabled and there are changes/new staff and assigned staff
+      // Send notifications only if email sending is explicitly enabled
       if (shouldSendEmails && (hasChanges || newlyAssignedStaffIds.length > 0) && allAssignedStaffIds.length > 0) {
         const updatedEventData = {
           name: eventData.name || currentEvent.name,
@@ -394,24 +394,7 @@ export function useEvents() {
           allCurrentVideographerIds,
           isUpdate
         );
-      } else if (allAssignedStaffIds.length === 0) {
-        toast({
-          title: "Event Updated",
-          description: "The event has been successfully updated.",
-        });
-      } else if (!shouldSendEmails) {
-        toast({
-          title: "Event Updated",
-          description: "The event has been successfully updated without sending email notifications.",
-        });
       } else {
-        // This case should not happen, but let's log it for debugging
-        console.log("No notifications sent - conditions not met:", { 
-          hasChanges, 
-          newlyAssignedStaffIds: newlyAssignedStaffIds.length, 
-          allAssignedStaffIds: allAssignedStaffIds.length,
-          shouldSendEmails
-        });
         toast({
           title: "Event Updated",
           description: "The event has been successfully updated.",
@@ -433,6 +416,60 @@ export function useEvents() {
     }
   };
 
+  // New function to cancel an event
+  const cancelEvent = async (eventId: string) => {
+    try {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get the event and its assigned staff
+      const currentEvent = events.find(e => e.id === eventId);
+      if (!currentEvent) {
+        throw new Error("Event not found");
+      }
+
+      // Update event status to cancelled
+      const { error } = await supabase
+        .from("events")
+        .update({ status: "Cancelled" })
+        .eq("id", eventId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Get all assigned staff IDs
+      const videographerIds = currentEvent.videographers?.map(v => v.staffId) || [];
+      const photographerIds = currentEvent.photographers?.map(p => p.staffId) || [];
+      const allAssignedStaffIds = [...videographerIds, ...photographerIds];
+
+      // Send cancellation notifications
+      if (allAssignedStaffIds.length > 0) {
+        await sendCancellationNotifications(eventId, currentEvent.name, allAssignedStaffIds);
+      }
+
+      toast({
+        title: "Event Cancelled",
+        description: `${currentEvent.name} has been cancelled and notifications sent to assigned staff.`,
+      });
+
+      // Refresh the events list
+      await loadEvents();
+
+      return true;
+    } catch (error: any) {
+      console.error("Error cancelling event:", error.message);
+      toast({
+        title: "Error Cancelling Event",
+        description: error.message || "Could not cancel event. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   // Load events on initialization and when user changes
   useEffect(() => {
     if (user) {
@@ -447,6 +484,7 @@ export function useEvents() {
     addEvent,
     deleteEvent,
     getEvent,
-    updateEvent
+    updateEvent,
+    cancelEvent
   };
 }
