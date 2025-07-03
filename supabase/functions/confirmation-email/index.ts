@@ -3,16 +3,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { sendEmailWithNodemailer } from "./email-service.ts";
 import { generateEmailTemplate } from "./email-template.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 // Get allowed origins from environment variables
 const allowedOrigins = [
   Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app",
   "http://localhost:5173", // Development
   "http://localhost:3000"  // Alternative development port
 ];
+
+const corsHeaders = {
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
