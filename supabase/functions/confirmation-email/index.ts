@@ -1,7 +1,13 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { sendEmailWithNodemailer } from "./email-service.ts";
 import { generateEmailTemplate } from "./email-template.ts";
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Get allowed origins from environment variables
 const allowedOrigins = [
@@ -12,12 +18,8 @@ const allowedOrigins = [
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
 };
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -72,20 +74,22 @@ interface EmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get('Origin');
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    const origin = req.headers.get('Origin');
     const headers = { ...corsHeaders };
     
     if (origin && allowedOrigins.includes(origin)) {
       headers['Access-Control-Allow-Origin'] = origin;
+    } else {
+      headers['Access-Control-Allow-Origin'] = allowedOrigins[0]; // Fallback to first allowed origin
     }
     
     return new Response(null, { headers });
   }
 
   // Handle actual requests
-  const origin = req.headers.get('Origin');
   const headers = { 
     "Content-Type": "application/json",
     ...corsHeaders 
@@ -93,6 +97,8 @@ const handler = async (req: Request): Promise<Response> => {
   
   if (origin && allowedOrigins.includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
+  } else {
+    headers['Access-Control-Allow-Origin'] = allowedOrigins[0]; // Fallback to first allowed origin
   }
 
   try {
