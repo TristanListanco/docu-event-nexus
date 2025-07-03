@@ -9,14 +9,8 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Get allowed origins from environment variables
-const allowedOrigins = [
-  Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app",
-  "http://localhost:5173", // Development
-  "http://localhost:3000"  // Alternative development port
-];
-
 const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
 };
@@ -74,19 +68,9 @@ interface EmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  const origin = req.headers.get('Origin');
-  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    const headers = { ...corsHeaders };
-    
-    if (origin && allowedOrigins.includes(origin)) {
-      headers['Access-Control-Allow-Origin'] = origin;
-    } else {
-      headers['Access-Control-Allow-Origin'] = allowedOrigins[0]; // Fallback to first allowed origin
-    }
-    
-    return new Response(null, { headers });
+    return new Response(null, { headers: corsHeaders });
   }
 
   // Handle actual requests
@@ -94,12 +78,6 @@ const handler = async (req: Request): Promise<Response> => {
     "Content-Type": "application/json",
     ...corsHeaders 
   };
-  
-  if (origin && allowedOrigins.includes(origin)) {
-    headers['Access-Control-Allow-Origin'] = origin;
-  } else {
-    headers['Access-Control-Allow-Origin'] = allowedOrigins[0]; // Fallback to first allowed origin
-  }
 
   try {
     const requestData: EmailRequest = await req.json();
