@@ -38,8 +38,8 @@ const timeRangesOverlap = (
 const getAvailableTimeSlots = (
   eventStart: string,
   eventEnd: string,
-  conflicts: TimeSlot[]
-): TimeSlot[] => {
+  conflicts: Array<{ startTime: string; endTime: string; reason: string }>
+): Array<{ startTime: string; endTime: string }> => {
   const eventStartMin = timeToMinutes(eventStart);
   const eventEndMin = timeToMinutes(eventEnd);
   
@@ -52,7 +52,7 @@ const getAvailableTimeSlots = (
     return [{ startTime: eventStart, endTime: eventEnd }];
   }
   
-  const availableSlots: TimeSlot[] = [];
+  const availableSlots: Array<{ startTime: string; endTime: string }> = [];
   let currentStart = eventStartMin;
   
   for (const conflict of sortedConflicts) {
@@ -103,7 +103,7 @@ export const getEnhancedStaffAvailability = (
       };
     }
     
-    const conflicts: TimeSlot[] = [];
+    const conflicts: Array<{ startTime: string; endTime: string; reason: string }> = [];
     
     // Check leave dates
     const isOnLeave = staffMember.leaveDates.some(leave => 
