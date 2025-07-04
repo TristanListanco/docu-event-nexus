@@ -24,6 +24,8 @@ export default function AddEventPage() {
   const [name, setName] = useState("");
   const [logId, setLogId] = useState("");
   const [date, setDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [isMultiDay, setIsMultiDay] = useState(false);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
@@ -119,6 +121,13 @@ export default function AddEventPage() {
     generateLogId();
   }, []);
 
+  // Auto-set end date when multi-day is enabled
+  useEffect(() => {
+    if (isMultiDay && date && !endDate) {
+      setEndDate(date);
+    }
+  }, [isMultiDay, date, endDate]);
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,6 +155,7 @@ export default function AddEventPage() {
 
       // Format date properly to avoid timezone issues
       const formattedDate = format(date, 'yyyy-MM-dd');
+      const formattedEndDate = isMultiDay && endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
 
       // Save the event with multiple staff assignments
       const eventId = await addEvent(
@@ -153,6 +163,7 @@ export default function AddEventPage() {
           name,
           logId,
           date: formattedDate,
+          endDate: formattedEndDate,
           startTime,
           endTime,
           location,
@@ -238,9 +249,19 @@ export default function AddEventPage() {
                     />
                   </div>
                   
+                  {/* Multi-day toggle */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="multiDay"
+                      checked={isMultiDay}
+                      onCheckedChange={(checked) => setIsMultiDay(!!checked)}
+                    />
+                    <Label htmlFor="multiDay">Multi-day event</Label>
+                  </div>
+                  
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Event Date</Label>
+                      <Label>Start Date</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -251,7 +272,7 @@ export default function AddEventPage() {
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {date ? format(date, "PPP") : <span>Pick a date</span>}
+                            {date ? format(date, "PPP") : <span>Pick start date</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="center" side="bottom">
@@ -269,40 +290,72 @@ export default function AddEventPage() {
                       </Popover>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2">
+                    {isMultiDay && (
                       <div className="space-y-2">
-                        <Label htmlFor="startTime">Start Time</Label>
-                        <div className="relative">
-                          <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="startTime"
-                            type="time"
-                            value={startTime}
-                            onChange={(e) => {
-                              setStartTime(e.target.value);
-                              validateTime(e.target.value, endTime);
-                            }}
-                            className={cn("pl-8", timeValidationError && "border-red-500")}
-                            required
-                          />
-                        </div>
+                        <Label>End Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !endDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {endDate ? format(endDate, "PPP") : <span>Pick end date</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="center" side="bottom">
+                            <Calendar
+                              mode="single"
+                              selected={endDate}
+                              onSelect={setEndDate}
+                              disabled={(date) =>
+                                date < (date || new Date()) || date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="endTime">End Time</Label>
-                        <div className="relative">
-                          <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="endTime"
-                            type="time"
-                            value={endTime}
-                            onChange={(e) => {
-                              setEndTime(e.target.value);
-                              validateTime(startTime, e.target.value);
-                            }}
-                            className={cn("pl-8", timeValidationError && "border-red-500")}
-                            required
-                          />
-                        </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="startTime">Start Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="startTime"
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => {
+                            setStartTime(e.target.value);
+                            validateTime(e.target.value, endTime);
+                          }}
+                          className={cn("pl-8", timeValidationError && "border-red-500")}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endTime">End Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="endTime"
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => {
+                            setEndTime(e.target.value);
+                            validateTime(startTime, e.target.value);
+                          }}
+                          className={cn("pl-8", timeValidationError && "border-red-500")}
+                          required
+                        />
                       </div>
                     </div>
                   </div>

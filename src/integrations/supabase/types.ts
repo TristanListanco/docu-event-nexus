@@ -39,6 +39,7 @@ export type Database = {
           ccs_only_event: boolean
           created_at: string
           date: string
+          end_date: string
           end_time: string
           id: string
           ignore_schedule_conflicts: boolean
@@ -57,6 +58,7 @@ export type Database = {
           ccs_only_event?: boolean
           created_at?: string
           date: string
+          end_date: string
           end_time: string
           id?: string
           ignore_schedule_conflicts?: boolean
@@ -75,6 +77,7 @@ export type Database = {
           ccs_only_event?: boolean
           created_at?: string
           date?: string
+          end_date?: string
           end_time?: string
           id?: string
           ignore_schedule_conflicts?: boolean

@@ -51,6 +51,25 @@ export default function EventsPageContent({
     setFilterBy(filters.filterBy);
   };
 
+  // Handle event click with cancelled event restrictions
+  const handleEventClick = (event: Event) => {
+    // For cancelled events, don't navigate to details (they'll be handled by the overlay)
+    if (event.status === "Cancelled") {
+      return;
+    }
+    onEventClick(event);
+  };
+
+  // Handle edit with cancelled event restrictions
+  const handleEditEvent = (e: React.MouseEvent, event: Event) => {
+    // Prevent editing cancelled events
+    if (event.status === "Cancelled") {
+      e.stopPropagation();
+      return;
+    }
+    onEditEvent(e, event);
+  };
+
   // Filter and sort events based on selected criteria
   const filteredAndSortedEvents = events
     .filter((event) => {
@@ -111,8 +130,8 @@ export default function EventsPageContent({
                 <EventMonthGroup
                   monthYear={monthYear}
                   events={monthEvents}
-                  onEventClick={onEventClick}
-                  onEditEvent={onEditEvent}
+                  onEventClick={handleEventClick}
+                  onEditEvent={handleEditEvent}
                   onDeleteEvent={onDeleteEvent}
                   getEventStatus={getEventStatus}
                   isCollapsed={collapsedMonths.has(monthYear)}

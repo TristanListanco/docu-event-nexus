@@ -53,6 +53,7 @@ export interface Event {
   logId: string;
   name: string;
   date: string;
+  endDate?: string; // New field for multi-day events
   startTime: string;
   endTime: string;
   location: string;
@@ -65,4 +66,19 @@ export interface Event {
   ccsOnlyEvent: boolean;
   isBigEvent: boolean;
   bigEventId?: string | null;
+}
+
+// New interface for staff availability with partial conflicts
+export interface StaffAvailability {
+  staff: StaffMember;
+  isFullyAvailable: boolean;
+  availableTimeSlots?: Array<{
+    startTime: string;
+    endTime: string;
+  }>;
+  conflictingTimeSlots?: Array<{
+    startTime: string;
+    endTime: string;
+    reason: string;
+  }>;
 }

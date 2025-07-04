@@ -1,0 +1,239 @@
+
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { StaffAvailability } from "@/types/models";
+import { Clock, AlertTriangle, CheckCircle, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface EnhancedMultiStaffSelectorProps {
+  role: "Videographer" | "Photographer";
+  staffAvailability: StaffAvailability[];
+  selectedStaffIds: string[];
+  onSelectionChange: (selectedIds: string[]) => void;
+  excludeStaffIds?: string[];
+  disabled?: boolean;
+}
+
+export default function EnhancedMultiStaffSelector({
+  role,
+  staffAvailability,
+  selectedStaffIds,
+  onSelectionChange,
+  excludeStaffIds = [],
+  disabled = false
+}: EnhancedMultiStaffSelectorProps) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Filter staff by role and exclude already selected staff from other roles
+  const availableStaff = staffAvailability.filter(availability =>
+    availability.staff.roles.includes(role) && 
+    !excludeStaffIds.includes(availability.staff.id)
+  );
+
+  // Separate fully available and partially available staff
+  const fullyAvailable = availableStaff.filter(a => a.isFullyAvailable);
+  const partiallyAvailable = availableStaff.filter(a => !a.isFullyAvailable && a.availableTimeSlots && a.availableTimeSlots.length > 0);
+  const unavailable = availableStaff.filter(a => !a.isFullyAvailable && (!a.availableTimeSlots || a.availableTimeSlots.length === 0));
+
+  const handleStaffToggle = (staffId: string) => {
+    if (disabled) return;
+    
+    if (selectedStaffIds.includes(staffId)) {
+      onSelectionChange(selectedStaffIds.filter(id => id !== staffId));
+    } else {
+      onSelectionChange([...selectedStaffIds, staffId]);
+    }
+  };
+
+  const getAvailabilityIcon = (availability: StaffAvailability) => {
+    if (availability.isFullyAvailable) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (availability.availableTimeSlots && availability.availableTimeSlots.length > 0) {
+      return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+    } else {
+      return <Clock className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const renderStaffCard = (availability: StaffAvailability) => {
+    const { staff } = availability;
+    const isSelected = selectedStaffIds.includes(staff.id);
+    
+    return (
+      <Card 
+        key={staff.id} 
+        className={cn(
+          "cursor-pointer transition-all duration-200 hover:shadow-md",
+          isSelected && "ring-2 ring-primary",
+          disabled && "opacity-50 cursor-not-allowed",
+          !availability.isFullyAvailable && "border-orange-200 bg-orange-50/30"
+        )}
+        onClick={() => handleStaffToggle(staff.id)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              checked={isSelected}
+              onChange={() => handleStaffToggle(staff.id)}
+              disabled={disabled}
+              className="mt-1"
+            />
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                {getAvailabilityIcon(availability)}
+                <h4 className="font-medium text-sm truncate">{staff.name}</h4>
+              </div>
+              
+              {/* Show availability status */}
+              {availability.isFullyAvailable ? (
+                <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">
+                  Fully Available
+                </Badge>
+              ) : availability.availableTimeSlots && availability.availableTimeSlots.length > 0 ? (
+                <div className="space-y-1">
+                  <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                    Partially Available
+                  </Badge>
+                  <div className="text-xs text-muted-foreground">
+                    Available: {availability.availableTimeSlots.map(slot => 
+                      `${slot.startTime}-${slot.endTime}`
+                    ).join(', ')}
+                  </div>
+                  {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
+                    <div className="text-xs text-red-600">
+                      Conflicts: {availability.conflictingTimeSlots.map(slot => 
+                        `${slot.startTime}-${slot.endTime} (${slot.reason})`
+                      ).join(', ')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
+                    Unavailable
+                  </Badge>
+                  {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
+                    <div className="text-xs text-red-600">
+                      {availability.conflictingTimeSlots[0].reason}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Generate suggestions for covering gaps
+  const generateSuggestions = () => {
+    if (partiallyAvailable.length === 0) return [];
+    
+    const suggestions = [];
+    for (let i = 0; i < Math.min(3, partiallyAvailable.length); i++) {
+      const staff = partiallyAvailable[i];
+      if (staff.availableTimeSlots && staff.availableTimeSlots.length > 0) {
+        suggestions.push({
+          staffId: staff.staff.id,
+          staffName: staff.staff.name,
+          availableSlots: staff.availableTimeSlots
+        });
+      }
+    }
+    return suggestions;
+  };
+
+  const suggestions = generateSuggestions();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <User className="h-5 w-5" />
+          {role}s
+        </h3>
+        {suggestions.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSuggestions(!showSuggestions)}
+          >
+            {showSuggestions ? 'Hide' : 'Show'} Suggestions
+          </Button>
+        )}
+      </div>
+
+      {showSuggestions && suggestions.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-orange-800">Coverage Suggestions</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-xs text-orange-700 space-y-1">
+              {suggestions.map(suggestion => (
+                <div key={suggestion.staffId}>
+                  <strong>{suggestion.staffName}</strong> can cover: {suggestion.availableSlots.map(slot => 
+                    `${slot.startTime}-${slot.endTime}`
+                  ).join(', ')}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <ScrollArea className="h-[400px]">
+        <div className="space-y-3">
+          {/* Fully Available Staff */}
+          {fullyAvailable.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-green-700 mb-2">
+                Fully Available ({fullyAvailable.length})
+              </h4>
+              {fullyAvailable.map(renderStaffCard)}
+            </div>
+          )}
+
+          {/* Partially Available Staff */}
+          {partiallyAvailable.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-orange-700 mb-2">
+                Partially Available ({partiallyAvailable.length})
+              </h4>
+              {partiallyAvailable.map(renderStaffCard)}
+            </div>
+          )}
+
+          {/* Unavailable Staff */}
+          {unavailable.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-red-700 mb-2">
+                Unavailable ({unavailable.length})
+              </h4>
+              {unavailable.map(renderStaffCard)}
+            </div>
+          )}
+
+          {availableStaff.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No {role.toLowerCase()}s available</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {selectedStaffIds.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Selected: {selectedStaffIds.length} {role.toLowerCase()}{selectedStaffIds.length !== 1 ? 's' : ''}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -39,6 +39,7 @@ export function useEvents() {
             logId: event.log_id,
             name: event.name,
             date: event.date,
+            endDate: event.end_date !== event.date ? event.end_date : undefined, // Only set endDate if different from date
             startTime: event.start_time,
             endTime: event.end_time,
             location: event.location,
@@ -82,13 +83,14 @@ export function useEvents() {
       // Generate log ID
       const logId = generateLogId(eventData.type);
 
-      // Insert the event
+      // Insert the event with multi-day support
       const { data: eventData_, error: eventError } = await supabase
         .from("events")
         .insert({
           name: eventData.name,
           log_id: logId,
           date: eventData.date,
+          end_date: eventData.endDate || eventData.date, // Use endDate or fallback to date
           start_time: eventData.startTime,
           end_time: eventData.endTime,
           location: eventData.location,
@@ -139,7 +141,7 @@ export function useEvents() {
         });
       }
 
-      // Refresh the events list
+      // Automatically refresh the events list
       await loadEvents();
 
       return eventData_.id;
@@ -181,13 +183,13 @@ export function useEvents() {
         throw error;
       }
 
-      // Update the local state by removing the deleted event
-      setEvents(events.filter((event) => event.id !== eventId));
-
       toast({
         title: "Event Deleted",
         description: "The event has been successfully deleted.",
       });
+
+      // Automatically refresh the events list
+      await loadEvents();
 
       return true;
     } catch (error: any) {
@@ -229,6 +231,7 @@ export function useEvents() {
         logId: data.log_id,
         name: data.name,
         date: data.date,
+        endDate: data.end_date !== data.date ? data.end_date : undefined,
         startTime: data.start_time,
         endTime: data.end_time,
         location: data.location,
@@ -282,6 +285,9 @@ export function useEvents() {
       if (eventData.date && eventData.date !== currentEvent.date) {
         changes.date = { old: currentEvent.date, new: eventData.date };
       }
+      if (eventData.endDate !== undefined && eventData.endDate !== currentEvent.endDate) {
+        changes.endDate = { old: currentEvent.endDate || currentEvent.date, new: eventData.endDate || eventData.date };
+      }
       if (eventData.startTime && eventData.startTime !== currentEvent.startTime) {
         changes.startTime = { old: currentEvent.startTime, new: eventData.startTime };
       }
@@ -306,6 +312,7 @@ export function useEvents() {
       if (eventData.name) updateData.name = eventData.name;
       if (eventData.logId) updateData.log_id = eventData.logId;
       if (eventData.date) updateData.date = eventData.date;
+      if (eventData.endDate !== undefined) updateData.end_date = eventData.endDate || eventData.date;
       if (eventData.startTime) updateData.start_time = eventData.startTime;
       if (eventData.endTime) updateData.end_time = eventData.endTime;
       if (eventData.location) updateData.location = eventData.location;
@@ -401,7 +408,7 @@ export function useEvents() {
         });
       }
 
-      // Refresh the events list
+      // Automatically refresh the events list
       await loadEvents();
 
       return true;
@@ -416,7 +423,7 @@ export function useEvents() {
     }
   };
 
-  // New function to cancel an event
+  // Enhanced cancel function with email notifications
   const cancelEvent = async (eventId: string) => {
     try {
       if (!user) {
@@ -455,7 +462,7 @@ export function useEvents() {
         description: `${currentEvent.name} has been cancelled and notifications sent to assigned staff.`,
       });
 
-      // Refresh the events list
+      // Automatically refresh the events list
       await loadEvents();
 
       return true;
