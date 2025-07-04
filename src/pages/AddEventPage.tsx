@@ -14,11 +14,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, EventType } from "@/types/models";
+import { EventType } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Mail, GraduationCap, AlertCircle } from "lucide-react";
-import MultiStaffSelector from "@/components/events/multi-staff-selector";
+import EnhancedMultiStaffSelector from "@/components/events/enhanced-multi-staff-selector";
+import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
 
 export default function AddEventPage() {
   const [name, setName] = useState("");
@@ -38,14 +39,9 @@ export default function AddEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [timeValidationError, setTimeValidationError] = useState("");
   const { addEvent } = useEvents();
-  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
+  const { staff, loading: staffLoading } = useStaff();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Store available staff
-  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
-  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
-  const [scheduleCalculated, setScheduleCalculated] = useState(false);
 
   // Validate time function
   const validateTime = (startTime: string, endTime: string) => {
@@ -66,48 +62,6 @@ export default function AddEventPage() {
     return true;
   };
 
-  // Check availability whenever date/time/staffAvailabilityMode changes
-  useEffect(() => {
-    if (date && startTime && endTime && !timeValidationError) {
-      const formattedDate = format(date, 'yyyy-MM-dd');
-      const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
-      const ccsOnlyEvent = staffAvailabilityMode === "ccs";
-      
-      const { videographers, photographers } = getAvailableStaff(
-        formattedDate,
-        startTime,
-        endTime,
-        ignoreScheduleConflicts,
-        ccsOnlyEvent
-      );
-      
-      setAvailableVideographers(videographers);
-      setAvailablePhotographers(photographers);
-      setScheduleCalculated(true);
-      
-      // Reset selections if the previously selected staff members are no longer available
-      const videographersStillAvailable = selectedVideographers.filter(id => 
-        videographers.some(v => v.id === id)
-      );
-      const photographersStillAvailable = selectedPhotographers.filter(id => 
-        photographers.some(p => p.id === id)
-      );
-      
-      if (videographersStillAvailable.length !== selectedVideographers.length) {
-        setSelectedVideographers(videographersStillAvailable);
-      }
-      
-      if (photographersStillAvailable.length !== selectedPhotographers.length) {
-        setSelectedPhotographers(photographersStillAvailable);
-      }
-    } else {
-      // Reset if necessary inputs are missing
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
-      setScheduleCalculated(false);
-    }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers, timeValidationError]);
-  
   // Function to generate a unique log ID
   const generateLogId = () => {
     const prefix = "EVNT";
@@ -202,6 +156,27 @@ export default function AddEventPage() {
     }
   };
 
+  // Get enhanced staff availability for the event time
+  const getStaffAvailabilityForEvent = () => {
+    if (!date || !startTime || !endTime || timeValidationError) {
+      return [];
+    }
+
+    const formattedDate = format(date, 'yyyy-MM-dd');
+    const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
+    const ccsOnlyEvent = staffAvailabilityMode === "ccs";
+    
+    return getEnhancedStaffAvailability(
+      staff,
+      formattedDate,
+      startTime,
+      endTime,
+      ignoreScheduleConflicts,
+      ccsOnlyEvent
+    );
+  };
+
+  const staffAvailability = getStaffAvailabilityForEvent();
   const canSelectStaff = date && startTime && endTime && !timeValidationError;
 
   return (
@@ -465,25 +440,25 @@ export default function AddEventPage() {
                         </div>
                       )}
                       
-                      {canSelectStaff && scheduleCalculated && (
+                      {canSelectStaff && (
                         <p className="text-sm text-muted-foreground">
                           {getStaffAvailabilityDescription()}
                         </p>
                       )}
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <MultiStaffSelector
+                        <EnhancedMultiStaffSelector
                           role="Videographer"
-                          availableStaff={availableVideographers}
+                          staffAvailability={staffAvailability}
                           selectedStaffIds={selectedVideographers}
                           onSelectionChange={setSelectedVideographers}
                           excludeStaffIds={selectedPhotographers}
                           disabled={!canSelectStaff}
                         />
                         
-                        <MultiStaffSelector
+                        <EnhancedMultiStaffSelector
                           role="Photographer"
-                          availableStaff={availablePhotographers}
+                          staffAvailability={staffAvailability}
                           selectedStaffIds={selectedPhotographers}
                           onSelectionChange={setSelectedPhotographers}
                           excludeStaffIds={selectedVideographers}
