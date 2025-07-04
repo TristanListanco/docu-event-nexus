@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
@@ -39,8 +38,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Event, EventType } from "@/types/models";
 import { Checkbox } from "@/components/ui/checkbox";
-import MultiStaffSelector from "@/components/events/multi-staff-selector";
-import { getAvailableStaff } from "@/hooks/staff/staff-availability";
+import EnhancedMultiStaffSelector from "@/components/events/enhanced-multi-staff-selector";
+import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -188,14 +187,14 @@ export default function EventEditDialog({
     }
   };
 
-  // Get available staff for the event time, considering schedule conflicts and leave dates
-  const getAvailableStaffForEvent = () => {
+  // Get enhanced staff availability for the event time
+  const getStaffAvailabilityForEvent = () => {
     if (!formData.date || !formData.startTime || !formData.endTime || timeValidationError) {
-      return { videographers: [], photographers: [] };
+      return [];
     }
 
     const formattedDate = format(formData.date, 'yyyy-MM-dd');
-    return getAvailableStaff(
+    return getEnhancedStaffAvailability(
       staff,
       formattedDate,
       formData.startTime,
@@ -205,7 +204,7 @@ export default function EventEditDialog({
     );
   };
 
-  const availableStaff = getAvailableStaffForEvent();
+  const staffAvailability = getStaffAvailabilityForEvent();
   const canSelectStaff = formData.date && formData.startTime && formData.endTime && !timeValidationError;
 
   const formContent = (
@@ -378,26 +377,24 @@ export default function EventEditDialog({
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Videographers</Label>
-          <MultiStaffSelector
+          <EnhancedMultiStaffSelector
             role="Videographer"
-            availableStaff={canSelectStaff ? availableStaff.videographers : []}
+            staffAvailability={staffAvailability}
             selectedStaffIds={selectedVideographers}
             onSelectionChange={setSelectedVideographers}
             excludeStaffIds={selectedPhotographers}
-            maxSelection={3}
             disabled={!canSelectStaff}
           />
         </div>
 
         <div className="space-y-2">
           <Label>Photographers</Label>
-          <MultiStaffSelector
+          <EnhancedMultiStaffSelector
             role="Photographer"
-            availableStaff={canSelectStaff ? availableStaff.photographers : []}
+            staffAvailability={staffAvailability}
             selectedStaffIds={selectedPhotographers}
             onSelectionChange={setSelectedPhotographers}
             excludeStaffIds={selectedVideographers}
-            maxSelection={3}
             disabled={!canSelectStaff}
           />
         </div>

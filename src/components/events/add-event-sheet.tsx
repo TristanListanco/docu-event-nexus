@@ -12,11 +12,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember, EventType } from "@/types/models";
+import { EventType, StaffAvailability } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Clock, Mail, GraduationCap } from "lucide-react";
-import MultiStaffSelector from "@/components/events/multi-staff-selector";
+import EnhancedMultiStaffSelector from "@/components/events/enhanced-multi-staff-selector";
+import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
 
 interface AddEventSheetProps {
   open: boolean;
@@ -39,12 +40,11 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const { addEvent } = useEvents();
-  const { staff, loading: staffLoading, getAvailableStaff } = useStaff();
+  const { staff, loading: staffLoading } = useStaff();
   const { toast } = useToast();
 
-  // Store available staff
-  const [availableVideographers, setAvailableVideographers] = useState<StaffMember[]>([]);
-  const [availablePhotographers, setAvailablePhotographers] = useState<StaffMember[]>([]);
+  // Store enhanced staff availability
+  const [staffAvailability, setStaffAvailability] = useState<StaffAvailability[]>([]);
   const [scheduleCalculated, setScheduleCalculated] = useState(false);
 
   // Check availability whenever date/time/staffAvailabilityMode changes
@@ -54,7 +54,8 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
       const ignoreScheduleConflicts = staffAvailabilityMode === "ignore";
       const ccsOnlyEvent = staffAvailabilityMode === "ccs";
       
-      const { videographers, photographers } = getAvailableStaff(
+      const availability = getEnhancedStaffAvailability(
+        staff,
         formattedDate,
         startTime,
         endTime,
@@ -62,16 +63,17 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
         ccsOnlyEvent
       );
       
-      setAvailableVideographers(videographers);
-      setAvailablePhotographers(photographers);
+      setStaffAvailability(availability);
       setScheduleCalculated(true);
       
       // Reset selections if the previously selected staff members are no longer available
+      const availableStaffIds = availability.map(a => a.staff.id);
+      
       const videographersStillAvailable = selectedVideographers.filter(id => 
-        videographers.some(v => v.id === id)
+        availableStaffIds.includes(id)
       );
       const photographersStillAvailable = selectedPhotographers.filter(id => 
-        photographers.some(p => p.id === id)
+        availableStaffIds.includes(id)
       );
       
       if (videographersStillAvailable.length !== selectedVideographers.length) {
@@ -82,11 +84,10 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
         setSelectedPhotographers(photographersStillAvailable);
       }
     } else {
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
+      setStaffAvailability([]);
       setScheduleCalculated(false);
     }
-  }, [date, startTime, endTime, staffAvailabilityMode, staff, getAvailableStaff, selectedVideographers, selectedPhotographers]);
+  }, [date, startTime, endTime, staffAvailabilityMode, staff, selectedVideographers, selectedPhotographers]);
   
   // Function to generate a unique log ID
   const generateLogId = () => {
@@ -119,8 +120,7 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
       setSelectedVideographers([]);
       setSelectedPhotographers([]);
       setSubmitting(false);
-      setAvailableVideographers([]);
-      setAvailablePhotographers([]);
+      setStaffAvailability([]);
       setScheduleCalculated(false);
     }
   }, [open]);
@@ -396,18 +396,18 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
                 )}
                 
                 <div className="space-y-4">
-                  <MultiStaffSelector
+                  <EnhancedMultiStaffSelector
                     role="Videographer"
-                    availableStaff={availableVideographers}
+                    staffAvailability={staffAvailability}
                     selectedStaffIds={selectedVideographers}
                     onSelectionChange={setSelectedVideographers}
                     disabled={!scheduleCalculated}
                     excludeStaffIds={selectedPhotographers}
                   />
                   
-                  <MultiStaffSelector
+                  <EnhancedMultiStaffSelector
                     role="Photographer"
-                    availableStaff={availablePhotographers}
+                    staffAvailability={staffAvailability}
                     selectedStaffIds={selectedPhotographers}
                     onSelectionChange={setSelectedPhotographers}
                     disabled={!scheduleCalculated}
