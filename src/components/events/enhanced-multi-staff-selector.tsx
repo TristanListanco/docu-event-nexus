@@ -23,8 +23,8 @@ interface EnhancedMultiStaffSelectorProps {
 
 export default function EnhancedMultiStaffSelector({
   role,
-  staffAvailability,
-  selectedStaffIds,
+  staffAvailability = [], // Default to empty array
+  selectedStaffIds = [], // Default to empty array
   onSelectionChange,
   excludeStaffIds = [],
   disabled = false,
@@ -33,17 +33,21 @@ export default function EnhancedMultiStaffSelector({
 }: EnhancedMultiStaffSelectorProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   
+  // Ensure staffAvailability is always an array
+  const safeStaffAvailability = Array.isArray(staffAvailability) ? staffAvailability : [];
+  
   // Filter staff by role and exclude already selected staff from other roles
-  const availableStaff = staffAvailability.filter(availability =>
-    availability.staff.roles.includes(role) && 
+  const availableStaff = safeStaffAvailability.filter(availability =>
+    availability?.staff?.roles?.includes(role) && 
     !excludeStaffIds.includes(availability.staff.id)
   );
 
   // Only show fully available and partially available staff
-  const fullyAvailable = availableStaff.filter(a => a.isFullyAvailable);
+  const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable);
   const partiallyAvailable = availableStaff.filter(a => 
-    !a.isFullyAvailable && 
-    a.availableTimeSlots && 
+    !a?.isFullyAvailable && 
+    a?.availableTimeSlots && 
+    Array.isArray(a.availableTimeSlots) &&
     a.availableTimeSlots.length > 0
   );
 
@@ -53,13 +57,14 @@ export default function EnhancedMultiStaffSelector({
     : null;
 
   const handleStaffToggle = (staffId: string) => {
-    if (disabled) return;
+    if (disabled || !staffId) return;
     
     try {
-      if (selectedStaffIds.includes(staffId)) {
-        onSelectionChange(selectedStaffIds.filter(id => id !== staffId));
+      const safeSelectedIds = Array.isArray(selectedStaffIds) ? selectedStaffIds : [];
+      if (safeSelectedIds.includes(staffId)) {
+        onSelectionChange(safeSelectedIds.filter(id => id !== staffId));
       } else {
-        onSelectionChange([...selectedStaffIds, staffId]);
+        onSelectionChange([...safeSelectedIds, staffId]);
       }
     } catch (error) {
       console.error("Error toggling staff selection:", error);
@@ -68,7 +73,7 @@ export default function EnhancedMultiStaffSelector({
 
   const handleSmartSelect = () => {
     try {
-      if (smartAllocation && smartAllocation.recommendedStaff.length > 0) {
+      if (smartAllocation && Array.isArray(smartAllocation.recommendedStaff) && smartAllocation.recommendedStaff.length > 0) {
         onSelectionChange(smartAllocation.recommendedStaff);
       }
     } catch (error) {
@@ -77,9 +82,11 @@ export default function EnhancedMultiStaffSelector({
   };
 
   const getAvailabilityIcon = (availability: StaffAvailability) => {
+    if (!availability) return <Clock className="h-4 w-4 text-red-500" />;
+    
     if (availability.isFullyAvailable) {
       return <CheckCircle className="h-4 w-4 text-green-500" />;
-    } else if (availability.availableTimeSlots && availability.availableTimeSlots.length > 0) {
+    } else if (availability.availableTimeSlots && Array.isArray(availability.availableTimeSlots) && availability.availableTimeSlots.length > 0) {
       return <AlertTriangle className="h-4 w-4 text-orange-500" />;
     } else {
       return <Clock className="h-4 w-4 text-red-500" />;
@@ -87,9 +94,12 @@ export default function EnhancedMultiStaffSelector({
   };
 
   const renderStaffCard = (availability: StaffAvailability) => {
+    if (!availability || !availability.staff) return null;
+    
     const { staff } = availability;
-    const isSelected = selectedStaffIds.includes(staff.id);
-    const isRecommended = smartAllocation?.recommendedStaff.includes(staff.id);
+    const safeSelectedIds = Array.isArray(selectedStaffIds) ? selectedStaffIds : [];
+    const isSelected = safeSelectedIds.includes(staff.id);
+    const isRecommended = smartAllocation?.recommendedStaff?.includes(staff.id);
     
     return (
       <Card 
@@ -130,7 +140,7 @@ export default function EnhancedMultiStaffSelector({
                 <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
                   Fully Available
                 </Badge>
-              ) : availability.availableTimeSlots && availability.availableTimeSlots.length > 0 ? (
+              ) : availability.availableTimeSlots && Array.isArray(availability.availableTimeSlots) && availability.availableTimeSlots.length > 0 ? (
                 <div className="space-y-1">
                   <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs">
                     Partially Available
@@ -140,7 +150,7 @@ export default function EnhancedMultiStaffSelector({
                       `${slot.startTime}-${slot.endTime}`
                     ).join(', ')}
                   </div>
-                  {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
+                  {availability.conflictingTimeSlots && Array.isArray(availability.conflictingTimeSlots) && availability.conflictingTimeSlots.length > 0 && (
                     <div className="text-xs text-red-600 dark:text-red-400">
                       Conflicts: {availability.conflictingTimeSlots.map(slot => 
                         `${slot.startTime}-${slot.endTime} (${slot.reason})`
@@ -156,6 +166,8 @@ export default function EnhancedMultiStaffSelector({
     );
   };
 
+  const safeSelectedIds = Array.isArray(selectedStaffIds) ? selectedStaffIds : [];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -163,7 +175,7 @@ export default function EnhancedMultiStaffSelector({
           <User className="h-5 w-5" />
           {role}s
         </h3>
-        {smartAllocation && smartAllocation.recommendedStaff.length > 0 && (
+        {smartAllocation && Array.isArray(smartAllocation.recommendedStaff) && smartAllocation.recommendedStaff.length > 0 && (
           <Button
             variant="outline"
             size="sm"
@@ -189,7 +201,7 @@ export default function EnhancedMultiStaffSelector({
           <CardContent className="pt-0">
             <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
               <p>Coverage: {smartAllocation.totalCoverage}% of event time</p>
-              {smartAllocation.coverageGaps.length > 0 && (
+              {smartAllocation.coverageGaps && Array.isArray(smartAllocation.coverageGaps) && smartAllocation.coverageGaps.length > 0 && (
                 <p className="text-orange-700 dark:text-orange-400">
                   Gaps: {smartAllocation.coverageGaps.map(gap => 
                     `${gap.startTime}-${gap.endTime}`
@@ -233,9 +245,9 @@ export default function EnhancedMultiStaffSelector({
         </div>
       </ScrollArea>
 
-      {selectedStaffIds.length > 0 && (
+      {safeSelectedIds.length > 0 && (
         <div className="text-sm text-muted-foreground">
-          Selected: {selectedStaffIds.length} {role.toLowerCase()}{selectedStaffIds.length !== 1 ? 's' : ''}
+          Selected: {safeSelectedIds.length} {role.toLowerCase()}{safeSelectedIds.length !== 1 ? 's' : ''}
         </div>
       )}
     </div>
