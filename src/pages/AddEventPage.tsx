@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,8 @@ export default function AddEventPage() {
     
     setStaffAvailability(availability);
   };
+
+  // ... keep existing code (validateTime, handleTimeChange, canSelectStaff, handleSubmit, getStaffAvailabilityDescription functions)
 
   const validateTime = (startTime: string, endTime: string): boolean => {
     if (!startTime || !endTime) {
