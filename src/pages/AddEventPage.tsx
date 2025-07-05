@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -101,7 +100,7 @@ export default function AddEventPage() {
     setLoading(true);
     
     try {
-      const success = await addEvent({
+      const eventData = {
         name: formData.name,
         date: format(formData.date, 'yyyy-MM-dd'),
         endDate: formData.isMultiDay && formData.endDate 
@@ -113,8 +112,14 @@ export default function AddEventPage() {
         organizer: formData.organizer,
         type: formData.type,
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
-        ccsOnlyEvent: formData.ccsOnlyEvent
-      }, selectedVideographers, selectedPhotographers);
+        ccsOnlyEvent: formData.ccsOnlyEvent,
+        logId: '',
+        status: 'Upcoming' as const,
+        isBigEvent: false,
+        bigEventId: null
+      };
+
+      const success = await addEvent(eventData, selectedVideographers, selectedPhotographers);
 
       if (success) {
         toast({
