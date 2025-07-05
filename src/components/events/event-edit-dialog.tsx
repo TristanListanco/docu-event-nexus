@@ -139,6 +139,10 @@ export default function EventEditDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent submission for cancelled events
+    if (isCancelled) return;
+    
     setIsSubmitting(true);
 
     try {
@@ -208,23 +212,23 @@ export default function EventEditDialog({
   };
 
   const staffAvailability = getStaffAvailabilityForEvent();
-  const canSelectStaff = formData.date && formData.startTime && formData.endTime && !timeValidationError;
+  const canSelectStaff = formData.date && formData.startTime && formData.endTime && !timeValidationError && !isCancelled;
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
       {isCancelled && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <div className="flex items-center gap-2 text-red-800">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
             <AlertCircle className="h-4 w-4" />
             <p className="text-sm font-medium">Event Cancelled</p>
           </div>
-          <p className="text-sm text-red-700 mt-1">
+          <p className="text-sm text-red-700 dark:text-red-300 mt-1">
             This event has been cancelled and cannot be edited. You can only delete it.
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className={cn("space-y-4", isCancelled && "opacity-50 pointer-events-none")}>
         <div className="space-y-2">
           <Label htmlFor="edit-name">Name</Label>
           <Input

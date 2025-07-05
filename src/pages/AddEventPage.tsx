@@ -127,9 +127,13 @@ export default function AddEventPage() {
         sendEmailNotifications
       );
 
-      // If successful, redirect to the event details page
+      // If successful, show success message and navigate back
       if (eventId) {
-        navigate(`/events/${eventId}`);
+        toast({
+          title: "Event Created",
+          description: "The event has been created successfully.",
+        });
+        navigate("/events");
       }
     } catch (error) {
       console.error("Error submitting form:", error);

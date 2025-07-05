@@ -1,13 +1,13 @@
 
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AddEventDateTimeProps {
   date: Date | undefined;
@@ -15,11 +15,11 @@ interface AddEventDateTimeProps {
   endDate: Date | undefined;
   setEndDate: (date: Date | undefined) => void;
   isMultiDay: boolean;
-  setIsMultiDay: (value: boolean) => void;
+  setIsMultiDay: (isMultiDay: boolean) => void;
   startTime: string;
-  setStartTime: (value: string) => void;
+  setStartTime: (time: string) => void;
   endTime: string;
-  setEndTime: (value: string) => void;
+  setEndTime: (time: string) => void;
   timeValidationError: string;
   validateTime: (startTime: string, endTime: string) => boolean;
 }
@@ -38,9 +38,22 @@ export default function AddEventDateTime({
   timeValidationError,
   validateTime
 }: AddEventDateTimeProps) {
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newStartTime = e.target.value;
+    setStartTime(newStartTime);
+    validateTime(newStartTime, endTime);
+  };
+
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEndTime = e.target.value;
+    setEndTime(newEndTime);
+    validateTime(startTime, newEndTime);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Multi-day toggle */}
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">Date & Time</h3>
+      
       <div className="flex items-center space-x-2">
         <Checkbox
           id="multiDay"
@@ -49,10 +62,10 @@ export default function AddEventDateTime({
         />
         <Label htmlFor="multiDay">Multi-day event</Label>
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Start Date</Label>
+          <Label htmlFor="date">Start Date</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -61,21 +74,21 @@ export default function AddEventDateTime({
                   "w-full justify-start text-left font-normal",
                   !date && "text-muted-foreground"
                 )}
+                id="date"
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick start date</span>}
+                {date ? format(date, "MMMM dd, yyyy") : (
+                  <span>Pick a date</span>
+                )}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center" side="bottom">
+            <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                disabled={(date) =>
-                  date < new Date(new Date().setHours(0, 0, 0, 0))
-                }
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                 initialFocus
-                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
@@ -83,7 +96,7 @@ export default function AddEventDateTime({
         
         {isMultiDay && (
           <div className="space-y-2">
-            <Label>End Date</Label>
+            <Label htmlFor="endDate">End Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -92,62 +105,51 @@ export default function AddEventDateTime({
                     "w-full justify-start text-left font-normal",
                     !endDate && "text-muted-foreground"
                   )}
+                  id="endDate"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, "PPP") : <span>Pick end date</span>}
+                  {endDate ? format(endDate, "MMMM dd, yyyy") : (
+                    <span>Pick end date</span>
+                  )}
+                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center" side="bottom">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={endDate}
                   onSelect={setEndDate}
-                  disabled={(date) =>
-                    date < (date || new Date()) || date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
+                  disabled={(date) => !date || date < (date || new Date())}
                   initialFocus
-                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
           </div>
         )}
       </div>
-      
-      <div className="grid grid-cols-2 gap-2">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startTime">Start Time</Label>
-          <div className="relative">
-            <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="startTime"
-              type="time"
-              value={startTime}
-              onChange={(e) => {
-                setStartTime(e.target.value);
-                validateTime(e.target.value, endTime);
-              }}
-              className={cn("pl-8", timeValidationError && "border-red-500")}
-              required
-            />
-          </div>
+          <Input
+            type="time"
+            id="startTime"
+            value={startTime}
+            onChange={handleStartTimeChange}
+            required
+            className={cn(timeValidationError && "border-red-500")}
+          />
         </div>
+        
         <div className="space-y-2">
           <Label htmlFor="endTime">End Time</Label>
-          <div className="relative">
-            <Clock className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="endTime"
-              type="time"
-              value={endTime}
-              onChange={(e) => {
-                setEndTime(e.target.value);
-                validateTime(startTime, e.target.value);
-              }}
-              className={cn("pl-8", timeValidationError && "border-red-500")}
-              required
-            />
-          </div>
+          <Input
+            type="time"
+            id="endTime"
+            value={endTime}
+            onChange={handleEndTimeChange}
+            required
+            className={cn(timeValidationError && "border-red-500")}
+          />
         </div>
       </div>
 
