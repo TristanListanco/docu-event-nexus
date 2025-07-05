@@ -19,7 +19,7 @@ interface StaffListItemProps {
 }
 
 export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: StaffListItemProps) {
-  const { name, roles, subjectSchedules } = staff;
+  const { name, roles, subjectSchedules, position } = staff;
   
   // Get icon based on roles
   const getIcon = () => {
@@ -61,6 +61,9 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
             </div>
             <div className="flex flex-col space-y-1">
               <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>
+              <p className="text-xs text-muted-foreground">
+                {position || "No position assigned"}
+              </p>
               {subjectSchedules && subjectSchedules.length > 0 && (
                 <div className="text-xs text-muted-foreground">
                   <span className="font-medium">Subjects: </span>

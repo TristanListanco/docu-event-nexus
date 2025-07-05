@@ -1,6 +1,7 @@
 
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
+export type StaffPosition = "Chairperson" | "Co-Chairperson" | "Secretary" | "Undersecretary" | "Associate";
 
 export interface Schedule {
   id: string;
@@ -32,6 +33,7 @@ export interface StaffMember {
   schedules: Schedule[];
   subjectSchedules: SubjectSchedule[];
   leaveDates: LeaveDate[];
+  position?: StaffPosition;
 }
 
 export type EventType = "General" | "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM";

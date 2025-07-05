@@ -115,6 +115,7 @@ export const loadStaffFromDatabase = async (userId: string): Promise<StaffMember
       schedules: allStaffSchedules,
       subjectSchedules: staffSubjectSchedules,
       leaveDates: staffLeaveDates,
+      position: staff.position,
     };
   });
 
@@ -132,6 +133,7 @@ export const addStaffToDatabase = async (
       name: staffData.name,
       email: staffData.email,
       role: staffData.roles[0], // Use first role as primary role
+      position: staffData.position,
       user_id: userId,
     })
     .select()
@@ -236,6 +238,7 @@ export const updateStaffInDatabase = async (
       name: staffData.name,
       email: staffData.email,
       role: staffData.roles?.[0], // Update primary role
+      position: staffData.position,
     })
     .eq("id", staffId)
     .eq("user_id", userId)

@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffRole, StaffMember, LeaveDate, SubjectSchedule } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 import LeaveDatesManager from "./leave-dates-manager";
@@ -32,6 +33,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     name: staff.name,
     roles: staff.roles || [],
     email: staff.email || "",
+    position: staff.position || undefined,
   });
   
   const [leaveDates, setLeaveDates] = useState<LeaveDate[]>([]);
@@ -46,6 +48,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
         name: staff.name,
         roles: staff.roles || [],
         email: staff.email || "",
+        position: staff.position || undefined,
       });
       
       // Properly map leave dates ensuring they have the correct structure
@@ -98,6 +101,10 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     }));
   };
 
+  const handlePositionChange = (position: string) => {
+    setFormData((prev) => ({ ...prev, position }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -116,7 +123,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
         roles: formData.roles,
         email: formData.email || undefined,
         leaveDates: leaveDates,
-        subjectSchedules: subjectSchedules
+        subjectSchedules: subjectSchedules,
+        position: formData.position
       });
       
       if (success) {
@@ -173,6 +181,25 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
                 {emailError && (
                   <p className="text-sm text-red-500 mt-1">{emailError}</p>
                 )}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
+                Position
+              </Label>
+              <div className="col-span-3">
+                <Select value={formData.position} onValueChange={handlePositionChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select position (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Chairperson">Chairperson</SelectItem>
+                    <SelectItem value="Co-Chairperson">Co-Chairperson</SelectItem>
+                    <SelectItem value="Secretary">Secretary</SelectItem>
+                    <SelectItem value="Undersecretary">Undersecretary</SelectItem>
+                    <SelectItem value="Associate">Associate</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

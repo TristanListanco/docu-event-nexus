@@ -309,6 +309,7 @@ export type Database = {
           id: string
           name: string
           photo_url: string | null
+          position: Database["public"]["Enums"]["staff_position"] | null
           role: Database["public"]["Enums"]["staff_role"]
           user_id: string
         }
@@ -318,6 +319,7 @@ export type Database = {
           id?: string
           name: string
           photo_url?: string | null
+          position?: Database["public"]["Enums"]["staff_position"] | null
           role: Database["public"]["Enums"]["staff_role"]
           user_id: string
         }
@@ -327,6 +329,7 @@ export type Database = {
           id?: string
           name?: string
           photo_url?: string | null
+          position?: Database["public"]["Enums"]["staff_position"] | null
           role?: Database["public"]["Enums"]["staff_role"]
           user_id?: string
         }
@@ -391,6 +394,12 @@ export type Database = {
       attendance_status: "Pending" | "Completed" | "Absent" | "Excused"
       event_status: "Upcoming" | "Ongoing" | "Completed" | "Cancelled"
       event_type: "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General"
+      staff_position:
+        | "Chairperson"
+        | "Co-Chairperson"
+        | "Secretary"
+        | "Undersecretary"
+        | "Associate"
       staff_role: "Videographer" | "Photographer" | "Working Com"
     }
     CompositeTypes: {
@@ -510,6 +519,13 @@ export const Constants = {
       attendance_status: ["Pending", "Completed", "Absent", "Excused"],
       event_status: ["Upcoming", "Ongoing", "Completed", "Cancelled"],
       event_type: ["SPECOM", "LITCOM", "CUACOM", "SPODACOM", "General"],
+      staff_position: [
+        "Chairperson",
+        "Co-Chairperson",
+        "Secretary",
+        "Undersecretary",
+        "Associate",
+      ],
       staff_role: ["Videographer", "Photographer", "Working Com"],
     },
   },
