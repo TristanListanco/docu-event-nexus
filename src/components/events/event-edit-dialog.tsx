@@ -76,6 +76,9 @@ export default function EventEditDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeValidationError, setTimeValidationError] = useState("");
 
+  // Check if event is cancelled
+  const isCancelled = event?.status === "Cancelled";
+
   useEffect(() => {
     if (open && event) {
       setFormData({
@@ -209,6 +212,18 @@ export default function EventEditDialog({
 
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {isCancelled && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertCircle className="h-4 w-4" />
+            <p className="text-sm font-medium">Event Cancelled</p>
+          </div>
+          <p className="text-sm text-red-700 mt-1">
+            This event has been cancelled and cannot be edited. You can only delete it.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="edit-name">Name</Label>
@@ -219,6 +234,8 @@ export default function EventEditDialog({
             value={formData.name}
             onChange={handleInputChange}
             required
+            disabled={isCancelled}
+            className={cn(isCancelled && "bg-gray-100 text-gray-500")}
           />
         </div>
         
@@ -230,9 +247,11 @@ export default function EventEditDialog({
                 variant={"outline"}
                 className={cn(
                   "w-full justify-start text-left font-normal",
-                  !formData.date && "text-muted-foreground"
+                  !formData.date && "text-muted-foreground",
+                  isCancelled && "bg-gray-100 text-gray-500"
                 )}
                 id="edit-date"
+                disabled={isCancelled}
               >
                 {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
                   <span>Pick a date</span>
@@ -240,16 +259,18 @@ export default function EventEditDialog({
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={formData.date}
-                onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
+            {!isCancelled && (
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={formData.date}
+                  onSelect={(date) => setFormData(prev => ({ ...prev, date }))}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            )}
           </Popover>
         </div>
       </div>
@@ -264,7 +285,11 @@ export default function EventEditDialog({
             value={formData.startTime}
             onChange={handleInputChange}
             required
-            className={cn(timeValidationError && "border-red-500")}
+            disabled={isCancelled}
+            className={cn(
+              timeValidationError && "border-red-500",
+              isCancelled && "bg-gray-100 text-gray-500"
+            )}
           />
         </div>
         
@@ -277,12 +302,16 @@ export default function EventEditDialog({
             value={formData.endTime}
             onChange={handleInputChange}
             required
-            className={cn(timeValidationError && "border-red-500")}
+            disabled={isCancelled}
+            className={cn(
+              timeValidationError && "border-red-500",
+              isCancelled && "bg-gray-100 text-gray-500"
+            )}
           />
         </div>
       </div>
 
-      {timeValidationError && (
+      {timeValidationError && !isCancelled && (
         <div className="text-sm text-red-500 flex items-center gap-2">
           <AlertCircle className="h-4 w-4" />
           {timeValidationError}
@@ -298,6 +327,8 @@ export default function EventEditDialog({
           value={formData.location}
           onChange={handleInputChange}
           required
+          disabled={isCancelled}
+          className={cn(isCancelled && "bg-gray-100 text-gray-500")}
         />
       </div>
 
@@ -309,13 +340,15 @@ export default function EventEditDialog({
           value={formData.organizer}
           onChange={handleInputChange}
           rows={2}
+          disabled={isCancelled}
+          className={cn(isCancelled && "bg-gray-100 text-gray-500")}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="edit-type">Type</Label>
-        <Select onValueChange={handleSelectChange} value={formData.type}>
-          <SelectTrigger id="edit-type">
+        <Select onValueChange={handleSelectChange} value={formData.type} disabled={isCancelled}>
+          <SelectTrigger id="edit-type" className={cn(isCancelled && "bg-gray-100 text-gray-500")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -334,8 +367,11 @@ export default function EventEditDialog({
             id="edit-ignoreScheduleConflicts"
             checked={formData.ignoreScheduleConflicts}
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
+            disabled={isCancelled}
           />
-          <Label htmlFor="edit-ignoreScheduleConflicts" className="text-sm">Ignore Conflicts</Label>
+          <Label htmlFor="edit-ignoreScheduleConflicts" className={cn("text-sm", isCancelled && "text-gray-500")}>
+            Ignore Conflicts
+          </Label>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -343,8 +379,11 @@ export default function EventEditDialog({
             id="edit-ccsOnlyEvent"
             checked={formData.ccsOnlyEvent}
             onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
+            disabled={isCancelled}
           />
-          <Label htmlFor="edit-ccsOnlyEvent" className="text-sm">CCS Only Event</Label>
+          <Label htmlFor="edit-ccsOnlyEvent" className={cn("text-sm", isCancelled && "text-gray-500")}>
+            CCS Only Event
+          </Label>
         </div>
       </div>
 
@@ -353,11 +392,14 @@ export default function EventEditDialog({
           id="edit-sendEmailNotifications"
           checked={formData.sendEmailNotifications}
           onCheckedChange={(checked) => setFormData(prev => ({ ...prev, sendEmailNotifications: !!checked }))}
+          disabled={isCancelled}
         />
-        <Label htmlFor="edit-sendEmailNotifications" className="text-sm">Send email notifications to assigned staff</Label>
+        <Label htmlFor="edit-sendEmailNotifications" className={cn("text-sm", isCancelled && "text-gray-500")}>
+          Send email notifications to assigned staff
+        </Label>
       </div>
 
-      {!canSelectStaff && (
+      {!canSelectStaff && !isCancelled && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-center gap-2 text-amber-800">
             <AlertCircle className="h-4 w-4" />
@@ -374,36 +416,55 @@ export default function EventEditDialog({
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>Videographers</Label>
-          <EnhancedMultiStaffSelector
-            role="Videographer"
-            staffAvailability={staffAvailability}
-            selectedStaffIds={selectedVideographers}
-            onSelectionChange={setSelectedVideographers}
-            excludeStaffIds={selectedPhotographers}
-            disabled={!canSelectStaff}
-          />
-        </div>
+      {!isCancelled && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Videographers</Label>
+            <EnhancedMultiStaffSelector
+              role="Videographer"
+              staffAvailability={staffAvailability}
+              selectedStaffIds={selectedVideographers}
+              onSelectionChange={setSelectedVideographers}
+              excludeStaffIds={selectedPhotographers}
+              disabled={!canSelectStaff}
+              eventStartTime={formData.startTime}
+              eventEndTime={formData.endTime}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label>Photographers</Label>
-          <EnhancedMultiStaffSelector
-            role="Photographer"
-            staffAvailability={staffAvailability}
-            selectedStaffIds={selectedPhotographers}
-            onSelectionChange={setSelectedPhotographers}
-            excludeStaffIds={selectedVideographers}
-            disabled={!canSelectStaff}
-          />
+          <div className="space-y-2">
+            <Label>Photographers</Label>
+            <EnhancedMultiStaffSelector
+              role="Photographer"
+              staffAvailability={staffAvailability}
+              selectedStaffIds={selectedPhotographers}
+              onSelectionChange={setSelectedPhotographers}
+              excludeStaffIds={selectedVideographers}
+              disabled={!canSelectStaff}
+              eventStartTime={formData.startTime}
+              eventEndTime={formData.endTime}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex justify-end pt-4">
-        <Button type="submit" disabled={isSubmitting || !!timeValidationError}>
-          {isSubmitting ? "Saving Changes..." : "Save Changes"}
-        </Button>
+        {!isCancelled ? (
+          <Button type="submit" disabled={isSubmitting || !!timeValidationError}>
+            {isSubmitting ? "Saving Changes..." : "Save Changes"}
+          </Button>
+        ) : (
+          <Button 
+            type="button" 
+            variant="destructive"
+            onClick={() => {
+              // Handle delete event logic here
+              onOpenChange(false);
+            }}
+          >
+            Delete Event
+          </Button>
+        )}
       </div>
     </form>
   );

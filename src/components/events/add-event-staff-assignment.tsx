@@ -12,6 +12,8 @@ interface AddEventStaffAssignmentProps {
   selectedPhotographers: string[];
   setSelectedPhotographers: (ids: string[]) => void;
   timeValidationError: string;
+  eventStartTime?: string;
+  eventEndTime?: string;
 }
 
 export default function AddEventStaffAssignment({
@@ -22,7 +24,9 @@ export default function AddEventStaffAssignment({
   setSelectedVideographers,
   selectedPhotographers,
   setSelectedPhotographers,
-  timeValidationError
+  timeValidationError,
+  eventStartTime,
+  eventEndTime
 }: AddEventStaffAssignmentProps) {
   const getStaffAvailabilityDescription = () => {
     switch (staffAvailabilityMode) {
@@ -32,6 +36,23 @@ export default function AddEventStaffAssignment({
         return "Showing staff members available for the selected time slot (CCS classes suspended)";
       default:
         return "Showing only staff members available for the selected time slot";
+    }
+  };
+
+  // Safe handler to prevent crashes
+  const handleVideographerChange = (ids: string[]) => {
+    try {
+      setSelectedVideographers(ids);
+    } catch (error) {
+      console.error("Error updating videographers:", error);
+    }
+  };
+
+  const handlePhotographerChange = (ids: string[]) => {
+    try {
+      setSelectedPhotographers(ids);
+    } catch (error) {
+      console.error("Error updating photographers:", error);
     }
   };
 
@@ -67,18 +88,22 @@ export default function AddEventStaffAssignment({
             role="Videographer"
             staffAvailability={staffAvailability}
             selectedStaffIds={selectedVideographers}
-            onSelectionChange={setSelectedVideographers}
+            onSelectionChange={handleVideographerChange}
             excludeStaffIds={selectedPhotographers}
             disabled={!canSelectStaff}
+            eventStartTime={eventStartTime}
+            eventEndTime={eventEndTime}
           />
           
           <EnhancedMultiStaffSelector
             role="Photographer"
             staffAvailability={staffAvailability}
             selectedStaffIds={selectedPhotographers}
-            onSelectionChange={setSelectedPhotographers}
+            onSelectionChange={handlePhotographerChange}
             excludeStaffIds={selectedVideographers}
             disabled={!canSelectStaff}
+            eventStartTime={eventStartTime}
+            eventEndTime={eventEndTime}
           />
         </div>
       </div>

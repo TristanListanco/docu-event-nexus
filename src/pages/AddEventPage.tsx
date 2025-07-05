@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -134,6 +133,11 @@ export default function AddEventPage() {
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create event. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -223,6 +227,8 @@ export default function AddEventPage() {
                     selectedPhotographers={selectedPhotographers}
                     setSelectedPhotographers={setSelectedPhotographers}
                     timeValidationError={timeValidationError}
+                    eventStartTime={startTime}
+                    eventEndTime={endTime}
                   />
                   
                   {/* Submit button - Sticky at bottom */}

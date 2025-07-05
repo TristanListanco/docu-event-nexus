@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { StaffAvailability } from "@/types/models";
-import { Clock, AlertTriangle, CheckCircle, User } from "lucide-react";
+import { Clock, AlertTriangle, CheckCircle, User, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getSmartStaffAllocation } from "@/hooks/staff/enhanced-staff-availability";
 
 interface EnhancedMultiStaffSelectorProps {
   role: "Videographer" | "Photographer";
@@ -16,6 +17,8 @@ interface EnhancedMultiStaffSelectorProps {
   onSelectionChange: (selectedIds: string[]) => void;
   excludeStaffIds?: string[];
   disabled?: boolean;
+  eventStartTime?: string;
+  eventEndTime?: string;
 }
 
 export default function EnhancedMultiStaffSelector({
@@ -24,7 +27,9 @@ export default function EnhancedMultiStaffSelector({
   selectedStaffIds,
   onSelectionChange,
   excludeStaffIds = [],
-  disabled = false
+  disabled = false,
+  eventStartTime,
+  eventEndTime
 }: EnhancedMultiStaffSelectorProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   
@@ -34,10 +39,18 @@ export default function EnhancedMultiStaffSelector({
     !excludeStaffIds.includes(availability.staff.id)
   );
 
-  // Separate fully available and partially available staff
+  // Only show fully available and partially available staff
   const fullyAvailable = availableStaff.filter(a => a.isFullyAvailable);
-  const partiallyAvailable = availableStaff.filter(a => !a.isFullyAvailable && a.availableTimeSlots && a.availableTimeSlots.length > 0);
-  const unavailable = availableStaff.filter(a => !a.isFullyAvailable && (!a.availableTimeSlots || a.availableTimeSlots.length === 0));
+  const partiallyAvailable = availableStaff.filter(a => 
+    !a.isFullyAvailable && 
+    a.availableTimeSlots && 
+    a.availableTimeSlots.length > 0
+  );
+
+  // Get smart allocation if event times are provided
+  const smartAllocation = eventStartTime && eventEndTime 
+    ? getSmartStaffAllocation(availableStaff, eventStartTime, eventEndTime)
+    : null;
 
   const handleStaffToggle = (staffId: string) => {
     if (disabled) return;
@@ -46,6 +59,12 @@ export default function EnhancedMultiStaffSelector({
       onSelectionChange(selectedStaffIds.filter(id => id !== staffId));
     } else {
       onSelectionChange([...selectedStaffIds, staffId]);
+    }
+  };
+
+  const handleSmartSelect = () => {
+    if (smartAllocation) {
+      onSelectionChange(smartAllocation.recommendedStaff);
     }
   };
 
@@ -62,6 +81,7 @@ export default function EnhancedMultiStaffSelector({
   const renderStaffCard = (availability: StaffAvailability) => {
     const { staff } = availability;
     const isSelected = selectedStaffIds.includes(staff.id);
+    const isRecommended = smartAllocation?.recommendedStaff.includes(staff.id);
     
     return (
       <Card 
@@ -69,6 +89,7 @@ export default function EnhancedMultiStaffSelector({
         className={cn(
           "cursor-pointer transition-all duration-200 hover:shadow-md",
           isSelected && "ring-2 ring-primary",
+          isRecommended && "ring-2 ring-blue-400 bg-blue-50/30",
           disabled && "opacity-50 cursor-not-allowed",
           !availability.isFullyAvailable && "border-orange-200 bg-orange-50/30"
         )}
@@ -87,6 +108,12 @@ export default function EnhancedMultiStaffSelector({
               <div className="flex items-center gap-2 mb-2">
                 {getAvailabilityIcon(availability)}
                 <h4 className="font-medium text-sm truncate">{staff.name}</h4>
+                {isRecommended && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                    <Lightbulb className="h-3 w-3 mr-1" />
+                    Smart Pick
+                  </Badge>
+                )}
               </div>
               
               {/* Show availability status */}
@@ -112,44 +139,13 @@ export default function EnhancedMultiStaffSelector({
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-1">
-                  <Badge variant="secondary" className="bg-red-100 text-red-800 text-xs">
-                    Unavailable
-                  </Badge>
-                  {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
-                    <div className="text-xs text-red-600">
-                      {availability.conflictingTimeSlots[0].reason}
-                    </div>
-                  )}
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
         </CardContent>
       </Card>
     );
   };
-
-  // Generate suggestions for covering gaps
-  const generateSuggestions = () => {
-    if (partiallyAvailable.length === 0) return [];
-    
-    const suggestions = [];
-    for (let i = 0; i < Math.min(3, partiallyAvailable.length); i++) {
-      const staff = partiallyAvailable[i];
-      if (staff.availableTimeSlots && staff.availableTimeSlots.length > 0) {
-        suggestions.push({
-          staffId: staff.staff.id,
-          staffName: staff.staff.name,
-          availableSlots: staff.availableTimeSlots
-        });
-      }
-    }
-    return suggestions;
-  };
-
-  const suggestions = generateSuggestions();
 
   return (
     <div className="space-y-4">
@@ -158,31 +154,38 @@ export default function EnhancedMultiStaffSelector({
           <User className="h-5 w-5" />
           {role}s
         </h3>
-        {suggestions.length > 0 && (
+        {smartAllocation && smartAllocation.recommendedStaff.length > 0 && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowSuggestions(!showSuggestions)}
+            onClick={handleSmartSelect}
+            className="flex items-center gap-2"
           >
-            {showSuggestions ? 'Hide' : 'Show'} Suggestions
+            <Lightbulb className="h-4 w-4" />
+            Smart Select
           </Button>
         )}
       </div>
 
-      {showSuggestions && suggestions.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50/30">
+      {/* Smart allocation summary */}
+      {smartAllocation && (
+        <Card className="border-blue-200 bg-blue-50/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-orange-800">Coverage Suggestions</CardTitle>
+            <CardTitle className="text-sm text-blue-800 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              Smart Allocation Summary
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-xs text-orange-700 space-y-1">
-              {suggestions.map(suggestion => (
-                <div key={suggestion.staffId}>
-                  <strong>{suggestion.staffName}</strong> can cover: {suggestion.availableSlots.map(slot => 
-                    `${slot.startTime}-${slot.endTime}`
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>Coverage: {smartAllocation.totalCoverage}% of event time</p>
+              {smartAllocation.coverageGaps.length > 0 && (
+                <p className="text-orange-700">
+                  Gaps: {smartAllocation.coverageGaps.map(gap => 
+                    `${gap.startTime}-${gap.endTime}`
                   ).join(', ')}
-                </div>
-              ))}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -210,20 +213,11 @@ export default function EnhancedMultiStaffSelector({
             </div>
           )}
 
-          {/* Unavailable Staff */}
-          {unavailable.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-red-700 mb-2">
-                Unavailable ({unavailable.length})
-              </h4>
-              {unavailable.map(renderStaffCard)}
-            </div>
-          )}
-
-          {availableStaff.length === 0 && (
+          {/* No available staff message */}
+          {fullyAvailable.length === 0 && partiallyAvailable.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No {role.toLowerCase()}s available</p>
+              <p>No {role.toLowerCase()}s available for this time slot</p>
             </div>
           )}
         </div>

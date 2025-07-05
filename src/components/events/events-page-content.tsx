@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import EventsPageFilters from "./events-page-filters";
@@ -51,12 +50,9 @@ export default function EventsPageContent({
     setFilterBy(filters.filterBy);
   };
 
-  // Handle event click with cancelled event restrictions
+  // Handle event click - allow navigation to cancelled events but show them as read-only
   const handleEventClick = (event: Event) => {
-    // For cancelled events, don't navigate to details (they'll be handled by the overlay)
-    if (event.status === "Cancelled") {
-      return;
-    }
+    // Allow navigation to all events, including cancelled ones
     onEventClick(event);
   };
 
