@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -112,8 +113,7 @@ export default function AddEventPage() {
         organizer: formData.organizer,
         type: formData.type,
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
-        ccsOnlyEvent: formData.ccsOnlyEvent,
-        sendEmailNotifications: false
+        ccsOnlyEvent: formData.ccsOnlyEvent
       }, selectedVideographers, selectedPhotographers);
 
       if (success) {
