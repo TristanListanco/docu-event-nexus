@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StaffRole, StaffMember, LeaveDate, SubjectSchedule } from "@/types/models";
+import { StaffRole, StaffMember, LeaveDate, SubjectSchedule, StaffPosition } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 import LeaveDatesManager from "./leave-dates-manager";
 import ScheduleManager from "./schedule-manager";
@@ -33,7 +32,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     name: staff.name,
     roles: staff.roles || [],
     email: staff.email || "",
-    position: staff.position || undefined,
+    position: staff.position || undefined as StaffPosition | undefined,
   });
   
   const [leaveDates, setLeaveDates] = useState<LeaveDate[]>([]);
@@ -102,7 +101,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   };
 
   const handlePositionChange = (position: string) => {
-    setFormData((prev) => ({ ...prev, position }));
+    setFormData((prev) => ({ ...prev, position: position as StaffPosition }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

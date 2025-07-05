@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StaffRole, SubjectSchedule } from "@/types/models";
+import { StaffRole, SubjectSchedule, StaffPosition } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 import ScheduleManager from "./schedule-manager";
 
@@ -38,7 +37,7 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
     name: "",
     email: "",
     roles: [] as StaffRole[],
-    position: undefined as string | undefined,
+    position: undefined as StaffPosition | undefined,
   });
   
   const [subjectSchedules, setSubjectSchedules] = useState<SubjectSchedule[]>([]);
@@ -79,7 +78,7 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
   };
 
   const handlePositionChange = (position: string) => {
-    setFormData((prev) => ({ ...prev, position }));
+    setFormData((prev) => ({ ...prev, position: position as StaffPosition }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

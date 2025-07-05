@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -114,9 +113,8 @@ export default function AddEventPage() {
         type: formData.type,
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
         ccsOnlyEvent: formData.ccsOnlyEvent,
-        videographers: selectedVideographers,
-        photographers: selectedPhotographers
-      });
+        sendEmailNotifications: false
+      }, selectedVideographers, selectedPhotographers);
 
       if (success) {
         toast({

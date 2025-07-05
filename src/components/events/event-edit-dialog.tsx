@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -142,9 +141,8 @@ export default function EventEditDialog({
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
         ccsOnlyEvent: formData.ccsOnlyEvent,
         status: formData.status,
-        videographers: selectedVideographers,
-        photographers: selectedPhotographers
-      });
+        sendEmailNotifications: false
+      }, selectedVideographers, selectedPhotographers);
 
       if (success) {
         onEventUpdated?.();
