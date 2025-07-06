@@ -20,6 +20,7 @@ import { Event, EventType, StaffAvailability } from "@/types/models";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import EnhancedMultiStaffSelector from "./enhanced-multi-staff-selector";
+import { getEventStatus } from "./event-status-utils";
 
 interface EventEditDialogProps {
   open: boolean;
@@ -61,6 +62,9 @@ export default function EventEditDialog({
   const [timeValidationError, setTimeValidationError] = useState("");
 
   const isCancelled = event.status === "Cancelled";
+  const currentStatus = getEventStatus(event);
+  const isElapsed = currentStatus === "Elapsed";
+  const isReadOnly = isCancelled || isElapsed;
 
   useEffect(() => {
     if (open && event) {
@@ -93,12 +97,7 @@ export default function EventEditDialog({
       formData.ccsOnlyEvent
     );
     
-    // Convert the returned object to StaffAvailability array
-    if (availability && Array.isArray(availability)) {
-      setStaffAvailability(availability);
-    } else {
-      setStaffAvailability([]);
-    }
+    setStaffAvailability(availability);
   };
 
   const validateTime = (startTime: string, endTime: string): boolean => {
@@ -177,7 +176,12 @@ export default function EventEditDialog({
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{isCancelled ? 'View Event (Cancelled)' : 'Edit Event'}</span>
+            <span>
+              {isReadOnly 
+                ? `View Event (${isCancelled ? 'Cancelled' : 'Elapsed'})` 
+                : 'Edit Event'
+              }
+            </span>
             {isCancelled && (
               <Button
                 variant="destructive"
@@ -191,14 +195,14 @@ export default function EventEditDialog({
             )}
           </DialogTitle>
           <DialogDescription>
-            {isCancelled 
-              ? 'This event has been cancelled and cannot be edited.'
+            {isReadOnly 
+              ? `This event has been ${isCancelled ? 'cancelled' : 'completed'} and cannot be edited.`
               : 'Make changes to the event details and staff assignments.'
             }
           </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("space-y-6", isCancelled && "opacity-50 pointer-events-none")}>
+        <div className={cn("space-y-6", isReadOnly && "opacity-50 pointer-events-none")}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column - Basic Info */}
             <div className="space-y-4">
@@ -211,6 +215,7 @@ export default function EventEditDialog({
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter event name"
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -222,6 +227,7 @@ export default function EventEditDialog({
                     id="startTime"
                     value={formData.startTime}
                     onChange={(e) => handleTimeChange('startTime', e.target.value)}
+                    disabled={isReadOnly}
                   />
                 </div>
                 <div className="space-y-2">
@@ -231,6 +237,7 @@ export default function EventEditDialog({
                     id="endTime"
                     value={formData.endTime}
                     onChange={(e) => handleTimeChange('endTime', e.target.value)}
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
@@ -246,6 +253,7 @@ export default function EventEditDialog({
                   value={formData.location}
                   onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                   placeholder="Enter location"
+                  disabled={isReadOnly}
                 />
               </div>
 
@@ -256,12 +264,13 @@ export default function EventEditDialog({
                   value={formData.organizer}
                   onChange={(e) => setFormData(prev => ({ ...prev, organizer: e.target.value }))}
                   placeholder="Enter organizer name"
+                  disabled={isReadOnly}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="type">Event Type</Label>
-                <Select value={formData.type} onValueChange={(value: EventType) => setFormData(prev => ({ ...prev, type: value }))}>
+                <Select value={formData.type} onValueChange={(value: EventType) => setFormData(prev => ({ ...prev, type: value }))} disabled={isReadOnly}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -285,6 +294,7 @@ export default function EventEditDialog({
                   id="multiDay"
                   checked={formData.isMultiDay}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isMultiDay: !!checked }))}
+                  disabled={isReadOnly}
                 />
                 <Label htmlFor="multiDay">Multi-day event</Label>
               </div>
@@ -294,7 +304,7 @@ export default function EventEditDialog({
                   <Label>Start Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isReadOnly}>
                         {formData.date ? format(formData.date, "MMMM dd, yyyy") : "Pick a date"}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
@@ -304,7 +314,7 @@ export default function EventEditDialog({
                         mode="single"
                         selected={formData.date}
                         onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isReadOnly}
                         initialFocus
                       />
                     </PopoverContent>
@@ -316,7 +326,7 @@ export default function EventEditDialog({
                     <Label>End Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isReadOnly}>
                           {formData.endDate ? format(formData.endDate, "MMMM dd, yyyy") : "Pick end date"}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -326,7 +336,7 @@ export default function EventEditDialog({
                           mode="single"
                           selected={formData.endDate}
                           onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
-                          disabled={(date) => !date || date < formData.date}
+                          disabled={(date) => !date || date < formData.date || isReadOnly}
                           initialFocus
                         />
                       </PopoverContent>
@@ -341,6 +351,7 @@ export default function EventEditDialog({
                     id="ignoreScheduleConflicts"
                     checked={formData.ignoreScheduleConflicts}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
+                    disabled={isReadOnly}
                   />
                   <Label htmlFor="ignoreScheduleConflicts">Ignore schedule conflicts</Label>
                 </div>
@@ -350,6 +361,7 @@ export default function EventEditDialog({
                     id="ccsOnlyEvent"
                     checked={formData.ccsOnlyEvent}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
+                    disabled={isReadOnly}
                   />
                   <Label htmlFor="ccsOnlyEvent">CCS classes suspended</Label>
                 </div>
@@ -367,7 +379,7 @@ export default function EventEditDialog({
                 selectedStaffIds={selectedVideographers}
                 onSelectionChange={setSelectedVideographers}
                 excludeStaffIds={selectedPhotographers}
-                disabled={!canSelectStaff}
+                disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
               />
@@ -378,7 +390,7 @@ export default function EventEditDialog({
                 selectedStaffIds={selectedPhotographers}
                 onSelectionChange={setSelectedPhotographers}
                 excludeStaffIds={selectedVideographers}
-                disabled={!canSelectStaff}
+                disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
               />
@@ -386,7 +398,7 @@ export default function EventEditDialog({
           </div>
         </div>
 
-        {!isCancelled && (
+        {!isReadOnly && (
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

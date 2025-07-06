@@ -9,7 +9,8 @@ import {
   Video,
   Camera,
   UserX,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -38,7 +39,7 @@ const formatTime12Hour = (time24: string) => {
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { events, loading, loadEvents, cancelEvent } = useEvents();
+  const { events, loading, loadEvents, cancelEvent, updateEvent } = useEvents();
   const { staff, loading: staffLoading } = useStaff();
   const isMobile = useIsMobile();
   const [event, setEvent] = useState<Event | null>(null);
@@ -49,6 +50,7 @@ export default function EventDetailsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
 
   useEffect(() => {
     if (events.length === 0 && !loading) {
@@ -201,6 +203,20 @@ export default function EventDetailsPage() {
     }
   };
 
+  const handleMarkAsDone = async () => {
+    if (!event) return;
+    
+    const success = await updateEvent(event.id, {
+      ...event,
+      status: "Completed"
+    }, [], []);
+    
+    if (success) {
+      setMarkDoneDialogOpen(false);
+      loadEvents();
+    }
+  };
+
   const getConfirmationBadge = (staffId: string) => {
     const assignment = staffAssignments[staffId];
     console.log(`Getting badge for staff ${staffId}:`, assignment);
@@ -229,6 +245,11 @@ export default function EventDetailsPage() {
 
   // Function to get dynamic event status based on current time
   const getEventStatus = (event: Event) => {
+    // If event has explicit status (like Cancelled or Completed), use it
+    if (event.status === "Cancelled" || event.status === "Completed") {
+      return event.status;
+    }
+
     const now = new Date();
     const eventDate = new Date(event.date);
     const startTime = new Date(`${event.date}T${event.startTime}`);
@@ -315,6 +336,17 @@ export default function EventDetailsPage() {
                   <p className="text-muted-foreground transition-colors duration-200">{event.logId}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {event.status !== "Cancelled" && event.status !== "Completed" && dynamicStatus === "Elapsed" && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setMarkDoneDialogOpen(true)}
+                      className="hover-scale transition-all duration-200 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark as Done
+                    </Button>
+                  )}
                   {event.status !== "Cancelled" && dynamicStatus === "Upcoming" && (
                     <Button
                       variant="destructive"
@@ -519,6 +551,35 @@ export default function EventDetailsPage() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 Cancel Event
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {/* Mark as Done Dialog */}
+      {event && (
+        <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Mark Event as Done</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to mark "{event.name}" as completed? This action will:
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Mark the event status as completed</li>
+                  <li>Update the event status in the events list</li>
+                  <li>This can be changed later if needed</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleMarkAsDone}
+                className="bg-green-600 text-white hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Mark as Done
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

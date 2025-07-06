@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
-import { StaffMember } from "@/types/models";
+import { StaffMember, StaffAvailability } from "@/types/models";
 import { toast } from "./use-toast";
 import { getAvailableStaff } from "./staff/staff-availability";
 import { 
@@ -118,8 +119,8 @@ export function useStaff() {
     endTime: string,
     ignoreScheduleConflicts: boolean = false,
     ccsOnlyEvent: boolean = false
-  ) => {
-    return getAvailableStaff(
+  ): StaffAvailability[] => {
+    const availability = getAvailableStaff(
       staff,
       eventDate,
       startTime,
@@ -127,6 +128,37 @@ export function useStaff() {
       ignoreScheduleConflicts,
       ccsOnlyEvent
     );
+    
+    // Convert object format to StaffAvailability array
+    const staffAvailabilityArray: StaffAvailability[] = [];
+    
+    if (availability && typeof availability === 'object' && 'videographers' in availability && 'photographers' in availability) {
+      // Add videographers to the array
+      if (Array.isArray(availability.videographers)) {
+        availability.videographers.forEach((staff: StaffMember) => {
+          staffAvailabilityArray.push({
+            staff,
+            isFullyAvailable: true,
+            availableTimeSlots: [],
+            conflictingTimeSlots: []
+          });
+        });
+      }
+      
+      // Add photographers to the array
+      if (Array.isArray(availability.photographers)) {
+        availability.photographers.forEach((staff: StaffMember) => {
+          staffAvailabilityArray.push({
+            staff,
+            isFullyAvailable: true,
+            availableTimeSlots: [],
+            conflictingTimeSlots: []
+          });
+        });
+      }
+    }
+    
+    return staffAvailabilityArray;
   };
 
   return {
