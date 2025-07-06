@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -213,7 +214,8 @@ export default function EventDetailsPage() {
     
     if (success) {
       setMarkDoneDialogOpen(false);
-      loadEvents();
+      // Don't reload events immediately, just update the local state
+      setEvent(prev => prev ? { ...prev, status: "Completed" } : null);
     }
   };
 
