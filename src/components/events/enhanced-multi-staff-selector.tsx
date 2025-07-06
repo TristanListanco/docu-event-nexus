@@ -37,10 +37,30 @@ export default function EnhancedMultiStaffSelector({
   const safeStaffAvailability = Array.isArray(staffAvailability) ? staffAvailability : [];
   
   // Filter staff by role and exclude already selected staff from other roles
-  const availableStaff = safeStaffAvailability.filter(availability =>
-    availability?.staff?.roles?.includes(role) && 
-    !excludeStaffIds.includes(availability.staff.id)
-  );
+  // Also filter out staff who are already assigned to the other role to prevent duplicates
+  const availableStaff = safeStaffAvailability.filter(availability => {
+    if (!availability?.staff?.roles?.includes(role)) return false;
+    if (excludeStaffIds.includes(availability.staff.id)) return false;
+    
+    // If this staff member has both roles, only show them in one section
+    // Prioritize showing them as Videographer first, then Photographer
+    if (availability.staff.roles.includes("Videographer") && availability.staff.roles.includes("Photographer")) {
+      // If we're showing Photographer section and this person has both roles,
+      // only show them if they're not already available in Videographer section
+      if (role === "Photographer") {
+        // Check if this person would also appear in videographer list
+        const wouldAppearInVideographer = safeStaffAvailability.some(other => 
+          other.staff.id === availability.staff.id && 
+          other.staff.roles.includes("Videographer")
+        );
+        // Only show in photographer if they're already selected as videographer
+        // or if they're not available as videographer
+        return excludeStaffIds.includes(availability.staff.id) || !wouldAppearInVideographer;
+      }
+    }
+    
+    return true;
+  });
 
   // Only show fully available and partially available staff
   const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable);
