@@ -107,7 +107,6 @@ export default function EnhancedMultiStaffSelector({
         className={cn(
           "transition-all duration-200 hover:shadow-md border",
           isSelected && "ring-2 ring-primary",
-          isRecommended && "ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950/30",
           disabled && "opacity-50 cursor-not-allowed",
           !availability.isFullyAvailable && "border-orange-200 bg-orange-50 dark:bg-orange-950/30"
         )}
@@ -128,7 +127,7 @@ export default function EnhancedMultiStaffSelector({
                 {getAvailabilityIcon(availability)}
                 <h4 className="font-medium text-sm truncate">{staff.name}</h4>
                 {isRecommended && (
-                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs">
+                  <Badge variant="secondary" className="text-xs">
                     <Lightbulb className="h-3 w-3 mr-1" />
                     Smart Pick
                   </Badge>
