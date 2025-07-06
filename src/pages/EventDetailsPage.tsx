@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -214,8 +213,12 @@ export default function EventDetailsPage() {
     
     if (success) {
       setMarkDoneDialogOpen(false);
-      // Don't reload events immediately, just update the local state
-      setEvent(prev => prev ? { ...prev, status: "Completed" } : null);
+      // Reload events to update the main page status and ensure staff assignments are preserved
+      await loadEvents();
+      // Also reload assignment statuses to ensure consistency
+      setTimeout(() => {
+        loadAssignmentStatuses();
+      }, 500);
     }
   };
 

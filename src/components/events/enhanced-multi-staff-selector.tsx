@@ -62,13 +62,17 @@ export default function EnhancedMultiStaffSelector({
     return true;
   });
 
-  // Only show fully available and partially available staff
+  // Show fully available, partially available, and unavailable staff
   const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable);
   const partiallyAvailable = availableStaff.filter(a => 
     !a?.isFullyAvailable && 
     a?.availableTimeSlots && 
     Array.isArray(a.availableTimeSlots) &&
     a.availableTimeSlots.length > 0
+  );
+  const unavailable = availableStaff.filter(a => 
+    !a?.isFullyAvailable && 
+    (!a?.availableTimeSlots || !Array.isArray(a.availableTimeSlots) || a.availableTimeSlots.length === 0)
   );
 
   // Get smart allocation if event times are provided
@@ -126,9 +130,8 @@ export default function EnhancedMultiStaffSelector({
         key={staff.id} 
         className={cn(
           "transition-all duration-200 hover:shadow-md border",
-          isSelected && "ring-2 ring-primary",
-          disabled && "opacity-50 cursor-not-allowed",
-          !availability.isFullyAvailable && "border-orange-200 bg-orange-50 dark:bg-orange-950/30"
+          isSelected && "border-primary",
+          disabled && "opacity-50 cursor-not-allowed"
         )}
       >
         <CardContent className="p-4">
@@ -177,7 +180,11 @@ export default function EnhancedMultiStaffSelector({
                     </div>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs">
+                  Not Available
+                </Badge>
+              )}
             </div>
           </div>
         </CardContent>
@@ -254,8 +261,18 @@ export default function EnhancedMultiStaffSelector({
             </div>
           )}
 
+          {/* Unavailable Staff */}
+          {unavailable.length > 0 && (
+            <div>
+              <div className="text-sm font-medium text-red-700 dark:text-red-300 mb-2 px-1">
+                Not Available ({unavailable.length})
+              </div>
+              {unavailable.map(renderStaffCard)}
+            </div>
+          )}
+
           {/* No available staff message */}
-          {fullyAvailable.length === 0 && partiallyAvailable.length === 0 && (
+          {fullyAvailable.length === 0 && partiallyAvailable.length === 0 && unavailable.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>No {role.toLowerCase()}s available for this time slot</p>
