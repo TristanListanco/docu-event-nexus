@@ -93,7 +93,12 @@ export default function EventEditDialog({
       formData.ccsOnlyEvent
     );
     
-    setStaffAvailability(availability);
+    // Convert the returned object to StaffAvailability array
+    if (availability && Array.isArray(availability)) {
+      setStaffAvailability(availability);
+    } else {
+      setStaffAvailability([]);
+    }
   };
 
   const validateTime = (startTime: string, endTime: string): boolean => {

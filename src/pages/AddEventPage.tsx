@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -59,10 +58,13 @@ export default function AddEventPage() {
       formData.ccsOnlyEvent
     );
     
-    setStaffAvailability(availability);
+    // Convert the returned object to StaffAvailability array
+    if (availability && Array.isArray(availability)) {
+      setStaffAvailability(availability);
+    } else {
+      setStaffAvailability([]);
+    }
   };
-
-  // ... keep existing code (validateTime, handleTimeChange, canSelectStaff, handleSubmit, getStaffAvailabilityDescription functions)
 
   const validateTime = (startTime: string, endTime: string): boolean => {
     if (!startTime || !endTime) {
