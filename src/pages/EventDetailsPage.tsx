@@ -25,7 +25,7 @@ interface ExtendedStaffAssignment extends StaffAssignment {
 }
 
 export default function EventDetailsPage() {
-  const { id } = useParams();
+  const { eventId } = useParams();
   const navigate = useNavigate();
   const { getEvent, deleteEvent, updateEvent, loadEvents } = useEvents();
   const { user } = useAuth();
@@ -37,18 +37,18 @@ export default function EventDetailsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (eventId) {
       loadEventDetails();
       loadAssignmentStatuses();
     }
-  }, [id]);
+  }, [eventId]);
 
   const loadEventDetails = async () => {
-    if (!id) return;
+    if (!eventId) return;
     
     setLoading(true);
     try {
-      const eventData = await getEvent(id);
+      const eventData = await getEvent(eventId);
       setEvent(eventData);
     } catch (error) {
       console.error("Error loading event details:", error);
@@ -63,7 +63,7 @@ export default function EventDetailsPage() {
   };
 
   const loadAssignmentStatuses = async () => {
-    if (!id || !user) return;
+    if (!eventId || !user) return;
 
     try {
       const { data, error } = await supabase
@@ -72,7 +72,7 @@ export default function EventDetailsPage() {
           *,
           staff_members!inner(name, email, role)
         `)
-        .eq('event_id', id)
+        .eq('event_id', eventId)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -97,9 +97,9 @@ export default function EventDetailsPage() {
   };
 
   const handleMarkAsDone = async () => {
-    if (!event || !id) return;
+    if (!event || !eventId) return;
     
-    const success = await updateEvent(id, { status: "Completed" });
+    const success = await updateEvent(eventId, { status: "Completed" });
     
     if (success) {
       setMarkDoneDialogOpen(false);
@@ -115,22 +115,22 @@ export default function EventDetailsPage() {
   };
 
   const handleDelete = async () => {
-    if (!id) return;
+    if (!eventId) return;
     
-    const success = await deleteEvent(id);
+    const success = await deleteEvent(eventId);
     if (success) {
       navigate("/events");
     }
   };
 
   const updateAttendanceStatus = async (staffId: string, newStatus: AttendanceStatus) => {
-    if (!user || !id) return;
+    if (!user || !eventId) return;
 
     try {
       const { error } = await supabase
         .from('staff_assignments')
         .update({ attendance_status: newStatus })
-        .eq('event_id', id)
+        .eq('event_id', eventId)
         .eq('staff_id', staffId)
         .eq('user_id', user.id);
 
