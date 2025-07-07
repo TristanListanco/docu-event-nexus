@@ -1,594 +1,523 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  MapPin, 
-  Video,
-  Camera,
-  UserX,
-  ArrowLeft,
-  CheckCircle
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
-import { useStaff } from "@/hooks/use-staff";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Event, StaffMember } from "@/types/models";
-import EventEditDialog from "@/components/events/event-edit-dialog";
-import EventDeleteDialog from "@/components/events/event-delete-dialog";
-import SendInvitationButton from "@/components/events/send-invitation-button";
-import EventsHeader from "@/components/events/events-header";
+import { Event, StaffAssignment, AttendanceStatus } from "@/types/models";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
-import EventDetailsSkeleton from "@/components/loading/event-details-skeleton";
+import CancelledEventOverlay from "@/components/events/cancelled-event-overlay";
+import EventEditDialog from "@/components/events/event-edit-dialog";
+import SendInvitationButton from "@/components/events/send-invitation-button";
 
-// Helper function to convert 24-hour time to 12-hour format
-const formatTime12Hour = (time24: string) => {
-  const [hours, minutes] = time24.split(':');
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
-};
+interface ExtendedStaffAssignment extends StaffAssignment {
+  manualInvitationSentAt?: string | null;
+  lastInvitationSentAt?: string | null;
+}
 
 export default function EventDetailsPage() {
-  const { eventId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { events, loading, loadEvents, cancelEvent, updateEvent } = useEvents();
-  const { staff, loading: staffLoading } = useStaff();
-  const isMobile = useIsMobile();
+  const { getEvent, deleteEvent, updateEvent, loadEvents } = useEvents();
+  const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
-  const [assignedVideographers, setAssignedVideographers] = useState<StaffMember[]>([]);
-  const [assignedPhotographers, setAssignedPhotographers] = useState<StaffMember[]>([]);
-  const [staffAssignments, setStaffAssignments] = useState<Record<string, any>>({});
-  
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [assignmentStatuses, setAssignmentStatuses] = useState<ExtendedStaffAssignment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (events.length === 0 && !loading) {
-      loadEvents();
+    if (id) {
+      loadEventDetails();
+      loadAssignmentStatuses();
     }
-  }, []);
+  }, [id]);
+
+  const loadEventDetails = async () => {
+    if (!id) return;
+    
+    setLoading(true);
+    try {
+      const eventData = await getEvent(id);
+      setEvent(eventData);
+    } catch (error) {
+      console.error("Error loading event details:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load event details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadAssignmentStatuses = async () => {
-    if (!eventId) return;
+    if (!id || !user) return;
 
     try {
-      console.log("Loading assignment statuses for event:", eventId);
-      
-      // Get assignment details including confirmation status
-      const { data: assignments, error } = await supabase
-        .from("staff_assignments")
+      const { data, error } = await supabase
+        .from('staff_assignments')
         .select(`
-          staff_id,
-          confirmation_status,
-          confirmed_at,
-          declined_at
+          *,
+          staff_members!inner(name, email, roles:staff_roles(role))
         `)
-        .eq("event_id", eventId);
+        .eq('event_id', id)
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error("Error loading assignment statuses:", error);
-        return;
-      }
+      if (error) throw error;
 
-      console.log("Loaded assignments:", assignments);
+      const assignments: ExtendedStaffAssignment[] = data?.map(assignment => ({
+        staffId: assignment.staff_id,
+        staffName: assignment.staff_members.name,
+        staffEmail: assignment.staff_members.email,
+        role: assignment.staff_members.roles?.[0]?.role || 'Working Com',
+        attendanceStatus: assignment.attendance_status as AttendanceStatus,
+        confirmationStatus: assignment.confirmation_status,
+        confirmedAt: assignment.confirmed_at,
+        declinedAt: assignment.declined_at,
+        manualInvitationSentAt: assignment.manual_invitation_sent_at,
+        lastInvitationSentAt: assignment.last_invitation_sent_at,
+      })) || [];
 
-      // Group by staff_id and take the most recent assignment for each staff member
-      const assignmentMap = assignments?.reduce((acc, assignment) => {
-        // For each staff member, store their latest assignment status
-        if (!acc[assignment.staff_id]) {
-          acc[assignment.staff_id] = {
-            confirmationStatus: assignment.confirmation_status,
-            confirmedAt: assignment.confirmed_at,
-            declinedAt: assignment.declined_at,
-          };
-        }
-        return acc;
-      }, {} as Record<string, any>) || {};
-
-      console.log("Assignment map:", assignmentMap);
-      setStaffAssignments(assignmentMap);
+      setAssignmentStatuses(assignments);
     } catch (error) {
       console.error("Error loading assignment statuses:", error);
     }
   };
 
-  useEffect(() => {
-    if (eventId) {
-      loadAssignmentStatuses();
-    }
-  }, [eventId]);
-
-  // Set up real-time subscription for assignment status changes
-  useEffect(() => {
-    if (!eventId) return;
-
-    console.log("Setting up real-time subscription for event:", eventId);
-
-    const channel = supabase
-      .channel(`assignment-status-changes-${eventId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'staff_assignments',
-          filter: `event_id=eq.${eventId}`
-        },
-        (payload) => {
-          console.log('Real-time assignment status change received:', payload);
-          
-          // Reload assignment statuses to get the latest state
-          loadAssignmentStatuses();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
-
-    return () => {
-      console.log("Cleaning up real-time subscription");
-      supabase.removeChannel(channel);
-    };
-  }, [eventId]);
-
-  useEffect(() => {
-    if (events.length > 0 && eventId) {
-      const foundEvent = events.find(e => e.id === eventId);
-      if (foundEvent) {
-        setEvent(foundEvent);
-        
-        // Debug logging
-        console.log("Found event:", foundEvent);
-        console.log("Event videographers:", foundEvent.videographers);
-        console.log("Event photographers:", foundEvent.photographers);
-        
-        // Find assigned staff when both event and staff data are available
-        if (staff.length > 0) {
-          // Find assigned videographers - get unique staff IDs first
-          const uniqueVideographerIds = [...new Set(foundEvent.videographers?.map(v => v.staffId) || [])];
-          const videographers = staff.filter(s => {
-            const isAssignedAsVideographer = uniqueVideographerIds.includes(s.id);
-            const hasVideographerRole = s.roles.includes("Videographer");
-            return isAssignedAsVideographer && hasVideographerRole;
-          });
-          
-          // Find assigned photographers - get unique staff IDs first
-          const uniquePhotographerIds = [...new Set(foundEvent.photographers?.map(p => p.staffId) || [])];
-          const photographers = staff.filter(s => {
-            const isAssignedAsPhotographer = uniquePhotographerIds.includes(s.id);
-            const hasPhotographerRole = s.roles.includes("Photographer");
-            return isAssignedAsPhotographer && hasPhotographerRole;
-          });
-          
-          console.log("Filtered videographers:", videographers);
-          console.log("Filtered photographers:", photographers);
-          
-          setAssignedVideographers(videographers);
-          setAssignedPhotographers(photographers);
-        }
-      }
-    }
-  }, [events, eventId, staff]);
-
-  const handleAfterEdit = () => {
-    // Reload both events and assignment statuses after edit
-    loadEvents();
-    // Reload assignment statuses to ensure UI is in sync
-    setTimeout(() => {
-      loadAssignmentStatuses();
-    }, 1000);
-  };
-
-  const handleAfterDelete = () => {
-    navigate("/events");
-  };
-
-  const handleCancelEvent = async () => {
-    if (!event) return;
-    
-    const success = await cancelEvent(event.id);
-    if (success) {
-      setCancelDialogOpen(false);
-      // The event list will be reloaded by the cancelEvent function
-    }
-  };
-
   const handleMarkAsDone = async () => {
-    if (!event) return;
+    if (!event || !id) return;
     
-    const success = await updateEvent(event.id, {
-      ...event,
-      status: "Completed"
-    }, [], []);
+    const success = await updateEvent(id, { status: "Completed" });
     
     if (success) {
       setMarkDoneDialogOpen(false);
-      // Reload events to update the main page status and ensure staff assignments are preserved
+      // Reload the main events to update status display
       await loadEvents();
-      // Also reload assignment statuses to ensure consistency
-      setTimeout(() => {
-        loadAssignmentStatuses();
-      }, 500);
+      // Reload event details to reflect changes
+      await loadEventDetails();
+      toast({
+        title: "Event Completed",
+        description: `${event.name} has been marked as completed.`,
+      });
     }
   };
 
-  const getConfirmationBadge = (staffId: string) => {
-    const assignment = staffAssignments[staffId];
-    console.log(`Getting badge for staff ${staffId}:`, assignment);
+  const handleDelete = async () => {
+    if (!id) return;
     
-    if (!assignment) {
-      console.log(`No assignment found for staff ${staffId}`);
-      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
-    }
-
-    const status = assignment.confirmationStatus;
-    console.log(`Status for staff ${staffId}:`, status);
-    
-    if (status === 'confirmed') {
-      return <Badge variant="default" className="text-xs bg-green-500 hover:bg-green-600">Confirmed</Badge>;
-    } else if (status === 'declined') {
-      return <Badge variant="destructive" className="text-xs">Declined</Badge>;
-    } else {
-      return <Badge variant="secondary" className="text-xs">Pending</Badge>;
+    const success = await deleteEvent(id);
+    if (success) {
+      navigate("/events");
     }
   };
 
-  const shouldShowInviteButton = (staffId: string) => {
-    const assignment = staffAssignments[staffId];
-    return !assignment || assignment.confirmationStatus !== 'declined';
+  const updateAttendanceStatus = async (staffId: string, newStatus: AttendanceStatus) => {
+    if (!user || !id) return;
+
+    try {
+      const { error } = await supabase
+        .from('staff_assignments')
+        .update({ attendance_status: newStatus })
+        .eq('event_id', id)
+        .eq('staff_id', staffId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setAssignmentStatuses(prev => 
+        prev.map(assignment => 
+          assignment.staffId === staffId 
+            ? { ...assignment, attendanceStatus: newStatus }
+            : assignment
+        )
+      );
+
+      toast({
+        title: "Status Updated",
+        description: "Attendance status has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating attendance status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update attendance status",
+        variant: "destructive",
+      });
+    }
   };
 
-  // Function to get dynamic event status based on current time
-  const getEventStatus = (event: Event) => {
-    // If event has explicit status (like Cancelled or Completed), use it
-    if (event.status === "Cancelled" || event.status === "Completed") {
-      return event.status;
-    }
+  const downloadCalendarEvent = async () => {
+    if (!event) return;
 
-    const now = new Date();
-    const eventDate = new Date(event.date);
-    const startTime = new Date(`${event.date}T${event.startTime}`);
-    const endTime = new Date(`${event.date}T${event.endTime}`);
+    try {
+      const response = await supabase.functions.invoke('send-event-notification', {
+        body: {
+          eventId: event.id,
+          eventName: event.name,
+          eventDate: event.date,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          location: event.location,
+          organizer: event.organizer || '',
+          type: event.type,
+          assignedStaff: [],
+          downloadOnly: true
+        }
+      });
 
-    if (now > endTime) {
-      return "Elapsed";
-    } else if (now >= startTime && now <= endTime) {
-      return "On Going";
-    } else {
-      return "Upcoming";
+      if (response.error) throw response.error;
+
+      // Create and trigger download
+      const blob = new Blob([response.data], { type: 'text/calendar' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${event.name.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Calendar Downloaded",
+        description: "Event has been downloaded to your calendar.",
+      });
+    } catch (error) {
+      console.error("Error downloading calendar:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download calendar event",
+        variant: "destructive",
+      });
     }
   };
 
-  if (loading || staffLoading) {
-    return <EventDetailsSkeleton />;
-  }
+  const getStatusBadge = (status: string) => {
+    const statusColors = {
+      "Upcoming": "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      "Ongoing": "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      "Completed": "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+      "Cancelled": "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      "Elapsed": "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+    };
 
-  if (!event) {
     return (
-      <div className="flex h-screen flex-col animate-fade-in">
-        <EventsHeader 
-          onAddEvent={() => {}}
-          showEventActions={false}
-        />
-        <div className="flex items-center justify-center p-12 flex-1 animate-fade-in-up">
-          <div className="text-center animate-scale-in">
-            <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground animate-bounce-gentle" />
-            <p className="mt-2 text-lg">Event not found</p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/events")}
-              className="mt-4 hover-lift"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Events
-            </Button>
-          </div>
+      <Badge className={statusColors[status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const getConfirmationBadge = (assignment: ExtendedStaffAssignment) => {
+    if (assignment.confirmationStatus === 'confirmed') {
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Confirmed
+          </Badge>
+          {assignment.confirmedAt && (
+            <div className="text-xs text-muted-foreground text-right">
+              Accepted on<br />
+              {new Date(assignment.confirmedAt).toLocaleDateString()} {new Date(assignment.confirmedAt).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      );
+    } else if (assignment.confirmationStatus === 'declined') {
+      return (
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1">
+            <XCircle className="h-3 w-3" />
+            Declined
+          </Badge>
+          {assignment.declinedAt && (
+            <div className="text-xs text-muted-foreground text-right">
+              Declined on<br />
+              {new Date(assignment.declinedAt).toLocaleDateString()} {new Date(assignment.declinedAt).toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="text-orange-600 border-orange-300">
+          Pending
+        </Badge>
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
       </div>
     );
   }
 
-  const dynamicStatus = getEventStatus(event);
+  if (!event) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Event Not Found</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The requested event could not be found.</p>
+          <Button onClick={() => navigate("/events")}>
+            Back to Events
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Upcoming":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
-      case "On Going":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
-      case "Elapsed":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-      case "Completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-      case "Cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-    }
-  };
-
-  const formattedDate = event.date ? format(new Date(event.date), 'MMMM d, yyyy') : 'No date specified';
+  const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed";
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-      <div className="animate-slide-in-right">
-        <EventsHeader 
-          onAddEvent={() => {}}
-          event={event}
-          onEditEvent={() => setEditDialogOpen(true)}
-          onDeleteEvent={() => setDeleteDialogOpen(true)}
-          showEventActions={true}
-        />
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
+          <p className="text-gray-600 dark:text-gray-400">Event Details</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {getStatusBadge(isElapsed && event.status !== "Completed" ? "Elapsed" : event.status)}
+          {isElapsed && event.status !== "Completed" && (
+            <Button 
+              onClick={() => setMarkDoneDialogOpen(true)} 
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Mark as Done
+            </Button>
+          )}
+        </div>
       </div>
-      
-      <div className="p-4 grid gap-4 md:grid-cols-3 animate-fade-in-up">
-        <div className="md:col-span-3 space-y-4">
-          <Card className="animate-scale-in hover-lift transition-all duration-300">
+
+      <div className="relative">
+        {event.status === "Cancelled" && <CancelledEventOverlay />}
+        
+        <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
+          {/* Event Details Card */}
+          <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="transition-colors duration-200 hover:text-primary">Event Details</CardTitle>
-                  <p className="text-muted-foreground transition-colors duration-200">{event.logId}</p>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Event Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium">Date</p>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
+                        {event.endDate && event.endDate !== event.date && 
+                          ` - ${format(new Date(event.endDate), 'EEEE, MMMM d, yyyy')}`
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Clock className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-medium">Time</p>
+                      <p className="text-gray-600 dark:text-gray-400">{event.startTime} - {event.endTime}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="font-medium">Location</p>
+                      <p className="text-gray-600 dark:text-gray-400">{event.location}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {event.status !== "Cancelled" && event.status !== "Completed" && dynamicStatus === "Elapsed" && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => setMarkDoneDialogOpen(true)}
-                      className="hover-scale transition-all duration-200 bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Mark as Done
-                    </Button>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-purple-600" />
+                    <div>
+                      <p className="font-medium">Organizer</p>
+                      <p className="text-gray-600 dark:text-gray-400">{event.organizer || "Not specified"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-orange-600" />
+                    <div>
+                      <p className="font-medium">Event Type</p>
+                      <p className="text-gray-600 dark:text-gray-400">{event.type}</p>
+                    </div>
+                  </div>
+                  
+                  {event.logId && (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="h-5 w-5 text-indigo-600" />
+                      <div>
+                        <p className="font-medium">Log ID</p>
+                        <p className="text-gray-600 dark:text-gray-400">{event.logId}</p>
+                      </div>
+                    </div>
                   )}
-                  {event.status !== "Cancelled" && dynamicStatus === "Upcoming" && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setCancelDialogOpen(true)}
-                      className="hover-scale transition-all duration-200"
-                    >
-                      Cancel Event
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => navigate("/events")}
-                    className="p-2 hover-scale transition-all duration-200"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
+              
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={downloadCalendarEvent} variant="outline" className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Download Calendar
+                </Button>
+                
+                <Button onClick={() => setEditDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Event
+                </Button>
+                
+                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Event
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Staff Assignments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Staff Assignments
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-8 animate-fade-in-up">
-                  <div className="flex items-center">
-                    <Badge className={`${getStatusColor(dynamicStatus)} mr-2 transition-all duration-200 hover:scale-105`}>
-                      {dynamicStatus}
-                    </Badge>
-                    <Badge variant="outline" className="transition-all duration-200 hover:scale-105">{event.type}</Badge>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground">
-                    <CalendarIcon className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
-                    {formattedDate}
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm transition-colors duration-200 hover:text-foreground">
-                    <Clock className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
-                    {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}
-                  </div>
-                </div>
-                
-                <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 1 } as React.CSSProperties}>
-                  <div className="flex items-center text-sm transition-colors duration-200 hover:text-foreground">
-                    <MapPin className="h-4 w-4 mr-2 transition-transform duration-200 hover:scale-110" />
-                    <span>{event.location}</span>
-                  </div>
-                </div>
-
-                {event.organizer && (
-                  <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 2 } as React.CSSProperties}>
-                    <div className="flex items-center text-sm transition-colors duration-200 hover:text-foreground">
-                      <span className="font-medium mr-2">Organizer/s:</span>
-                      <span>{event.organizer}</span>
-                    </div>
-                  </div>
-                )}
-                
-                <Separator className="animate-fade-in-up stagger-animation" style={{ '--stagger': 3 } as React.CSSProperties} />
-                
-                <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 4 } as React.CSSProperties}>
-                  <h3 className="text-sm font-medium mb-2 transition-colors duration-200 hover:text-primary">Assigned Staff</h3>
-                  <div className="space-y-3">
-                    {/* Videographers Section */}
-                    <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 5 } as React.CSSProperties}>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center transition-colors duration-200 hover:text-foreground">
-                        <Video className="h-3 w-3 mr-1 transition-transform duration-200 hover:scale-110" />
-                        Videographers
-                      </h4>
-                      {assignedVideographers.length > 0 ? (
-                        assignedVideographers.map((videographer, index) => (
-                          <div 
-                            key={`videographer-${videographer.id}`}
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md hover-lift transition-all duration-300 animate-fade-in-up stagger-animation"
-                            style={{ '--stagger': 6 + index } as React.CSSProperties}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Video className="h-4 w-4 mr-2 text-primary transition-transform duration-200 hover:scale-110" />
-                              <span className="text-sm transition-colors duration-200 hover:text-primary">{videographer.name}</span>
-                              {getConfirmationBadge(videographer.id)}
-                            </div>
-                            {shouldShowInviteButton(videographer.id) && (
-                              <SendInvitationButton
-                                eventId={event.id}
-                                staffMember={{
-                                  id: videographer.id,
-                                  name: videographer.name,
-                                  email: videographer.email,
-                                  role: "Videographer"
-                                }}
-                                eventData={{
-                                  name: event.name,
-                                  date: event.date,
-                                  startTime: event.startTime,
-                                  endTime: event.endTime,
-                                  location: event.location,
-                                  type: event.type
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="flex items-center p-2 bg-muted/30 rounded-md animate-fade-in-up">
-                          <UserX className="h-4 w-4 mr-2 text-muted-foreground transition-transform duration-200 hover:scale-110" />
-                          <span className="text-sm text-muted-foreground italic transition-colors duration-200">No Videographer Selected</span>
+              {assignmentStatuses.length > 0 ? (
+                <div className="space-y-4">
+                  {assignmentStatuses.map((assignment) => (
+                    <div key={assignment.staffId} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium">{assignment.staffName}</h4>
+                          <Badge variant="outline">{assignment.role}</Badge>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Photographers Section */}
-                    <div className="animate-fade-in-up stagger-animation" style={{ '--stagger': 8 } as React.CSSProperties}>
-                      <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center transition-colors duration-200 hover:text-foreground">
-                        <Camera className="h-3 w-3 mr-1 transition-transform duration-200 hover:scale-110" />
-                        Photographers
-                      </h4>
-                      {assignedPhotographers.length > 0 ? (
-                        assignedPhotographers.map((photographer, index) => (
-                          <div 
-                            key={`photographer-${photographer.id}`}
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-md hover-lift transition-all duration-300 animate-fade-in-up stagger-animation"
-                            style={{ '--stagger': 9 + index } as React.CSSProperties}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Camera className="h-4 w-4 mr-2 text-primary transition-transform duration-200 hover:scale-110" />
-                              <span className="text-sm transition-colors duration-200 hover:text-primary">{photographer.name}</span>
-                              {getConfirmationBadge(photographer.id)}
-                            </div>
-                            {shouldShowInviteButton(photographer.id) && (
-                              <SendInvitationButton
-                                eventId={event.id}
-                                staffMember={{
-                                  id: photographer.id,
-                                  name: photographer.name,
-                                  email: photographer.email,
-                                  role: "Photographer"
-                                }}
-                                eventData={{
-                                  name: event.name,
-                                  date: event.date,
-                                  startTime: event.startTime,
-                                  endTime: event.endTime,
-                                  location: event.location,
-                                  type: event.type
-                                }}
-                              />
-                            )}
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.staffEmail}</p>
+                        
+                        {event.status === "Completed" && (
+                          <div className="mt-2">
+                            <Select
+                              value={assignment.attendanceStatus}
+                              onValueChange={(value: AttendanceStatus) => 
+                                updateAttendanceStatus(assignment.staffId, value)
+                              }
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="Absent">Absent</SelectItem>
+                                <SelectItem value="Excused">Excused</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
-                        ))
-                      ) : (
-                        <div className="flex items-center p-2 bg-muted/30 rounded-md animate-fade-in-up">
-                          <UserX className="h-4 w-4 mr-2 text-muted-foreground transition-transform duration-200 hover:scale-110" />
-                          <span className="text-sm text-muted-foreground italic transition-colors duration-200">No Photographer Selected</span>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        {getConfirmationBadge(assignment)}
+                        <SendInvitationButton
+                          eventId={event.id}
+                          staffMember={{
+                            id: assignment.staffId,
+                            name: assignment.staffName,
+                            email: assignment.staffEmail || '',
+                            role: assignment.role
+                          }}
+                          eventData={{
+                            name: event.name,
+                            date: event.date,
+                            startTime: event.startTime,
+                            endTime: event.endTime,
+                            location: event.location,
+                            type: event.type
+                          }}
+                          lastSentAt={assignment.manualInvitationSentAt}
+                          onInvitationSent={loadAssignmentStatuses}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                  No staff members assigned to this event.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Edit Event Dialog */}
-      {event && (
+      {/* Mark as Done Dialog */}
+      <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Event as Completed</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark "{event.name}" as completed? This action will change the event status and allow you to track attendance.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkAsDone}>Mark as Done</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{event.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete Event
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Dialog */}
+      {editDialogOpen && (
         <EventEditDialog
+          event={event}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          event={event}
-          onEventUpdated={handleAfterEdit}
+          onEventUpdated={loadEventDetails}
         />
-      )}
-
-      {/* Delete Event Dialog */}
-      {event && (
-        <EventDeleteDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          event={event}
-          onEventDeleted={handleAfterDelete}
-        />
-      )}
-
-      {/* Cancel Event Dialog */}
-      {event && (
-        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cancel Event</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to cancel "{event.name}"? This action will:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Mark the event as cancelled</li>
-                  <li>Send cancellation notifications to all assigned staff</li>
-                  <li>This action cannot be undone</li>
-                </ul>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep Event</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleCancelEvent}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Cancel Event
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-
-      {/* Mark as Done Dialog */}
-      {event && (
-        <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Mark Event as Done</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to mark "{event.name}" as completed? This action will:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Mark the event status as completed</li>
-                  <li>Update the event status in the events list</li>
-                  <li>This can be changed later if needed</li>
-                </ul>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleMarkAsDone}
-                className="bg-green-600 text-white hover:bg-green-700"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark as Done
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       )}
     </div>
   );

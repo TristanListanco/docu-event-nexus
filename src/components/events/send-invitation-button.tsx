@@ -21,24 +21,30 @@ interface SendInvitationButtonProps {
     location: string;
     type: string;
   };
+  lastSentAt?: string | null;
+  onInvitationSent?: () => void;
 }
 
-export default function SendInvitationButton({ eventId, staffMember, eventData }: SendInvitationButtonProps) {
+export default function SendInvitationButton({ 
+  eventId, 
+  staffMember, 
+  eventData, 
+  lastSentAt,
+  onInvitationSent 
+}: SendInvitationButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [lastSent, setLastSent] = useState<Date | null>(null);
   const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const canSendEmail = () => {
-    if (!lastSent) return true;
-    const timeSinceLastSend = Date.now() - lastSent.getTime();
+    if (!lastSentAt) return true;
+    const timeSinceLastSend = Date.now() - new Date(lastSentAt).getTime();
     return timeSinceLastSend > 30000; // 30 seconds cooldown
   };
 
   const handleSendInvitation = async () => {
-    // Prevent multiple clicks while processing or during cooldown
     if (isLoading || !canSendEmail()) {
       if (!canSendEmail()) {
-        const remainingTime = Math.ceil((30000 - (Date.now() - lastSent!.getTime())) / 1000);
+        const remainingTime = Math.ceil((30000 - (Date.now() - new Date(lastSentAt!).getTime())) / 1000);
         toast({
           title: "Please Wait",
           description: `You can resend the invitation in ${remainingTime} seconds.`,
@@ -73,12 +79,26 @@ export default function SendInvitationButton({ eventId, staffMember, eventData }
         throw error;
       }
 
-      setLastSent(new Date());
+      // Update the manual invitation timestamp
+      await supabase
+        .from('staff_assignments')
+        .update({ 
+          manual_invitation_sent_at: new Date().toISOString(),
+          last_invitation_sent_at: new Date().toISOString()
+        })
+        .eq('event_id', eventId)
+        .eq('staff_id', staffMember.id);
+
       setSendStatus('success');
       toast({
         title: "Invitation Sent",
         description: `Event invitation has been sent to ${staffMember.name}`,
       });
+
+      // Call the callback to refresh data
+      if (onInvitationSent) {
+        onInvitationSent();
+      }
 
       // Reset success status after 3 seconds
       setTimeout(() => setSendStatus('idle'), 3000);
@@ -113,19 +133,27 @@ export default function SendInvitationButton({ eventId, staffMember, eventData }
   };
 
   return (
-    <Button
-      variant={getButtonVariant()}
-      size="sm"
-      onClick={handleSendInvitation}
-      disabled={isLoading || !canSendEmail()}
-      className="h-8 w-8 p-0"
-      title={
-        !canSendEmail() 
-          ? `Please wait ${Math.ceil((30000 - (Date.now() - lastSent!.getTime())) / 1000)}s before resending`
-          : `Send invitation to ${staffMember.name}`
-      }
-    >
-      {getIcon()}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        variant={getButtonVariant()}
+        size="sm"
+        onClick={handleSendInvitation}
+        disabled={isLoading || !canSendEmail()}
+        className="h-8 w-8 p-0"
+        title={
+          !canSendEmail() 
+            ? `Please wait ${Math.ceil((30000 - (Date.now() - new Date(lastSentAt!).getTime())) / 1000)}s before resending`
+            : `Send invitation to ${staffMember.name}`
+        }
+      >
+        {getIcon()}
+      </Button>
+      {lastSentAt && (
+        <div className="text-xs text-muted-foreground text-right">
+          Manually sent email on<br />
+          {new Date(lastSentAt).toLocaleDateString()} {new Date(lastSentAt).toLocaleTimeString()}
+        </div>
+      )}
+    </div>
   );
 }

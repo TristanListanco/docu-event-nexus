@@ -86,28 +86,24 @@ const handler = async (req: Request): Promise<Response> => {
 
         if (fetchError) {
           console.log(`No existing assignment found for staff ${staff.id}, this might be an issue`);
-          continue; // Skip if no assignment exists
+          continue;
         }
 
-        // If staff has already confirmed, don't regenerate token or send confirmation email
         if (existingAssignment.confirmation_status === 'confirmed') {
           console.log(`Staff ${staff.id} already confirmed, skipping token generation`);
           continue;
         }
 
-        // If staff declined, don't send update notifications
         if (existingAssignment.confirmation_status === 'declined') {
           console.log(`Staff ${staff.id} declined assignment, skipping notification`);
           continue;
         }
 
-        // For pending assignments, check if token is still valid
         const tokenExpiry = existingAssignment.confirmation_token_expires_at;
         const now = new Date();
         
         console.log(`Existing assignment found. Token expires at: ${tokenExpiry}, Current time: ${now.toISOString()}`);
         
-        // Only regenerate token if it's expired or missing
         if (!existingAssignment.confirmation_token || (tokenExpiry && new Date(tokenExpiry) <= now)) {
           const confirmationToken = crypto.randomUUID();
           const expiryDate = new Date();
@@ -120,7 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
             .update({
               confirmation_token: confirmationToken,
               confirmation_token_expires_at: expiryDate.toISOString(),
-              confirmation_status: 'pending'
+              confirmation_status: 'pending',
+              last_invitation_sent_at: new Date().toISOString()
             })
             .eq('event_id', requestData.eventId)
             .eq('staff_id', staff.id);
@@ -146,7 +143,8 @@ const handler = async (req: Request): Promise<Response> => {
           .update({
             confirmation_token: confirmationToken,
             confirmation_token_expires_at: expiryDate.toISOString(),
-            confirmation_status: 'pending'
+            confirmation_status: 'pending',
+            last_invitation_sent_at: new Date().toISOString()
           })
           .eq('event_id', requestData.eventId)
           .eq('staff_id', staff.id);
@@ -185,7 +183,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Skip sending emails to confirmed staff for updates
         if (requestData.isUpdate && assignment?.confirmation_status === 'confirmed') {
           console.log(`Skipping email for ${staff.name} - already confirmed`);
-          successCount++; // Count as success since no action needed
+          successCount++;
           continue;
         }
 
@@ -200,7 +198,6 @@ const handler = async (req: Request): Promise<Response> => {
         let emailSubject: string;
 
         if (requestData.isUpdate) {
-          // Send update email
           emailTemplate = generateUpdateEmailTemplate({
             staffName: staff.name,
             eventName: requestData.eventName,
@@ -214,7 +211,6 @@ const handler = async (req: Request): Promise<Response> => {
           });
           emailSubject = `Event Updated: ${requestData.eventName}`;
         } else {
-          // Send confirmation email
           const confirmationUrl = `${supabaseUrl.replace('/supabase', '')}/confirm-assignment?token=${assignment?.confirmation_token}`;
           
           emailTemplate = generateConfirmationEmailTemplate({

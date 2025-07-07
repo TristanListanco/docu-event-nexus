@@ -23,8 +23,8 @@ interface EnhancedMultiStaffSelectorProps {
 
 export default function EnhancedMultiStaffSelector({
   role,
-  staffAvailability = [], // Default to empty array
-  selectedStaffIds = [], // Default to empty array
+  staffAvailability = [],
+  selectedStaffIds = [],
   onSelectionChange,
   excludeStaffIds = [],
   disabled = false,
@@ -33,28 +33,18 @@ export default function EnhancedMultiStaffSelector({
 }: EnhancedMultiStaffSelectorProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   
-  // Ensure staffAvailability is always an array
   const safeStaffAvailability = Array.isArray(staffAvailability) ? staffAvailability : [];
   
-  // Filter staff by role and exclude already selected staff from other roles
-  // Also filter out staff who are already assigned to the other role to prevent duplicates
   const availableStaff = safeStaffAvailability.filter(availability => {
     if (!availability?.staff?.roles?.includes(role)) return false;
     if (excludeStaffIds.includes(availability.staff.id)) return false;
     
-    // If this staff member has both roles, only show them in one section
-    // Prioritize showing them as Videographer first, then Photographer
     if (availability.staff.roles.includes("Videographer") && availability.staff.roles.includes("Photographer")) {
-      // If we're showing Photographer section and this person has both roles,
-      // only show them if they're not already available in Videographer section
       if (role === "Photographer") {
-        // Check if this person would also appear in videographer list
         const wouldAppearInVideographer = safeStaffAvailability.some(other => 
           other.staff.id === availability.staff.id && 
           other.staff.roles.includes("Videographer")
         );
-        // Only show in photographer if they're already selected as videographer
-        // or if they're not available as videographer
         return excludeStaffIds.includes(availability.staff.id) || !wouldAppearInVideographer;
       }
     }
@@ -62,16 +52,16 @@ export default function EnhancedMultiStaffSelector({
     return true;
   });
 
-  // Show fully available, partially available, and unavailable staff
-  const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable);
+  // Show fully available, partially available, and unavailable staff with proper filtering
+  const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable === true);
   const partiallyAvailable = availableStaff.filter(a => 
-    !a?.isFullyAvailable && 
+    a?.isFullyAvailable === false && 
     a?.availableTimeSlots && 
     Array.isArray(a.availableTimeSlots) &&
     a.availableTimeSlots.length > 0
   );
   const unavailable = availableStaff.filter(a => 
-    !a?.isFullyAvailable && 
+    a?.isFullyAvailable === false && 
     (!a?.availableTimeSlots || !Array.isArray(a.availableTimeSlots) || a.availableTimeSlots.length === 0)
   );
 
@@ -130,7 +120,7 @@ export default function EnhancedMultiStaffSelector({
         key={staff.id} 
         className={cn(
           "transition-all duration-200 hover:shadow-md border",
-          isSelected && "border-primary",
+          isSelected && "border-primary border-2",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       >
