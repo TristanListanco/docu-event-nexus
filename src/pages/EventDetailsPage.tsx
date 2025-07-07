@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
-import { Event, StaffAssignment, AttendanceStatus } from "@/types/models";
+import { Event, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +18,9 @@ import EventEditDialog from "@/components/events/event-edit-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
 
 interface ExtendedStaffAssignment extends StaffAssignment {
+  staffName?: string;
+  staffEmail?: string;
+  role?: string;
   manualInvitationSentAt?: string | null;
   lastInvitationSentAt?: string | null;
 }
@@ -67,7 +71,7 @@ export default function EventDetailsPage() {
         .from('staff_assignments')
         .select(`
           *,
-          staff_members!inner(name, email, roles:staff_roles(role))
+          staff_members!inner(name, email, role)
         `)
         .eq('event_id', id)
         .eq('user_id', user.id);
@@ -78,9 +82,9 @@ export default function EventDetailsPage() {
         staffId: assignment.staff_id,
         staffName: assignment.staff_members.name,
         staffEmail: assignment.staff_members.email,
-        role: assignment.staff_members.roles?.[0]?.role || 'Working Com',
+        role: assignment.staff_members.role,
         attendanceStatus: assignment.attendance_status as AttendanceStatus,
-        confirmationStatus: assignment.confirmation_status,
+        confirmationStatus: assignment.confirmation_status as ConfirmationStatus,
         confirmedAt: assignment.confirmed_at,
         declinedAt: assignment.declined_at,
         manualInvitationSentAt: assignment.manual_invitation_sent_at,
@@ -307,7 +311,12 @@ export default function EventDetailsPage() {
       </div>
 
       <div className="relative">
-        {event.status === "Cancelled" && <CancelledEventOverlay />}
+        {event.status === "Cancelled" && (
+          <CancelledEventOverlay 
+            isVisible={true}
+            onDelete={handleDelete}
+          />
+        )}
         
         <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
           {/* Event Details Card */}
@@ -447,9 +456,9 @@ export default function EventDetailsPage() {
                           eventId={event.id}
                           staffMember={{
                             id: assignment.staffId,
-                            name: assignment.staffName,
+                            name: assignment.staffName || '',
                             email: assignment.staffEmail || '',
-                            role: assignment.role
+                            role: assignment.role || ''
                           }}
                           eventData={{
                             name: event.name,
