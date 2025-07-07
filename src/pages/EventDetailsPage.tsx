@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -87,8 +86,8 @@ export default function EventDetailsPage() {
         confirmationStatus: assignment.confirmation_status as ConfirmationStatus,
         confirmedAt: assignment.confirmed_at,
         declinedAt: assignment.declined_at,
-        manualInvitationSentAt: assignment.manual_invitation_sent_at,
-        lastInvitationSentAt: assignment.last_invitation_sent_at,
+        manualInvitationSentAt: (assignment as any).manual_invitation_sent_at,
+        lastInvitationSentAt: (assignment as any).last_invitation_sent_at,
       })) || [];
 
       setAssignmentStatuses(assignments);

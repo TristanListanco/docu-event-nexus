@@ -79,11 +79,12 @@ export default function SendInvitationButton({
         throw error;
       }
 
-      // Update the manual invitation timestamp - first check if the columns exist
+      // Update the manual invitation timestamp
       const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('staff_assignments')
         .update({ 
+          manual_invitation_sent_at: now,
           last_invitation_sent_at: now
         })
         .eq('event_id', eventId)
