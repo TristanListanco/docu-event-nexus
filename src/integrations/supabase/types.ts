@@ -1,4 +1,3 @@
-
 export type Json =
   | string
   | number
@@ -416,8 +415,6 @@ export type Database = {
 }
 
 type DefaultSchema = Database[Extract<keyof Database, "public">]
-
-// ... keep existing code (type definitions) the same
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
