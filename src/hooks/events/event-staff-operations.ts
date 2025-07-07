@@ -78,24 +78,8 @@ export const updateStaffAssignments = async (
 
   const currentStaffIds = currentAssignments?.map(a => a.staff_id) || [];
   
-  // Find staff to remove (those not in the new assignment list)
-  const staffToRemove = currentStaffIds.filter(staffId => !allNewStaffIds.includes(staffId));
-  
-  // Find staff to add (those not currently assigned)
+  // Only add new staff that aren't already assigned (don't remove existing confirmed/declined staff)
   const staffToAdd = allNewStaffIds.filter(staffId => !currentStaffIds.includes(staffId));
-
-  // Remove unassigned staff
-  if (staffToRemove.length > 0) {
-    const { error: deleteError } = await supabase
-      .from("staff_assignments")
-      .delete()
-      .eq("event_id", eventId)
-      .in("staff_id", staffToRemove);
-
-    if (deleteError) {
-      throw deleteError;
-    }
-  }
 
   // Add new staff assignments (only those not already assigned)
   if (staffToAdd.length > 0) {
@@ -116,7 +100,6 @@ export const updateStaffAssignments = async (
   }
 
   console.log("Staff assignment update completed:", {
-    removed: staffToRemove,
     added: staffToAdd
   });
 };

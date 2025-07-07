@@ -72,12 +72,10 @@ export default function StaffPage() {
 
   return (
     <div className="flex h-screen flex-col animate-fade-in">
-      <div className="animate-slide-in-right">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-background border-b animate-slide-in-right">
         <StaffHeader onAddStaff={() => setAddDialogOpen(true)} />
-      </div>
-      
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6 animate-fade-in-up">
+        <div className="container mx-auto px-6 pb-4">
           <StaffViewControls
             sortBy={sortBy}
             onSortByChange={setSortBy}
@@ -86,7 +84,12 @@ export default function StaffPage() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
           />
-
+        </div>
+      </div>
+      
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6 animate-fade-in-up">
           <div className="space-y-4">
             {filteredAndSortedStaff.map((member, index) => (
               <div
