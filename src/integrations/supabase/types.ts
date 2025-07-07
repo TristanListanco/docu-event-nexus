@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -258,6 +259,8 @@ export type Database = {
           declined_at: string | null
           event_id: string
           id: string
+          last_invitation_sent_at: string | null
+          manual_invitation_sent_at: string | null
           staff_id: string
           user_id: string
         }
@@ -270,6 +273,8 @@ export type Database = {
           declined_at?: string | null
           event_id: string
           id?: string
+          last_invitation_sent_at?: string | null
+          manual_invitation_sent_at?: string | null
           staff_id: string
           user_id: string
         }
@@ -282,6 +287,8 @@ export type Database = {
           declined_at?: string | null
           event_id?: string
           id?: string
+          last_invitation_sent_at?: string | null
+          manual_invitation_sent_at?: string | null
           staff_id?: string
           user_id?: string
         }
@@ -409,6 +416,8 @@ export type Database = {
 }
 
 type DefaultSchema = Database[Extract<keyof Database, "public">]
+
+// ... keep existing code (type definitions) the same
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
