@@ -302,10 +302,9 @@ export default function EventDetailsPage() {
             variant="ghost" 
             size="sm" 
             onClick={() => navigate("/events")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 p-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
@@ -338,7 +337,7 @@ export default function EventDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
+                <Calendar className="h-5 w-5 text-cyan-600" />
                 Event Information
               </CardTitle>
             </CardHeader>
@@ -346,7 +345,7 @@ export default function EventDetailsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <CalendarDays className="h-5 w-5 text-blue-600" />
+                    <CalendarDays className="h-5 w-5 text-cyan-600" />
                     <div>
                       <p className="font-medium">Date</p>
                       <p className="text-gray-600 dark:text-gray-400">
@@ -359,7 +358,7 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-green-600" />
+                    <Clock className="h-5 w-5 text-cyan-600" />
                     <div>
                       <p className="font-medium">Time</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.startTime} - {event.endTime}</p>
@@ -367,7 +366,7 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-red-600" />
+                    <MapPin className="h-5 w-5 text-cyan-600" />
                     <div>
                       <p className="font-medium">Location</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.location}</p>
@@ -377,7 +376,7 @@ export default function EventDetailsPage() {
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-purple-600" />
+                    <User className="h-5 w-5 text-cyan-600" />
                     <div>
                       <p className="font-medium">Organizer</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.organizer || "Not specified"}</p>
@@ -385,7 +384,7 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-orange-600" />
+                    <Users className="h-5 w-5 text-cyan-600" />
                     <div>
                       <p className="font-medium">Event Type</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.type}</p>
@@ -394,7 +393,7 @@ export default function EventDetailsPage() {
                   
                   {event.logId && (
                     <div className="flex items-center gap-3">
-                      <Calendar className="h-5 w-5 text-indigo-600" />
+                      <Calendar className="h-5 w-5 text-cyan-600" />
                       <div>
                         <p className="font-medium">Log ID</p>
                         <p className="text-gray-600 dark:text-gray-400">{event.logId}</p>

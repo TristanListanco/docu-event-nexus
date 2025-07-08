@@ -138,27 +138,19 @@ export default function SendInvitationButton({
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button
-        variant={getButtonVariant()}
-        size="sm"
-        onClick={handleSendInvitation}
-        disabled={isLoading || !canSendEmail()}
-        className="h-8 w-8 p-0"
-        title={
-          !canSendEmail() 
-            ? `Please wait ${Math.ceil((30000 - (Date.now() - new Date(lastSentAt!).getTime())) / 1000)}s before resending`
-            : `Send invitation to ${staffMember.name}`
-        }
-      >
-        {getIcon()}
-      </Button>
-      {lastSentAt && (
-        <div className="text-xs text-muted-foreground text-right">
-          Manually sent email on<br />
-          {new Date(lastSentAt).toLocaleDateString()} {new Date(lastSentAt).toLocaleTimeString()}
-        </div>
-      )}
-    </div>
+    <Button
+      variant={getButtonVariant()}
+      size="sm"
+      onClick={handleSendInvitation}
+      disabled={isLoading || !canSendEmail()}
+      className="h-8 w-8 p-0"
+      title={
+        !canSendEmail() 
+          ? `Please wait ${Math.ceil((30000 - (Date.now() - new Date(lastSentAt!).getTime())) / 1000)}s before resending`
+          : `Send invitation to ${staffMember.name}`
+      }
+    >
+      {getIcon()}
+    </Button>
   );
 }
