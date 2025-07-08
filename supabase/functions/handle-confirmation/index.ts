@@ -67,17 +67,51 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Handle the 'check' action to get current status
+    if (action === 'check') {
+      return new Response(
+        JSON.stringify({
+          status: assignment.confirmation_status || 'pending',
+          assignment: {
+            id: assignment.id,
+            eventName: assignment.events.name,
+            staffName: assignment.staff_members.name,
+            eventDate: assignment.events.date,
+            startTime: assignment.events.start_time,
+            endTime: assignment.events.end_time,
+            location: assignment.events.location
+          },
+          timestamp: assignment.confirmed_at || assignment.declined_at
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Handle confirm/decline actions
+    if (action !== 'confirm' && action !== 'decline') {
+      return new Response(
+        JSON.stringify({ error: "Invalid action" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Update the assignment based on action
     const updateData: any = {
-      confirmation_status: action,
+      confirmation_status: action === 'confirm' ? 'confirmed' : 'declined',
       confirmation_token: null, // Clear the token after use
       confirmation_token_expires_at: null
     };
 
-    if (action === 'confirmed') {
+    if (action === 'confirm') {
       updateData.confirmed_at = new Date().toISOString();
       updateData.declined_at = null;
-    } else if (action === 'declined') {
+    } else if (action === 'decline') {
       updateData.declined_at = new Date().toISOString();
       updateData.confirmed_at = null;
     }
@@ -99,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create a notification for the event organizer
-    const notificationMessage = action === 'confirmed' 
+    const notificationMessage = action === 'confirm' 
       ? `${assignment.staff_members.name} has confirmed their assignment`
       : `${assignment.staff_members.name} has declined their assignment`;
 
@@ -109,7 +143,7 @@ const handler = async (req: Request): Promise<Response> => {
         user_id: assignment.events.user_id,
         event_id: assignment.event_id,
         staff_id: assignment.staff_id,
-        type: action,
+        type: action === 'confirm' ? 'confirmed' : 'declined',
         staff_name: assignment.staff_members.name,
         event_name: assignment.events.name,
         message: notificationMessage
@@ -119,14 +153,16 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Error creating notification:', notificationError);
     }
 
-    console.log(`Assignment ${action} successfully for ${assignment.staff_members.name}`);
+    console.log(`Assignment ${action}ed successfully for ${assignment.staff_members.name}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: `Assignment ${action} successfully`,
+        status: action === 'confirm' ? 'confirmed' : 'declined',
+        message: `Assignment ${action}ed successfully`,
         eventName: assignment.events.name,
-        staffName: assignment.staff_members.name
+        staffName: assignment.staff_members.name,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 200,

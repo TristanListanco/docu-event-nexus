@@ -230,9 +230,8 @@ export default function EventDetailsPage() {
             Confirmed
           </Badge>
           {assignment.confirmedAt && (
-            <div className="text-xs text-muted-foreground text-right">
-              Accepted on<br />
-              {new Date(assignment.confirmedAt).toLocaleDateString()} {new Date(assignment.confirmedAt).toLocaleTimeString()}
+            <div className="text-xs text-muted-foreground">
+              {format(new Date(assignment.confirmedAt), 'MMM d, h:mm a')}
             </div>
           )}
         </div>
@@ -245,9 +244,8 @@ export default function EventDetailsPage() {
             Declined
           </Badge>
           {assignment.declinedAt && (
-            <div className="text-xs text-muted-foreground text-right">
-              Declined on<br />
-              {new Date(assignment.declinedAt).toLocaleDateString()} {new Date(assignment.declinedAt).toLocaleTimeString()}
+            <div className="text-xs text-muted-foreground">
+              {format(new Date(assignment.declinedAt), 'MMM d, h:mm a')}
             </div>
           )}
         </div>

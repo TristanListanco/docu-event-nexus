@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { Event, EventType, StaffAvailability } from "@/types/models";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
+import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
 import EnhancedMultiStaffSelector from "./enhanced-multi-staff-selector";
 import { getEventStatus } from "./event-status-utils";
 
@@ -38,7 +40,7 @@ export default function EventEditDialog({
   onEventDeleted
 }: EventEditDialogProps) {
   const { updateEvent, deleteEvent } = useEvents();
-  const { getAvailableStaff } = useStaff();
+  const { staff } = useStaff();
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -87,9 +89,10 @@ export default function EventEditDialog({
   }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent]);
 
   const updateStaffAvailability = () => {
-    if (!formData.date || !formData.startTime || !formData.endTime) return;
+    if (!formData.date || !formData.startTime || !formData.endTime || !staff) return;
 
-    const availability = getAvailableStaff(
+    const availability = getEnhancedStaffAvailability(
+      staff,
       format(formData.date, 'yyyy-MM-dd'),
       formData.startTime,
       formData.endTime,
