@@ -21,6 +21,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { token, action } = await req.json();
     
     if (!token || !action) {
+      console.error('Missing token or action:', { token: !!token, action });
       return new Response(
         JSON.stringify({ error: "Missing token or action" }),
         {
@@ -41,10 +42,21 @@ const handler = async (req: Request): Promise<Response> => {
         staff_members(name, email)
       `)
       .eq('confirmation_token', token)
-      .single();
+      .maybeSingle();
 
-    if (fetchError || !assignment) {
-      console.error('Assignment not found:', fetchError);
+    if (fetchError) {
+      console.error('Database error fetching assignment:', fetchError);
+      return new Response(
+        JSON.stringify({ error: "Database error occurred" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    if (!assignment) {
+      console.error('Assignment not found for token:', token);
       return new Response(
         JSON.stringify({ error: "Invalid or expired token" }),
         {
@@ -55,16 +67,19 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check if token is expired
-    const now = new Date();
-    const expiryDate = new Date(assignment.confirmation_token_expires_at);
-    if (now > expiryDate) {
-      return new Response(
-        JSON.stringify({ error: "Token has expired" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
+    if (assignment.confirmation_token_expires_at) {
+      const now = new Date();
+      const expiryDate = new Date(assignment.confirmation_token_expires_at);
+      if (now > expiryDate) {
+        console.error('Token expired:', { now, expiryDate });
+        return new Response(
+          JSON.stringify({ error: "Token has expired" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
     }
 
     // Handle the 'check' action to get current status
@@ -74,12 +89,12 @@ const handler = async (req: Request): Promise<Response> => {
           status: assignment.confirmation_status || 'pending',
           assignment: {
             id: assignment.id,
-            eventName: assignment.events.name,
-            staffName: assignment.staff_members.name,
-            eventDate: assignment.events.date,
-            startTime: assignment.events.start_time,
-            endTime: assignment.events.end_time,
-            location: assignment.events.location
+            eventName: assignment.events?.name || 'Unknown Event',
+            staffName: assignment.staff_members?.name || 'Unknown Staff',
+            eventDate: assignment.events?.date,
+            startTime: assignment.events?.start_time,
+            endTime: assignment.events?.end_time,
+            location: assignment.events?.location
           },
           timestamp: assignment.confirmed_at || assignment.declined_at
         }),
@@ -92,6 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Handle confirm/decline actions
     if (action !== 'confirm' && action !== 'decline') {
+      console.error('Invalid action:', action);
       return new Response(
         JSON.stringify({ error: "Invalid action" }),
         {
@@ -133,35 +149,38 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create a notification for the event organizer
-    const notificationMessage = action === 'confirm' 
-      ? `${assignment.staff_members.name} has confirmed their assignment`
-      : `${assignment.staff_members.name} has declined their assignment`;
+    if (assignment.events?.user_id && assignment.staff_members?.name && assignment.events?.name) {
+      const notificationMessage = action === 'confirm' 
+        ? `${assignment.staff_members.name} has confirmed their assignment`
+        : `${assignment.staff_members.name} has declined their assignment`;
 
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: assignment.events.user_id,
-        event_id: assignment.event_id,
-        staff_id: assignment.staff_id,
-        type: action === 'confirm' ? 'confirmed' : 'declined',
-        staff_name: assignment.staff_members.name,
-        event_name: assignment.events.name,
-        message: notificationMessage
-      });
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: assignment.events.user_id,
+          event_id: assignment.event_id,
+          staff_id: assignment.staff_id,
+          type: action === 'confirm' ? 'confirmed' : 'declined',
+          staff_name: assignment.staff_members.name,
+          event_name: assignment.events.name,
+          message: notificationMessage
+        });
 
-    if (notificationError) {
-      console.error('Error creating notification:', notificationError);
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Don't fail the request if notification fails
+      }
     }
 
-    console.log(`Assignment ${action}ed successfully for ${assignment.staff_members.name}`);
+    console.log(`Assignment ${action}ed successfully for ${assignment.staff_members?.name || 'unknown staff'}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
         status: action === 'confirm' ? 'confirmed' : 'declined',
         message: `Assignment ${action}ed successfully`,
-        eventName: assignment.events.name,
-        staffName: assignment.staff_members.name,
+        eventName: assignment.events?.name || 'Unknown Event',
+        staffName: assignment.staff_members?.name || 'Unknown Staff',
         timestamp: new Date().toISOString()
       }),
       {
@@ -174,7 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.error("Error in handle-confirmation function:", error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error.message || "An unexpected error occurred",
         timestamp: new Date().toISOString()
       }),
       {

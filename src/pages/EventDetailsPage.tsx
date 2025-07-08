@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send, ArrowLeft } from "lucide-react";
+import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send, ArrowLeft, Ban } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
 import { Event, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -27,12 +27,13 @@ interface ExtendedStaffAssignment extends StaffAssignment {
 export default function EventDetailsPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
-  const { getEvent, deleteEvent, updateEvent, loadEvents } = useEvents();
+  const { getEvent, deleteEvent, updateEvent, loadEvents, cancelEvent } = useEvents();
   const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignmentStatuses, setAssignmentStatuses] = useState<ExtendedStaffAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
@@ -115,6 +116,19 @@ export default function EventDetailsPage() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!eventId) return;
+    
+    const success = await cancelEvent(eventId);
+    if (success) {
+      setCancelDialogOpen(false);
+      // Reload the main events to update status display
+      await loadEvents();
+      // Reload event details to reflect changes
+      await loadEventDetails();
+    }
+  };
+
   const handleDelete = async () => {
     if (!eventId) return;
     
@@ -129,7 +143,8 @@ export default function EventDetailsPage() {
     // Force reload both event details and assignment statuses
     await Promise.all([
       loadEventDetails(),
-      loadAssignmentStatuses()
+      loadAssignmentStatuses(),
+      loadEvents() // Also reload main events list to sync status
     ]);
     console.log("Data refresh completed");
   };
@@ -308,7 +323,7 @@ export default function EventDetailsPage() {
             onClick={() => navigate("/events")}
             className="flex items-center gap-2 p-2"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-cyan-600" />
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
@@ -418,6 +433,13 @@ export default function EventDetailsPage() {
                   Edit Event
                 </Button>
                 
+                {event.status !== "Cancelled" && (
+                  <Button onClick={() => setCancelDialogOpen(true)} variant="outline" className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50">
+                    <Ban className="h-4 w-4" />
+                    Cancel Event
+                  </Button>
+                )}
+                
                 <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="flex items-center gap-2">
                   <Trash2 className="h-4 w-4" />
                   Delete Event
@@ -446,11 +468,6 @@ export default function EventDetailsPage() {
                         </div>
                         <div className="space-y-1">
                           <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.staffEmail}</p>
-                          {assignment.manualInvitationSentAt && (
-                            <p className="text-xs text-gray-500 opacity-70">
-                              Last emailed: {format(new Date(assignment.manualInvitationSentAt), 'MMM d, h:mm a')}
-                            </p>
-                          )}
                         </div>
                         
                         {event.status === "Completed" && (
@@ -522,6 +539,24 @@ export default function EventDetailsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleMarkAsDone}>Mark as Done</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Event Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel "{event.name}"? This will notify all assigned staff members about the cancellation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, Keep Event</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancel} className="bg-orange-600 hover:bg-orange-700">
+              Yes, Cancel Event
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
