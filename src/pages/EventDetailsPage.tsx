@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -91,6 +90,7 @@ export default function EventDetailsPage() {
         lastInvitationSentAt: (assignment as any).last_invitation_sent_at,
       })) || [];
 
+      console.log("Loaded assignment statuses:", assignments);
       setAssignmentStatuses(assignments);
     } catch (error) {
       console.error("Error loading assignment statuses:", error);
@@ -125,9 +125,13 @@ export default function EventDetailsPage() {
   };
 
   const handleEventUpdated = async () => {
-    // Reload both event details and assignment statuses after editing
-    await loadEventDetails();
-    await loadAssignmentStatuses();
+    console.log("Event updated - refreshing data...");
+    // Force reload both event details and assignment statuses
+    await Promise.all([
+      loadEventDetails(),
+      loadAssignmentStatuses()
+    ]);
+    console.log("Data refresh completed");
   };
 
   const updateAttendanceStatus = async (staffId: string, newStatus: AttendanceStatus) => {
