@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send } from "lucide-react";
+import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send, ArrowLeft } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
 import { Event, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -121,6 +122,12 @@ export default function EventDetailsPage() {
     if (success) {
       navigate("/events");
     }
+  };
+
+  const handleEventUpdated = async () => {
+    // Reload both event details and assignment statuses after editing
+    await loadEventDetails();
+    await loadAssignmentStatuses();
   };
 
   const updateAttendanceStatus = async (staffId: string, newStatus: AttendanceStatus) => {
@@ -288,11 +295,22 @@ export default function EventDetailsPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Header with Back Button */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
-          <p className="text-gray-600 dark:text-gray-400">Event Details</p>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate("/events")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
+            <p className="text-gray-600 dark:text-gray-400">Event Details</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {getStatusBadge(isElapsed && event.status !== "Completed" ? "Elapsed" : event.status)}
@@ -423,7 +441,14 @@ export default function EventDetailsPage() {
                           <h4 className="font-medium">{assignment.staffName}</h4>
                           <Badge variant="outline">{assignment.role}</Badge>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.staffEmail}</p>
+                        <div className="space-y-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.staffEmail}</p>
+                          {assignment.manualInvitationSentAt && (
+                            <p className="text-xs text-gray-500 opacity-70">
+                              Last emailed: {format(new Date(assignment.manualInvitationSentAt), 'MMM d, h:mm a')}
+                            </p>
+                          )}
+                        </div>
                         
                         {event.status === "Completed" && (
                           <div className="mt-2">
@@ -498,7 +523,6 @@ export default function EventDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -516,13 +540,12 @@ export default function EventDetailsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit Dialog */}
       {editDialogOpen && (
         <EventEditDialog
           event={event}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
-          onEventUpdated={loadEventDetails}
+          onEventUpdated={handleEventUpdated}
         />
       )}
     </div>

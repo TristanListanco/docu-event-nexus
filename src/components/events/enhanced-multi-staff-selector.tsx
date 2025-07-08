@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function EnhancedMultiStaffSelector({
   eventEndTime
 }: EnhancedMultiStaffSelectorProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [currentCoverage, setCurrentCoverage] = useState(0);
   
   const safeStaffAvailability = Array.isArray(staffAvailability) ? staffAvailability : [];
   
@@ -39,20 +40,18 @@ export default function EnhancedMultiStaffSelector({
     if (!availability?.staff?.roles?.includes(role)) return false;
     if (excludeStaffIds.includes(availability.staff.id)) return false;
     
-    if (availability.staff.roles.includes("Videographer") && availability.staff.roles.includes("Photographer")) {
-      if (role === "Photographer") {
-        const wouldAppearInVideographer = safeStaffAvailability.some(other => 
-          other.staff.id === availability.staff.id && 
-          other.staff.roles.includes("Videographer")
-        );
-        return excludeStaffIds.includes(availability.staff.id) || !wouldAppearInVideographer;
-      }
-    }
+    // Only show fully available and partially available staff
+    // Hide completely unavailable staff (including those on leave)
+    const isFullyAvailable = availability.isFullyAvailable === true;
+    const isPartiallyAvailable = availability.isFullyAvailable === false && 
+      availability.availableTimeSlots && 
+      Array.isArray(availability.availableTimeSlots) &&
+      availability.availableTimeSlots.length > 0;
     
-    return true;
+    return isFullyAvailable || isPartiallyAvailable;
   });
 
-  // Show fully available, partially available, and unavailable staff with proper filtering
+  // Show fully available and partially available staff separately
   const fullyAvailable = availableStaff.filter(a => a?.isFullyAvailable === true);
   const partiallyAvailable = availableStaff.filter(a => 
     a?.isFullyAvailable === false && 
@@ -60,24 +59,96 @@ export default function EnhancedMultiStaffSelector({
     Array.isArray(a.availableTimeSlots) &&
     a.availableTimeSlots.length > 0
   );
-  const unavailable = availableStaff.filter(a => 
-    a?.isFullyAvailable === false && 
-    (!a?.availableTimeSlots || !Array.isArray(a.availableTimeSlots) || a.availableTimeSlots.length === 0)
-  );
 
   // Get smart allocation if event times are provided
   const smartAllocation = eventStartTime && eventEndTime 
     ? getSmartStaffAllocation(availableStaff, eventStartTime, eventEndTime)
     : null;
 
+  // Calculate current coverage based on selected staff
+  useEffect(() => {
+    if (!eventStartTime || !eventEndTime || selectedStaffIds.length === 0) {
+      setCurrentCoverage(0);
+      return;
+    }
+
+    const selectedStaff = availableStaff.filter(a => selectedStaffIds.includes(a.staff.id));
+    if (selectedStaff.length === 0) {
+      setCurrentCoverage(0);
+      return;
+    }
+
+    // If any selected staff is fully available, coverage is 100%
+    if (selectedStaff.some(s => s.isFullyAvailable)) {
+      setCurrentCoverage(100);
+      return;
+    }
+
+    // Calculate coverage for partially available staff
+    const eventDuration = timeToMinutes(eventEndTime) - timeToMinutes(eventStartTime);
+    const coveredSlots = selectedStaff.flatMap(s => s.availableTimeSlots || []);
+    const mergedSlots = mergeTimeSlots(coveredSlots);
+    const totalCoveredTime = mergedSlots.reduce((sum, slot) => 
+      sum + (timeToMinutes(slot.endTime) - timeToMinutes(slot.startTime)), 0);
+    
+    setCurrentCoverage(Math.round((totalCoveredTime / eventDuration) * 100));
+  }, [selectedStaffIds, availableStaff, eventStartTime, eventEndTime]);
+
+  // Helper functions for time calculations
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const mergeTimeSlots = (slots: Array<{ startTime: string; endTime: string }>): Array<{ startTime: string; endTime: string }> => {
+    if (slots.length === 0) return [];
+    
+    const sorted = slots.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+    const merged: Array<{ startTime: string; endTime: string }> = [sorted[0]];
+    
+    for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i];
+      const last = merged[merged.length - 1];
+      
+      if (timeToMinutes(current.startTime) <= timeToMinutes(last.endTime)) {
+        last.endTime = timeToMinutes(current.endTime) > timeToMinutes(last.endTime) 
+          ? current.endTime 
+          : last.endTime;
+      } else {
+        merged.push(current);
+      }
+    }
+    
+    return merged;
+  };
+
   const handleStaffToggle = (staffId: string) => {
     if (disabled || !staffId) return;
     
     try {
       const safeSelectedIds = Array.isArray(selectedStaffIds) ? selectedStaffIds : [];
+      const selectedStaff = availableStaff.find(s => s.staff.id === staffId);
+      
       if (safeSelectedIds.includes(staffId)) {
+        // Remove staff
         onSelectionChange(safeSelectedIds.filter(id => id !== staffId));
       } else {
+        // Add staff - check for conflicts
+        const currentlySelected = availableStaff.filter(s => safeSelectedIds.includes(s.staff.id));
+        
+        if (currentlySelected.length > 0 && selectedStaff) {
+          const hasFullyAvailable = currentlySelected.some(s => s.isFullyAvailable);
+          const hasPartiallyAvailable = currentlySelected.some(s => !s.isFullyAvailable);
+          
+          // Prevent mixing fully and partially available staff
+          if ((hasFullyAvailable && !selectedStaff.isFullyAvailable) || 
+              (hasPartiallyAvailable && selectedStaff.isFullyAvailable)) {
+            // Clear previous selections and select only the new one
+            onSelectionChange([staffId]);
+            return;
+          }
+        }
+        
         onSelectionChange([...safeSelectedIds, staffId]);
       }
     } catch (error) {
@@ -152,13 +223,13 @@ export default function EnhancedMultiStaffSelector({
                 <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs">
                   Fully Available
                 </Badge>
-              ) : availability.availableTimeSlots && Array.isArray(availability.availableTimeSlots) && availability.availableTimeSlots.length > 0 ? (
+              ) : (
                 <div className="space-y-1">
                   <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs">
                     Partially Available
                   </Badge>
                   <div className="text-xs text-muted-foreground">
-                    Available: {availability.availableTimeSlots.map(slot => 
+                    Available: {availability.availableTimeSlots?.map(slot => 
                       `${slot.startTime}-${slot.endTime}`
                     ).join(', ')}
                   </div>
@@ -170,10 +241,6 @@ export default function EnhancedMultiStaffSelector({
                     </div>
                   )}
                 </div>
-              ) : (
-                <Badge variant="secondary" className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs">
-                  Not Available
-                </Badge>
               )}
             </div>
           </div>
@@ -205,25 +272,18 @@ export default function EnhancedMultiStaffSelector({
         )}
       </div>
 
-      {/* Smart allocation summary */}
-      {smartAllocation && (
+      {/* Current coverage summary */}
+      {safeSelectedIds.length > 0 && (
         <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-blue-800 dark:text-blue-200 flex items-center gap-2">
               <Lightbulb className="h-4 w-4" />
-              Smart Allocation Summary
+              Current Coverage
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-              <p>Coverage: {smartAllocation.totalCoverage}% of event time</p>
-              {smartAllocation.coverageGaps && Array.isArray(smartAllocation.coverageGaps) && smartAllocation.coverageGaps.length > 0 && (
-                <p className="text-orange-700 dark:text-orange-400">
-                  Gaps: {smartAllocation.coverageGaps.map(gap => 
-                    `${gap.startTime}-${gap.endTime}`
-                  ).join(', ')}
-                </p>
-              )}
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              <p>Coverage: {currentCoverage}% of event time</p>
             </div>
           </CardContent>
         </Card>
@@ -251,18 +311,8 @@ export default function EnhancedMultiStaffSelector({
             </div>
           )}
 
-          {/* Unavailable Staff */}
-          {unavailable.length > 0 && (
-            <div>
-              <div className="text-sm font-medium text-red-700 dark:text-red-300 mb-2 px-1">
-                Not Available ({unavailable.length})
-              </div>
-              {unavailable.map(renderStaffCard)}
-            </div>
-          )}
-
           {/* No available staff message */}
-          {fullyAvailable.length === 0 && partiallyAvailable.length === 0 && unavailable.length === 0 && (
+          {fullyAvailable.length === 0 && partiallyAvailable.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>No {role.toLowerCase()}s available for this time slot</p>
