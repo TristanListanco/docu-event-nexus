@@ -13,13 +13,19 @@ import {
 
 interface StaffListItemProps {
   staff: StaffMember;
-  onEdit: () => void;
-  onDelete: () => void;
-  isOnLeave: boolean;
+  onEdit: (staff: StaffMember) => void;
+  onDelete: (staff: StaffMember) => void;
+  viewMode: "list" | "grid";
 }
 
-export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: StaffListItemProps) {
-  const { name, roles, subjectSchedules, position } = staff;
+export default function StaffListItem({ staff, onEdit, onDelete, viewMode }: StaffListItemProps) {
+  const { name, roles, subjectSchedules, position, leaveDates } = staff;
+  
+  // Check if staff is currently on leave
+  const isOnLeave = leaveDates?.some(leave => {
+    const today = new Date().toISOString().split('T')[0];
+    return today >= leave.startDate && today <= leave.endDate;
+  }) || false;
   
   // Get icon based on roles
   const getIcon = () => {
@@ -95,12 +101,12 @@ export default function StaffListItem({ staff, onEdit, onDelete, isOnLeave }: St
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>
+            <DropdownMenuItem onClick={() => onEdit(staff)}>
               <Edit className="mr-2 h-4 w-4" />
               <span>Edit</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
-              onClick={onDelete}
+              onClick={() => onDelete(staff)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="mr-2 h-4 w-4" />
