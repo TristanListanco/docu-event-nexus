@@ -105,35 +105,28 @@ export default function EventsPageContent({
   }, {} as Record<string, Event[]>);
 
   return (
-    <div className="flex-1 overflow-auto animate-fade-in">
-      <div className="container mx-auto p-6">
-        <div className="animate-slide-in-right">
+    <div className="h-full overflow-auto">
+      <div className="container mx-auto p-4 md:p-6">
+        <div className="mb-6">
           <EventsPageFilters onFiltersChange={handleFiltersChange} />
         </div>
 
         {filteredAndSortedEvents.length === 0 ? (
-          <div className="animate-fade-in-up">
-            <EventsEmptyState searchQuery={searchQuery} />
-          </div>
+          <EventsEmptyState searchQuery={searchQuery} />
         ) : (
-          <div className="space-y-2">
-            {Object.entries(groupedEvents).map(([monthYear, monthEvents], index) => (
-              <div 
-                key={monthYear} 
-                className="animate-fade-in-up stagger-animation"
-                style={{ '--stagger': index } as React.CSSProperties}
-              >
-                <EventMonthGroup
-                  monthYear={monthYear}
-                  events={monthEvents}
-                  onEventClick={handleEventClick}
-                  onEditEvent={handleEditEvent}
-                  onDeleteEvent={onDeleteEvent}
-                  getEventStatus={getEventStatus}
-                  isCollapsed={collapsedMonths.has(monthYear)}
-                  onToggleCollapse={() => toggleMonthCollapse(monthYear)}
-                />
-              </div>
+          <div className="space-y-4">
+            {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
+              <EventMonthGroup
+                key={monthYear}
+                monthYear={monthYear}
+                events={monthEvents}
+                onEventClick={handleEventClick}
+                onEditEvent={handleEditEvent}
+                onDeleteEvent={onDeleteEvent}
+                getEventStatus={getEventStatus}
+                isCollapsed={collapsedMonths.has(monthYear)}
+                onToggleCollapse={() => toggleMonthCollapse(monthYear)}
+              />
             ))}
           </div>
         )}

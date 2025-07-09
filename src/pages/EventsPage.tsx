@@ -19,7 +19,6 @@ export default function EventsPage() {
   const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
   const [addEventSheetOpen, setAddEventSheetOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const hasRenderedRef = useRef(false);
 
   const eventActions = EventActionsManager({
     onEventUpdated: () => {
@@ -55,33 +54,28 @@ export default function EventsPage() {
     }
   };
 
-  // Only show loading skeleton on initial load, not on subsequent re-renders
-  if (loading && !hasRenderedRef.current) {
+  // Show loading skeleton while loading
+  if (loading) {
     return <EventsPageSkeleton />;
   }
 
-  // Mark that we've rendered at least once
-  if (!hasRenderedRef.current) {
-    hasRenderedRef.current = true;
-  }
-
   return (
-    <div className="flex h-screen flex-col animate-fade-in">
-      <div className="animate-slide-in-right">
-        <EventsHeader 
-          onAddEvent={handleAddEvent} 
-          onRefresh={handleRefresh}
-          isRefreshing={isRefreshing}
+    <div className="flex h-full min-h-screen flex-col">
+      <EventsHeader 
+        onAddEvent={handleAddEvent} 
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
+      
+      <div className="flex-1 overflow-hidden">
+        <EventsPageContent
+          events={events}
+          onEventClick={handleEventClick}
+          onEditEvent={eventActions.editHandler}
+          onDeleteEvent={eventActions.deleteHandler}
+          getEventStatus={getEventStatus}
         />
       </div>
-      
-      <EventsPageContent
-        events={events}
-        onEventClick={handleEventClick}
-        onEditEvent={eventActions.editHandler}
-        onDeleteEvent={eventActions.deleteHandler}
-        getEventStatus={getEventStatus}
-      />
 
       {/* Desktop Dialog */}
       <AddEventDialog
