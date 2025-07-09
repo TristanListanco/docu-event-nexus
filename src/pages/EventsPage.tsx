@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/events/use-events";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -18,6 +19,7 @@ export default function EventsPage() {
   const [addEventDialogOpen, setAddEventDialogOpen] = useState(false);
   const [addEventSheetOpen, setAddEventSheetOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasRenderedRef = useRef(false);
 
   const eventActions = EventActionsManager({
     onEventUpdated: () => {
@@ -53,8 +55,14 @@ export default function EventsPage() {
     }
   };
 
-  if (loading) {
+  // Only show loading skeleton on initial load, not on subsequent re-renders
+  if (loading && !hasRenderedRef.current) {
     return <EventsPageSkeleton />;
+  }
+
+  // Mark that we've rendered at least once
+  if (!hasRenderedRef.current) {
+    hasRenderedRef.current = true;
   }
 
   return (

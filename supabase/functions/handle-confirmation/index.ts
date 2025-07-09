@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -18,7 +19,12 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+
     const { token, action } = await req.json();
+    
+    console.log('Received request:', { token: !!token, action });
     
     if (!token || !action) {
       console.error('Missing token or action:', { token: !!token, action });
@@ -38,11 +44,13 @@ const handler = async (req: Request): Promise<Response> => {
       .from('staff_assignments')
       .select(`
         *,
-        events(name, date, start_time, end_time, location, user_id),
-        staff_members(name, email)
+        events!inner(name, date, start_time, end_time, location, user_id),
+        staff_members!inner(name, email)
       `)
       .eq('confirmation_token', token)
       .maybeSingle();
+
+    console.log('Assignment query result:', { assignment: !!assignment, error: fetchError });
 
     if (fetchError) {
       console.error('Database error fetching assignment:', fetchError);
@@ -131,6 +139,8 @@ const handler = async (req: Request): Promise<Response> => {
       updateData.declined_at = new Date().toISOString();
       updateData.confirmed_at = null;
     }
+
+    console.log('Updating assignment with data:', updateData);
 
     const { error: updateError } = await supabase
       .from('staff_assignments')

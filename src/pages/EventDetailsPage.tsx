@@ -319,11 +319,12 @@ export default function EventDetailsPage() {
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
-            size="sm" 
+            size="icon" 
             onClick={() => navigate("/events")}
-            className="flex items-center gap-2 p-2"
+            className="h-10 w-10"
+            title="Back to Events"
           >
-            <ArrowLeft className="h-4 w-4 text-cyan-600" />
+            <ArrowLeft className="h-5 w-5 text-cyan-600" />
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
@@ -356,7 +357,9 @@ export default function EventDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-cyan-600" />
+                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                  <Calendar className="h-5 w-5 text-cyan-600" />
+                </div>
                 Event Information
               </CardTitle>
             </CardHeader>
@@ -364,7 +367,9 @@ export default function EventDetailsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <CalendarDays className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <CalendarDays className="h-5 w-5 text-cyan-600" />
+                    </div>
                     <div>
                       <p className="font-medium">Date</p>
                       <p className="text-gray-600 dark:text-gray-400">
@@ -377,7 +382,9 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <Clock className="h-5 w-5 text-cyan-600" />
+                    </div>
                     <div>
                       <p className="font-medium">Time</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.startTime} - {event.endTime}</p>
@@ -385,7 +392,9 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <MapPin className="h-5 w-5 text-cyan-600" />
+                    </div>
                     <div>
                       <p className="font-medium">Location</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.location}</p>
@@ -395,7 +404,9 @@ export default function EventDetailsPage() {
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <User className="h-5 w-5 text-cyan-600" />
+                    </div>
                     <div>
                       <p className="font-medium">Organizer</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.organizer || "Not specified"}</p>
@@ -403,7 +414,9 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                      <Users className="h-5 w-5 text-cyan-600" />
+                    </div>
                     <div>
                       <p className="font-medium">Event Type</p>
                       <p className="text-gray-600 dark:text-gray-400">{event.type}</p>
@@ -412,7 +425,9 @@ export default function EventDetailsPage() {
                   
                   {event.logId && (
                     <div className="flex items-center gap-3">
-                      <Calendar className="h-5 w-5 text-cyan-600" />
+                      <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                        <Calendar className="h-5 w-5 text-cyan-600" />
+                      </div>
                       <div>
                         <p className="font-medium">Log ID</p>
                         <p className="text-gray-600 dark:text-gray-400">{event.logId}</p>
@@ -423,26 +438,34 @@ export default function EventDetailsPage() {
               </div>
               
               <div className="flex gap-2 pt-4 border-t">
-                <Button onClick={downloadCalendarEvent} variant="outline" className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Download Calendar
-                </Button>
-                
-                <Button onClick={() => setEditDialogOpen(true)} variant="outline" className="flex items-center gap-2">
+                <Button 
+                  onClick={() => setEditDialogOpen(true)} 
+                  variant="outline" 
+                  size="icon"
+                  title="Edit Event"
+                >
                   <Edit className="h-4 w-4" />
-                  Edit Event
                 </Button>
                 
                 {event.status !== "Cancelled" && (
-                  <Button onClick={() => setCancelDialogOpen(true)} variant="outline" className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50">
+                  <Button 
+                    onClick={() => setCancelDialogOpen(true)} 
+                    variant="outline" 
+                    size="icon"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    title="Cancel Event"
+                  >
                     <Ban className="h-4 w-4" />
-                    Cancel Event
                   </Button>
                 )}
                 
-                <Button onClick={() => setDeleteDialogOpen(true)} variant="destructive" className="flex items-center gap-2">
+                <Button 
+                  onClick={() => setDeleteDialogOpen(true)} 
+                  variant="destructive" 
+                  size="icon"
+                  title="Delete Event"
+                >
                   <Trash2 className="h-4 w-4" />
-                  Delete Event
                 </Button>
               </div>
             </CardContent>

@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
@@ -68,20 +67,23 @@ export default function EventListItem({
               {dynamicStatus}
             </Badge>
           </div>
+          
           <div className="flex items-center justify-between">
             <Badge variant="outline" className="bg-primary/10 text-primary text-xs transition-colors duration-200 hover:bg-primary/20">
               {event.type}
             </Badge>
-            <span className="text-xs text-muted-foreground transition-colors duration-200">
-              {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
-            </span>
           </div>
-          <div className="space-y-1">
+          
+          {/* Mobile: Each item on separate line */}
+          <div className="space-y-2">
             <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
-              <span className="flex items-center">📍 <span className="ml-1 truncate">{event.location}</span></span>
+              <span>🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
             </div>
             <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
               <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
+              <span className="flex items-center">📍 <span className="ml-1 truncate max-w-[200px]" title={event.location}>{event.location}</span></span>
             </div>
           </div>
         </div>
@@ -99,10 +101,17 @@ export default function EventListItem({
                   {event.type}
                 </Badge>
               </div>
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground flex-wrap gap-y-1">
-                <span className="flex items-center transition-colors duration-200 hover:text-foreground">📍 <span className="ml-1 truncate max-w-[200px] lg:max-w-none">{event.location}</span></span>
-                <span className="flex-shrink-0 transition-colors duration-200 hover:text-foreground">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
-                <span className="flex-shrink-0 transition-colors duration-200">🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
+              {/* Desktop: Each item on separate line for better readability */}
+              <div className="space-y-1">
+                <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
+                  <span>🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
+                </div>
+                <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
+                  <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
+                </div>
+                <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
+                  <span className="flex items-center">📍 <span className="ml-1 truncate max-w-[300px] lg:max-w-[400px]" title={event.location}>{event.location}</span></span>
+                </div>
               </div>
             </div>
           </div>

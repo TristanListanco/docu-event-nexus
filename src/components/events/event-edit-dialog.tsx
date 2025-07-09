@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +20,7 @@ import { Event, EventType, StaffAvailability } from "@/types/models";
 import { useEvents } from "@/hooks/events/use-events";
 import { useStaff } from "@/hooks/use-staff";
 import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
+import { supabase } from "@/integrations/supabase/client";
 import EnhancedMultiStaffSelector from "./enhanced-multi-staff-selector";
 import { getEventStatus } from "./event-status-utils";
 
@@ -62,6 +62,7 @@ export default function EventEditDialog({
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [staffAvailability, setStaffAvailability] = useState<StaffAvailability[]>([]);
   const [timeValidationError, setTimeValidationError] = useState("");
+  const [leaveDates, setLeaveDates] = useState<any[]>([]);
 
   const isCancelled = event.status === "Cancelled";
   const currentStatus = getEventStatus(event);
@@ -86,7 +87,25 @@ export default function EventEditDialog({
     if (formData.date && formData.startTime && formData.endTime) {
       updateStaffAvailability();
     }
-  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent]);
+  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent, leaveDates]);
+
+  // Load leave dates
+  useEffect(() => {
+    const loadLeaveDates = async () => {
+      try {
+        const { data } = await supabase
+          .from('leave_dates')
+          .select('*');
+        setLeaveDates(data || []);
+      } catch (error) {
+        console.error('Error loading leave dates:', error);
+      }
+    };
+
+    if (open) {
+      loadLeaveDates();
+    }
+  }, [open]);
 
   const updateStaffAvailability = () => {
     if (!formData.date || !formData.startTime || !formData.endTime || !staff) return;
@@ -97,7 +116,8 @@ export default function EventEditDialog({
       formData.startTime,
       formData.endTime,
       formData.ignoreScheduleConflicts,
-      formData.ccsOnlyEvent
+      formData.ccsOnlyEvent,
+      leaveDates
     );
     
     setStaffAvailability(availability);
