@@ -1,143 +1,126 @@
 
 import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
-import { StaffMember } from "@/types/models";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { StaffMember, StaffViewMode } from "@/types/models";
 import StaffHeader from "@/components/staff/staff-header";
 import StaffViewControls from "@/components/staff/staff-view-controls";
-import StaffListItem from "@/components/staff/staff-list-item";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
-import StaffPageSkeleton from "@/components/loading/staff-page-skeleton";
-import { isStaffOnLeaveToday } from "@/hooks/staff/staff-availability";
+import StaffListItem from "@/components/staff/staff-list-item";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users } from "lucide-react";
 
 export default function StaffPage() {
-  const { staff, loading, loadStaff } = useStaff();
-  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sortBy, setSortBy] = useState("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const { staff, addStaff, updateStaff, deleteStaff } = useStaff();
+  const isMobile = useIsMobile();
+  
+  const [viewMode, setViewMode] = useState<StaffViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  
+  // Dialog states
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
 
-  // Filter and sort staff based on search and selected criteria
-  const filteredAndSortedStaff = staff
-    .filter((member) => {
-      const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        member.roles.some(role => role.toLowerCase().includes(searchQuery.toLowerCase()));
-      return matchesSearch;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "role":
-          comparison = a.roles.join(", ").localeCompare(b.roles.join(", "));
-          break;
-        case "email":
-          comparison = (a.email || "").localeCompare(b.email || "");
-          break;
-        default:
-          comparison = 0;
-      }
-      return sortOrder === "asc" ? comparison : -comparison;
-    });
+  const filteredStaff = staff.filter((member) => {
+    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesRole = roleFilter === "all" || member.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
-  const handleEdit = (staffMember: StaffMember) => {
-    setSelectedStaff(staffMember);
-    setEditDialogOpen(true);
+  const handleAddStaff = async (staffData: Omit<StaffMember, "id">) => {
+    await addStaff(staffData);
   };
 
-  const handleDelete = (staffMember: StaffMember) => {
-    setSelectedStaff(staffMember);
-    setDeleteDialogOpen(true);
+  const handleUpdateStaff = async (id: string, updates: Partial<StaffMember>) => {
+    await updateStaff(id, updates);
+    setEditingStaff(null);
   };
 
-  const handleStaffAdded = async () => {
-    await loadStaff();
-    setAddDialogOpen(false);
+  const handleDeleteStaff = async (id: string) => {
+    await deleteStaff(id);
+    setDeletingStaff(null);
   };
-
-  const handleStaffUpdated = async () => {
-    await loadStaff();
-  };
-
-  if (loading) {
-    return <StaffPageSkeleton />;
-  }
 
   return (
-    <div className="flex h-screen flex-col animate-fade-in">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-background border-b animate-slide-in-right">
-        <StaffHeader onAddStaff={() => setAddDialogOpen(true)} />
-        <div className="container mx-auto px-6 pb-4">
+    <div className="flex h-screen flex-col">
+      <StaffHeader onAddStaff={() => setIsAddDialogOpen(true)} />
+      
+      <div className="flex-1 overflow-hidden p-6">
+        <div className="space-y-6">
           <StaffViewControls
-            sortBy={sortBy}
-            onSortByChange={setSortBy}
-            sortOrder={sortOrder}
-            onSortOrderChange={setSortOrder}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            roleFilter={roleFilter}
+            onRoleFilterChange={setRoleFilter}
           />
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Staff Members ({filteredStaff.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredStaff.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">No staff members found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchQuery || roleFilter !== "all" 
+                      ? "Try adjusting your search or filter criteria."
+                      : "Get started by adding your first staff member."
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredStaff.map((member) => (
+                    <StaffListItem
+                      key={member.id}
+                      staff={member}
+                      onEdit={setEditingStaff}
+                      onDelete={setDeletingStaff}
+                      viewMode={viewMode}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
-      
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6 animate-fade-in-up">
-          <div className="space-y-4">
-            {filteredAndSortedStaff.map((member, index) => (
-              <div
-                key={member.id}
-                className="animate-fade-in-up stagger-animation"
-                style={{ '--stagger': index } as React.CSSProperties}
-              >
-                <StaffListItem
-                  staff={member}
-                  onEdit={() => handleEdit(member)}
-                  onDelete={() => handleDelete(member)}
-                  isOnLeave={isStaffOnLeaveToday(member)}
-                />
-              </div>
-            ))}
-          </div>
 
-          {filteredAndSortedStaff.length === 0 && (
-            <div className="text-center py-8 animate-fade-in">
-              <p className="text-muted-foreground">
-                {searchQuery ? "No staff members found matching your search." : "No staff members found."}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
+      {/* Dialogs */}
       <StaffFormDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onStaffAdded={handleStaffAdded}
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSubmit={handleAddStaff}
       />
 
-      {selectedStaff && (
-        <>
-          <StaffEditDialog
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            staff={selectedStaff}
-            onStaffUpdated={handleStaffUpdated}
-          />
-          
-          <StaffDeleteDialog
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-            staff={selectedStaff}
-          />
-        </>
+      {editingStaff && (
+        <StaffEditDialog
+          staff={editingStaff}
+          open={!!editingStaff}
+          onOpenChange={(open) => !open && setEditingStaff(null)}
+          onUpdate={handleUpdateStaff}
+        />
+      )}
+
+      {deletingStaff && (
+        <StaffDeleteDialog
+          staff={deletingStaff}
+          open={!!deletingStaff}
+          onOpenChange={(open) => !open && setDeletingStaff(null)}
+          onConfirm={() => handleDeleteStaff(deletingStaff.id)}
+        />
       )}
     </div>
   );

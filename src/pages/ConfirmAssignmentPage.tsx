@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -173,23 +174,6 @@ export default function ConfirmAssignmentPage() {
         // Set the confirmation timestamp from the response
         if (data.timestamp) {
           setConfirmationTimestamp(data.timestamp);
-        }
-
-        // Show browser notification
-        if (Notification.permission === 'granted') {
-          new Notification(`Assignment ${confirmAction}ed`, {
-            body: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
-            icon: '/favicon.ico'
-          });
-        } else if (Notification.permission === 'default') {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              new Notification(`Assignment ${confirmAction}ed`, {
-                body: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
-                icon: '/favicon.ico'
-              });
-            }
-          });
         }
 
         // Show toast notification

@@ -168,7 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
         user_id: assignment.events.user_id,
         event_id: assignment.event_id,
         staff_id: assignment.staff_id,
-        type: action === 'confirm' ? 'confirmed' : 'declined',
+        type: action === 'confirm' ? 'confirmation' : 'decline',
         message: notificationMessage
       });
 
@@ -178,7 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
           user_id: assignment.events.user_id,
           event_id: assignment.event_id,
           staff_id: assignment.staff_id,
-          type: action === 'confirm' ? 'confirmed' : 'declined',
+          type: action === 'confirm' ? 'confirmation' : 'decline',
           staff_name: assignment.staff_members.name,
           event_name: assignment.events.name,
           message: notificationMessage

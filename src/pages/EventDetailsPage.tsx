@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,7 @@ import { format } from "date-fns";
 import CancelledEventOverlay from "@/components/events/cancelled-event-overlay";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
+import EventDetailsSkeleton from "@/components/loading/event-details-skeleton";
 
 interface ExtendedStaffAssignment extends StaffAssignment {
   staffName?: string;
@@ -287,14 +287,7 @@ export default function EventDetailsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
+    return <EventDetailsSkeleton />;
   }
 
   if (!event) {
@@ -517,26 +510,28 @@ export default function EventDetailsPage() {
                       
                       <div className="flex items-center gap-3">
                         {getConfirmationBadge(assignment)}
-                        {/* Always show send invitation button, regardless of confirmation status */}
-                        <SendInvitationButton
-                          eventId={event.id}
-                          staffMember={{
-                            id: assignment.staffId,
-                            name: assignment.staffName || '',
-                            email: assignment.staffEmail || '',
-                            role: assignment.role || ''
-                          }}
-                          eventData={{
-                            name: event.name,
-                            date: event.date,
-                            startTime: event.startTime,
-                            endTime: event.endTime,
-                            location: event.location,
-                            type: event.type
-                          }}
-                          lastSentAt={assignment.manualInvitationSentAt}
-                          onInvitationSent={loadAssignmentStatuses}
-                        />
+                        {/* Only show send invitation button if not confirmed or declined */}
+                        {assignment.confirmationStatus !== 'confirmed' && assignment.confirmationStatus !== 'declined' && (
+                          <SendInvitationButton
+                            eventId={event.id}
+                            staffMember={{
+                              id: assignment.staffId,
+                              name: assignment.staffName || '',
+                              email: assignment.staffEmail || '',
+                              role: assignment.role || ''
+                            }}
+                            eventData={{
+                              name: event.name,
+                              date: event.date,
+                              startTime: event.startTime,
+                              endTime: event.endTime,
+                              location: event.location,
+                              type: event.type
+                            }}
+                            lastSentAt={assignment.manualInvitationSentAt}
+                            onInvitationSent={loadAssignmentStatuses}
+                          />
+                        )}
                       </div>
                     </div>
                   ))}
