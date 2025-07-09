@@ -11,6 +11,7 @@ import {
   updateStaffInDatabase, 
   deleteStaffFromDatabase 
 } from "./staff/staff-crud";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useStaff() {
   const { user } = useAuth();
@@ -39,6 +40,30 @@ export function useStaff() {
     networkMode: 'online',
     // Keep previous data while fetching new data
     placeholderData: (previousData) => previousData,
+  });
+
+  // Fetch leave dates separately
+  const { data: leaveDates = [] } = useQuery({
+    queryKey: ['leaveDates', user?.id],
+    queryFn: async () => {
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      const { data, error } = await supabase
+        .from('leave_dates')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      return data || [];
+    },
+    enabled: !!user,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
   });
 
   const addStaff = async (staffData: Omit<StaffMember, "id">) => {
@@ -163,6 +188,7 @@ export function useStaff() {
 
   return {
     staff,
+    leaveDates,
     loading,
     loadStaff,
     addStaff,
