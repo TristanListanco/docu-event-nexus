@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, CheckCircle, XCircle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 interface AssignmentData {
   id: string;
@@ -39,6 +39,52 @@ export default function ConfirmAssignmentPage() {
   const [error, setError] = useState<string>("");
   const [confirmationTimestamp, setConfirmationTimestamp] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
+
+  const downloadCalendarEvent = async () => {
+    if (!assignment) return;
+
+    try {
+      const response = await supabase.functions.invoke('send-event-notification', {
+        body: {
+          eventId: assignment.id,
+          eventName: assignment.eventName,
+          eventDate: assignment.eventDate,
+          startTime: assignment.startTime,
+          endTime: assignment.endTime,
+          location: assignment.location,
+          organizer: '',
+          type: 'General',
+          assignedStaff: [],
+          downloadOnly: true
+        }
+      });
+
+      if (response.error) throw response.error;
+
+      // Create and trigger download
+      const blob = new Blob([response.data], { type: 'text/calendar' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${assignment.eventName.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Calendar Downloaded",
+        description: "Event has been downloaded to your calendar.",
+      });
+    } catch (error) {
+      console.error("Error downloading calendar:", error);
+      toast({
+        title: "Error",
+        description: "Failed to download calendar event",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -128,6 +174,29 @@ export default function ConfirmAssignmentPage() {
         if (data.timestamp) {
           setConfirmationTimestamp(data.timestamp);
         }
+
+        // Show browser notification
+        if (Notification.permission === 'granted') {
+          new Notification(`Assignment ${confirmAction}ed`, {
+            body: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
+            icon: '/favicon.ico'
+          });
+        } else if (Notification.permission === 'default') {
+          Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+              new Notification(`Assignment ${confirmAction}ed`, {
+                body: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
+                icon: '/favicon.ico'
+              });
+            }
+          });
+        }
+
+        // Show toast notification
+        toast({
+          title: `Assignment ${confirmAction === 'confirm' ? 'Confirmed' : 'Declined'}`,
+          description: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
+        });
 
         // Refresh the assignment data
         await checkAssignmentStatus();
@@ -231,19 +300,19 @@ export default function ConfirmAssignmentPage() {
 
           {/* Event Details */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{assignment.eventName}</h3>
+            <h3 className="text-lg font-semibold">{assignment?.eventName}</h3>
             <div className="grid gap-3 text-sm">
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{format(new Date(assignment.eventDate), 'MMMM d, yyyy')}</span>
+                <span>{assignment?.eventDate && format(new Date(assignment.eventDate), 'MMMM d, yyyy')}</span>
               </div>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{assignment.startTime} - {assignment.endTime}</span>
+                <span>{assignment?.startTime} - {assignment?.endTime}</span>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>{assignment.location}</span>
+                <span>{assignment?.location}</span>
               </div>
             </div>
           </div>
@@ -251,7 +320,7 @@ export default function ConfirmAssignmentPage() {
           {/* Staff Information */}
           <div className="border-t pt-4">
             <p className="text-sm text-muted-foreground">Assigned to:</p>
-            <p className="font-medium">{assignment.staffName}</p>
+            <p className="font-medium">{assignment?.staffName}</p>
           </div>
 
           {/* Confirmation Timestamp */}
@@ -283,6 +352,20 @@ export default function ConfirmAssignmentPage() {
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 {confirming ? 'Processing...' : 'Decline'}
+              </Button>
+            </div>
+          )}
+
+          {/* Calendar download for confirmed assignments */}
+          {isAlreadyProcessed && status === 'confirmed' && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={downloadCalendarEvent}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Calendar Event
               </Button>
             </div>
           )}

@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Download, Edit, Trash2, Send, ArrowLeft, Ban } from "lucide-react";
+import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Edit, Trash2, Ban, ArrowLeft } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
 import { Event, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -460,7 +461,7 @@ export default function EventDetailsPage() {
                   <Button 
                     onClick={() => setCancelDialogOpen(true)} 
                     variant="outline" 
-                    className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950"
+                    className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950 dark:text-orange-400"
                   >
                     <Ban className="h-4 w-4" />
                     Cancel Event
@@ -516,6 +517,7 @@ export default function EventDetailsPage() {
                       
                       <div className="flex items-center gap-3">
                         {getConfirmationBadge(assignment)}
+                        {/* Always show send invitation button, regardless of confirmation status */}
                         <SendInvitationButton
                           eventId={event.id}
                           staffMember={{
