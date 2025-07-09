@@ -20,13 +20,10 @@ interface AssignmentData {
 
 interface ConfirmationResponse {
   success?: boolean;
-  action?: string;
   status?: string;
   assignment?: AssignmentData;
-  icsFile?: string;
   message?: string;
   error?: string;
-  code?: string;
   timestamp?: string;
 }
 
@@ -34,15 +31,14 @@ export default function ConfirmAssignmentPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get("token");
-  const action = searchParams.get("action");
   
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [assignment, setAssignment] = useState<AssignmentData | null>(null);
-  const [icsFile, setIcsFile] = useState<string | null>(null);
   const [error, setError] = useState<string>("");
   const [confirmationTimestamp, setConfirmationTimestamp] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   useEffect(() => {
     if (!token) {
@@ -68,7 +64,7 @@ export default function ConfirmAssignmentPage() {
 
       if (error) {
         console.error("Error checking status:", error);
-        throw error;
+        throw new Error(error.message || "Failed to check status");
       }
 
       console.log("Status check response:", data);
@@ -80,7 +76,6 @@ export default function ConfirmAssignmentPage() {
 
       setStatus(data.status);
       setAssignment(data.assignment);
-      setIcsFile(data.icsFile);
       
       // If there's a timestamp, format it for display
       if (data.timestamp) {
@@ -100,6 +95,9 @@ export default function ConfirmAssignmentPage() {
 
     try {
       setConfirming(true);
+      setError("");
+      setSuccessMessage("");
+      
       console.log(`Processing ${confirmAction} action for token:`, token);
 
       const { data, error } = await supabase.functions.invoke('handle-confirmation', {
@@ -111,7 +109,7 @@ export default function ConfirmAssignmentPage() {
 
       if (error) {
         console.error(`Error ${confirmAction}ing:`, error);
-        throw error;
+        throw new Error(error.message || `Failed to ${confirmAction} assignment`);
       }
 
       console.log(`${confirmAction} response:`, data);
@@ -121,16 +119,21 @@ export default function ConfirmAssignmentPage() {
         return;
       }
 
-      setStatus(data.status);
-      setIcsFile(data.icsFile);
-      
-      // Set the confirmation timestamp from the response
-      if (data.timestamp) {
-        setConfirmationTimestamp(data.timestamp);
-      }
+      // Handle successful response
+      if (data.success) {
+        setStatus(data.status);
+        setSuccessMessage(data.message || `Assignment ${confirmAction}ed successfully`);
+        
+        // Set the confirmation timestamp from the response
+        if (data.timestamp) {
+          setConfirmationTimestamp(data.timestamp);
+        }
 
-      // Refresh the assignment data
-      await checkAssignmentStatus();
+        // Refresh the assignment data
+        await checkAssignmentStatus();
+      } else {
+        setError("Unexpected response format");
+      }
 
     } catch (error: any) {
       console.error(`Error ${confirmAction}ing assignment:`, error);
@@ -140,26 +143,23 @@ export default function ConfirmAssignmentPage() {
     }
   };
 
-  const downloadICS = () => {
-    if (!icsFile || !assignment) return;
-
-    const blob = new Blob([icsFile], { type: 'text/calendar' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${assignment.eventName.replace(/\s+/g, '_')}_confirmation.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-
   const formatDateTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
       return format(date, 'MMMM d, yyyy \'at\' h:mm a');
     } catch (error) {
       return dateString;
+    }
+  };
+
+  const getStatusBadge = () => {
+    switch (status) {
+      case 'confirmed':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
+      case 'declined':
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"><XCircle className="h-3 w-3 mr-1" />Declined</Badge>;
+      default:
+        return <Badge variant="secondary">Pending</Badge>;
     }
   };
 
@@ -208,18 +208,7 @@ export default function ConfirmAssignmentPage() {
     );
   }
 
-  const getStatusBadge = () => {
-    switch (status) {
-      case 'already_confirmed':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Confirmed</Badge>;
-      case 'already_declined':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Declined</Badge>;
-      default:
-        return <Badge variant="secondary">Pending</Badge>;
-    }
-  };
-
-  const isAlreadyProcessed = status === 'already_confirmed' || status === 'already_declined';
+  const isAlreadyProcessed = status === 'confirmed' || status === 'declined';
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -231,6 +220,15 @@ export default function ConfirmAssignmentPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Success Message */}
+          {successMessage && (
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-green-800 dark:text-green-200 text-center font-medium">
+                {successMessage}
+              </p>
+            </div>
+          )}
+
           {/* Event Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">{assignment.eventName}</h3>
@@ -260,7 +258,7 @@ export default function ConfirmAssignmentPage() {
           {confirmationTimestamp && (
             <div className="border-t pt-4">
               <p className="text-sm text-muted-foreground">
-                {status === 'already_confirmed' ? 'Confirmed on:' : 'Declined on:'}
+                {status === 'confirmed' ? 'Confirmed on:' : 'Declined on:'}
               </p>
               <p className="font-medium">{formatDateTime(confirmationTimestamp)}</p>
             </div>
@@ -289,20 +287,10 @@ export default function ConfirmAssignmentPage() {
             </div>
           )}
 
-          {/* Calendar Download */}
-          {status === 'already_confirmed' && icsFile && (
-            <div className="border-t pt-4">
-              <Button onClick={downloadICS} variant="outline" className="w-full">
-                <Download className="h-4 w-4 mr-2" />
-                Download Calendar Event
-              </Button>
-            </div>
-          )}
-
           {/* Message for processed assignments */}
           {isAlreadyProcessed && (
             <div className="text-center text-muted-foreground text-sm">
-              {status === 'already_confirmed' 
+              {status === 'confirmed' 
                 ? 'You have already confirmed your attendance for this event.'
                 : 'You have already declined this assignment.'
               }

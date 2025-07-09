@@ -161,8 +161,16 @@ const handler = async (req: Request): Promise<Response> => {
     // Create a notification for the event organizer
     if (assignment.events?.user_id && assignment.staff_members?.name && assignment.events?.name) {
       const notificationMessage = action === 'confirm' 
-        ? `${assignment.staff_members.name} has confirmed their assignment`
-        : `${assignment.staff_members.name} has declined their assignment`;
+        ? `${assignment.staff_members.name} has confirmed their assignment for ${assignment.events.name}`
+        : `${assignment.staff_members.name} has declined their assignment for ${assignment.events.name}`;
+
+      console.log('Creating notification:', {
+        user_id: assignment.events.user_id,
+        event_id: assignment.event_id,
+        staff_id: assignment.staff_id,
+        type: action === 'confirm' ? 'confirmed' : 'declined',
+        message: notificationMessage
+      });
 
       const { error: notificationError } = await supabase
         .from('notifications')
@@ -179,20 +187,24 @@ const handler = async (req: Request): Promise<Response> => {
       if (notificationError) {
         console.error('Error creating notification:', notificationError);
         // Don't fail the request if notification fails
+      } else {
+        console.log('Notification created successfully');
       }
     }
 
     console.log(`Assignment ${action}ed successfully for ${assignment.staff_members?.name || 'unknown staff'}`);
 
+    const responseData = { 
+      success: true,
+      status: action === 'confirm' ? 'confirmed' : 'declined',
+      message: `Assignment ${action}ed successfully`,
+      eventName: assignment.events?.name || 'Unknown Event',
+      staffName: assignment.staff_members?.name || 'Unknown Staff',
+      timestamp: new Date().toISOString()
+    };
+
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        status: action === 'confirm' ? 'confirmed' : 'declined',
-        message: `Assignment ${action}ed successfully`,
-        eventName: assignment.events?.name || 'Unknown Event',
-        staffName: assignment.staff_members?.name || 'Unknown Staff',
-        timestamp: new Date().toISOString()
-      }),
+      JSON.stringify(responseData),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },

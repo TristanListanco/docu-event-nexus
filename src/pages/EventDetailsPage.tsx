@@ -311,6 +311,7 @@ export default function EventDetailsPage() {
   }
 
   const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed";
+  const currentStatus = isElapsed && event.status !== "Completed" ? "Elapsed" : event.status;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -324,15 +325,14 @@ export default function EventDetailsPage() {
             className="h-10 w-10"
             title="Back to Events"
           >
-            <ArrowLeft className="h-5 w-5 text-cyan-600" />
+            <ArrowLeft className="h-5 w-5 text-primary" />
           </Button>
-          <div>
+          <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
-            <p className="text-gray-600 dark:text-gray-400">Event Details</p>
+            {getStatusBadge(currentStatus)}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {getStatusBadge(isElapsed && event.status !== "Completed" ? "Elapsed" : event.status)}
           {isElapsed && event.status !== "Completed" && (
             <Button 
               onClick={() => setMarkDoneDialogOpen(true)} 
@@ -357,8 +357,8 @@ export default function EventDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                  <Calendar className="h-5 w-5 text-cyan-600" />
+                <div className="p-2 bg-muted rounded-lg">
+                  <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 Event Information
               </CardTitle>
@@ -367,8 +367,8 @@ export default function EventDetailsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                      <CalendarDays className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <CalendarDays className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">Date</p>
@@ -382,8 +382,8 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                      <Clock className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <Clock className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">Time</p>
@@ -392,8 +392,8 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                      <MapPin className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <MapPin className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">Location</p>
@@ -404,8 +404,8 @@ export default function EventDetailsPage() {
                 
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                      <User className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <User className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">Organizer</p>
@@ -414,8 +414,8 @@ export default function EventDetailsPage() {
                   </div>
                   
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                      <Users className="h-5 w-5 text-cyan-600" />
+                    <div className="p-2 bg-muted rounded-lg">
+                      <Users className="h-5 w-5 text-primary" />
                     </div>
                     <div>
                       <p className="font-medium">Event Type</p>
@@ -425,8 +425,8 @@ export default function EventDetailsPage() {
                   
                   {event.logId && (
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                        <Calendar className="h-5 w-5 text-cyan-600" />
+                      <div className="p-2 bg-muted rounded-lg">
+                        <Calendar className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <p className="font-medium">Log ID</p>
@@ -437,36 +437,35 @@ export default function EventDetailsPage() {
                 </div>
               </div>
               
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button 
                   onClick={() => setEditDialogOpen(true)} 
                   variant="outline" 
-                  size="icon"
-                  title="Edit Event"
+                  className="flex items-center gap-2"
                 >
                   <Edit className="h-4 w-4" />
+                  Edit Event
+                </Button>
+                
+                <Button 
+                  onClick={() => setDeleteDialogOpen(true)} 
+                  variant="outline"
+                  className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Event
                 </Button>
                 
                 {event.status !== "Cancelled" && (
                   <Button 
                     onClick={() => setCancelDialogOpen(true)} 
                     variant="outline" 
-                    size="icon"
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                    title="Cancel Event"
+                    className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950"
                   >
                     <Ban className="h-4 w-4" />
+                    Cancel Event
                   </Button>
                 )}
-                
-                <Button 
-                  onClick={() => setDeleteDialogOpen(true)} 
-                  variant="destructive" 
-                  size="icon"
-                  title="Delete Event"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
             </CardContent>
           </Card>
