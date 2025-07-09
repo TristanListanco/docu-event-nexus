@@ -19,6 +19,8 @@ export default function StaffPage() {
   const [viewMode, setViewMode] = useState<StaffViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   
   // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -28,12 +30,13 @@ export default function StaffPage() {
   const filteredStaff = staff.filter((member) => {
     const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesRole = roleFilter === "all" || member.role === roleFilter;
+    const matchesRole = roleFilter === "all" || member.roles.includes(roleFilter as any);
     return matchesSearch && matchesRole;
   });
 
   const handleAddStaff = async (staffData: Omit<StaffMember, "id">) => {
     await addStaff(staffData);
+    setIsAddDialogOpen(false);
   };
 
   const handleUpdateStaff = async (id: string, updates: Partial<StaffMember>) => {
@@ -55,6 +58,10 @@ export default function StaffPage() {
           <StaffViewControls
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             roleFilter={roleFilter}
@@ -86,8 +93,8 @@ export default function StaffPage() {
                     <StaffListItem
                       key={member.id}
                       staff={member}
-                      onEdit={setEditingStaff}
-                      onDelete={setDeletingStaff}
+                      onEdit={(staff) => setEditingStaff(staff)}
+                      onDelete={(staff) => setDeletingStaff(staff)}
                       viewMode={viewMode}
                     />
                   ))}
@@ -102,7 +109,7 @@ export default function StaffPage() {
       <StaffFormDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onSubmit={handleAddStaff}
+        onStaffAdded={() => setIsAddDialogOpen(false)}
       />
 
       {editingStaff && (
@@ -110,7 +117,7 @@ export default function StaffPage() {
           staff={editingStaff}
           open={!!editingStaff}
           onOpenChange={(open) => !open && setEditingStaff(null)}
-          onUpdate={handleUpdateStaff}
+          onStaffUpdated={() => setEditingStaff(null)}
         />
       )}
 
@@ -119,7 +126,7 @@ export default function StaffPage() {
           staff={deletingStaff}
           open={!!deletingStaff}
           onOpenChange={(open) => !open && setDeletingStaff(null)}
-          onConfirm={() => handleDeleteStaff(deletingStaff.id)}
+          onStaffDeleted={() => setDeletingStaff(null)}
         />
       )}
     </div>

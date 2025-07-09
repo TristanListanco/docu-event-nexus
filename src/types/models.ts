@@ -1,7 +1,7 @@
-
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
 export type StaffPosition = "Chairperson" | "Co-Chairperson" | "Secretary" | "Undersecretary" | "Associate";
+export type StaffViewMode = "list" | "grid";
 
 export interface Schedule {
   id: string;

@@ -4,23 +4,32 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, SortAsc, SortDesc } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { StaffViewMode } from "@/types/models";
 
 interface StaffViewControlsProps {
+  viewMode: StaffViewMode;
+  onViewModeChange: (viewMode: StaffViewMode) => void;
   sortBy: string;
   onSortByChange: (sortBy: string) => void;
   sortOrder: 'asc' | 'desc';
   onSortOrderChange: (order: 'asc' | 'desc') => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  roleFilter: string;
+  onRoleFilterChange: (role: string) => void;
 }
 
 export default function StaffViewControls({
+  viewMode,
+  onViewModeChange,
   sortBy,
   onSortByChange,
   sortOrder,
   onSortOrderChange,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  roleFilter,
+  onRoleFilterChange
 }: StaffViewControlsProps) {
   const isMobile = useIsMobile();
 
@@ -39,8 +48,21 @@ export default function StaffViewControls({
         </div>
       </div>
 
-      {/* Sort Controls Row */}
+      {/* Filter and Sort Controls Row */}
       <div className="flex items-center gap-2">
+        {/* Role Filter */}
+        <Select value={roleFilter} onValueChange={onRoleFilterChange}>
+          <SelectTrigger className="w-32">
+            <SelectValue placeholder="All Roles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="Photographer">Photographer</SelectItem>
+            <SelectItem value="Videographer">Videographer</SelectItem>
+            <SelectItem value="Working Com">Working Com</SelectItem>
+          </SelectContent>
+        </Select>
+
         {isMobile ? (
           <>
             {/* Mobile: Icon buttons */}
