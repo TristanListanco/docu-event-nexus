@@ -128,9 +128,40 @@ serve(async (req) => {
       }
     }
 
-    // Check if token is expired (24 hours)
-    const expiresAt = new Date(assignment.confirmation_token_expires_at);
+    // Enhanced logging for token expiration debugging
+    console.log('Assignment found:', {
+      id: assignment.id,
+      confirmation_token_expires_at: assignment.confirmation_token_expires_at,
+      raw_expires_at: assignment.confirmation_token_expires_at
+    });
+
+    // Check if token is expired (24 hours) - with better null handling
+    let expiresAt: Date;
     const now = new Date();
+    
+    if (!assignment.confirmation_token_expires_at) {
+      console.log('No expiration date set, setting to 24 hours from now');
+      // If no expiration is set, update it to 24 hours from now
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      // Update the assignment with the proper expiration
+      const { error: updateError } = await supabase
+        .from('staff_assignments')
+        .update({ confirmation_token_expires_at: expiresAt.toISOString() })
+        .eq('id', assignment.id);
+        
+      if (updateError) {
+        console.error('Error updating expiration:', updateError);
+      }
+    } else {
+      expiresAt = new Date(assignment.confirmation_token_expires_at);
+    }
+    
+    console.log('Token expiration check:', { 
+      expiresAt: expiresAt.toISOString(), 
+      now: now.toISOString(),
+      isExpired: now > expiresAt
+    });
     
     if (now > expiresAt) {
       console.error('Token expired:', { expiresAt, now });
