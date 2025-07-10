@@ -8,8 +8,8 @@ import EventMonthGroup from "./event-month-group";
 interface EventsPageContentProps {
   events: Event[];
   onEventClick: (event: Event) => void;
-  onEditEvent: (event: Event) => void;
-  onDeleteEvent: (event: Event) => void;
+  onEditEvent: (e: React.MouseEvent, event: Event) => void;
+  onDeleteEvent: (e: React.MouseEvent, event: Event) => void;
   getEventStatus: (event: Event) => string;
 }
 
@@ -40,9 +40,14 @@ export default function EventsPageContent({
     onEventClick(event);
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (e: React.MouseEvent, event: Event) => {
     console.log('Edit event:', event);
-    onEditEvent(event);
+    onEditEvent(e, event);
+  };
+
+  const handleDeleteEvent = (e: React.MouseEvent, event: Event) => {
+    console.log('Delete event:', event);
+    onDeleteEvent(e, event);
   };
 
   const toggleMonthCollapse = (monthYear: string) => {
@@ -97,8 +102,8 @@ export default function EventsPageContent({
   }, {} as Record<string, Event[]>);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 p-4 md:p-6 border-b">
+    <div className="h-full flex flex-col bg-background">
+      <div className="flex-shrink-0 p-4 md:p-6 border-b border-border">
         <EventsPageFilters onFiltersChange={handleFiltersChange} />
       </div>
 
@@ -115,7 +120,7 @@ export default function EventsPageContent({
                   events={monthEvents}
                   onEventClick={handleEventClick}
                   onEditEvent={handleEditEvent}
-                  onDeleteEvent={onDeleteEvent}
+                  onDeleteEvent={handleDeleteEvent}
                   getEventStatus={getEventStatus}
                   isCollapsed={collapsedMonths.has(monthYear)}
                   onToggleCollapse={() => toggleMonthCollapse(monthYear)}

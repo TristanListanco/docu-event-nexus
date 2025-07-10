@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/events/use-events";
@@ -33,12 +32,14 @@ export default function EventsPage() {
     navigate(`/events/${event.id}`);
   };
 
-  const handleEditEvent = (event: Event) => {
-    eventActions.editHandler(event);
+  const handleEditEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    eventActions.editHandler(e, event);
   };
 
-  const handleDeleteEvent = (event: Event) => {
-    eventActions.deleteHandler(event);
+  const handleDeleteEvent = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    eventActions.deleteHandler(e, event);
   };
 
   const handleAddEvent = () => {
@@ -68,7 +69,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="h-full min-h-screen flex flex-col">
+    <div className="h-full min-h-screen flex flex-col bg-background">
       <div className="flex-shrink-0">
         <EventsHeader 
           onAddEvent={handleAddEvent} 
