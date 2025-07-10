@@ -45,11 +45,14 @@ export default function ConfirmAssignmentPage() {
     if (!assignment) return;
 
     try {
-      const response = await supabase.functions.invoke('send-event-notification', {
+      // Format the date properly for the calendar function
+      const eventDate = new Date(assignment.eventDate).toISOString().split('T')[0];
+      
+      const { data, error } = await supabase.functions.invoke('send-event-notification', {
         body: {
           eventId: assignment.id,
           eventName: assignment.eventName,
-          eventDate: assignment.eventDate,
+          eventDate: eventDate,
           startTime: assignment.startTime,
           endTime: assignment.endTime,
           location: assignment.location,
@@ -60,10 +63,17 @@ export default function ConfirmAssignmentPage() {
         }
       });
 
-      if (response.error) throw response.error;
+      if (error) {
+        console.error("Calendar download error:", error);
+        throw new Error(error.message || "Failed to generate calendar file");
+      }
+
+      if (!data) {
+        throw new Error("No calendar data received");
+      }
 
       // Create and trigger download
-      const blob = new Blob([response.data], { type: 'text/calendar' });
+      const blob = new Blob([data], { type: 'text/calendar; charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -75,13 +85,13 @@ export default function ConfirmAssignmentPage() {
 
       toast({
         title: "Calendar Downloaded",
-        description: "Event has been downloaded to your calendar.",
+        description: "Event has been added to your calendar.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading calendar:", error);
       toast({
-        title: "Error",
-        description: "Failed to download calendar event",
+        title: "Download Failed", 
+        description: error.message || "Failed to download calendar event",
         variant: "destructive",
       });
     }
@@ -182,6 +192,13 @@ export default function ConfirmAssignmentPage() {
           description: `You have ${confirmAction}ed your assignment for ${assignment?.eventName}`,
         });
 
+        // Auto-download calendar for confirmed assignments
+        if (confirmAction === 'confirm') {
+          setTimeout(() => {
+            downloadCalendarEvent();
+          }, 1000);
+        }
+
         // Refresh the assignment data
         await checkAssignmentStatus();
       } else {
@@ -267,7 +284,12 @@ export default function ConfirmAssignmentPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-center">Event Assignment Confirmation</CardTitle>
+          <CardTitle className="text-center">
+            {isAlreadyProcessed 
+              ? `Event ${status === 'confirmed' ? 'Confirmed' : 'Declined'}`
+              : "Event Assignment Confirmation"
+            }
+          </CardTitle>
           <div className="text-center">
             {getStatusBadge()}
           </div>
@@ -278,6 +300,23 @@ export default function ConfirmAssignmentPage() {
             <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <p className="text-green-800 dark:text-green-200 text-center font-medium">
                 {successMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Already processed message */}
+          {isAlreadyProcessed && (
+            <div className={`p-4 rounded-lg border ${
+              status === 'confirmed' 
+                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+            }`}>
+              <p className={`text-center font-medium ${
+                status === 'confirmed' 
+                  ? 'text-green-800 dark:text-green-200' 
+                  : 'text-red-800 dark:text-red-200'
+              }`}>
+                You have already {status} your attendance for this event.
               </p>
             </div>
           )}
@@ -317,7 +356,7 @@ export default function ConfirmAssignmentPage() {
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons for pending assignments */}
           {!isAlreadyProcessed && (
             <div className="flex gap-4 pt-4">
               <Button
@@ -351,16 +390,6 @@ export default function ConfirmAssignmentPage() {
                 <Download className="h-4 w-4" />
                 Download Calendar Event
               </Button>
-            </div>
-          )}
-
-          {/* Message for processed assignments */}
-          {isAlreadyProcessed && (
-            <div className="text-center text-muted-foreground text-sm">
-              {status === 'confirmed' 
-                ? 'You have already confirmed your attendance for this event.'
-                : 'You have already declined this assignment.'
-              }
             </div>
           )}
         </CardContent>

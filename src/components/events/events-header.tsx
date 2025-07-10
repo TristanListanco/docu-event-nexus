@@ -80,19 +80,19 @@ export default function EventsHeader({
               </Button>
               
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
                 onClick={onDeleteEvent}
-                className="hidden sm:flex"
+                className="hidden sm:flex border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
               <Button
-                variant="destructive"
+                variant="outline"
                 size="icon"
                 onClick={onDeleteEvent}
-                className="sm:hidden"
+                className="sm:hidden border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
