@@ -276,10 +276,13 @@ serve(async (req) => {
       }
     }
 
-    // Handle confirm/decline actions
+    // Handle confirm/decline actions - FIX: Use correct status values
     if (action === 'confirm' || action === 'decline') {
+      // Map actions to correct database values
+      const confirmationStatus = action === 'confirm' ? 'confirmed' : 'declined';
+      
       const updateData = {
-        confirmation_status: action,
+        confirmation_status: confirmationStatus,
         ...(action === 'confirm' ? { confirmed_at: new Date().toISOString() } : { declined_at: new Date().toISOString() })
       };
 
@@ -327,7 +330,7 @@ serve(async (req) => {
       }
 
       // Create notification for the organizer
-      const notificationMessage = `${assignment.staff_members.name} has ${action === 'confirm' ? 'confirmed' : 'declined'} attendance for ${assignment.events.name}`;
+      const notificationMessage = `${assignment.staff_members.name} has ${confirmationStatus} attendance for ${assignment.events.name}`;
       
       const { error: notificationError } = await supabase
         .from('notifications')
@@ -347,7 +350,7 @@ serve(async (req) => {
       }
 
       // Success response
-      const actionText = action === 'confirm' ? 'confirmed' : 'declined';
+      const actionText = confirmationStatus;
       const statusColor = action === 'confirm' ? '#059669' : '#dc2626';
       
       if (isDirectCall) {
@@ -430,7 +433,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: true,
-            status: action,
+            status: confirmationStatus,
             message: `Assignment ${actionText} successfully`,
             timestamp: new Date().toISOString()
           }),
