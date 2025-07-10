@@ -33,6 +33,14 @@ export default function EventsPage() {
     navigate(`/events/${event.id}`);
   };
 
+  const handleEditEvent = (event: Event) => {
+    eventActions.editHandler(event);
+  };
+
+  const handleDeleteEvent = (event: Event) => {
+    eventActions.deleteHandler(event);
+  };
+
   const handleAddEvent = () => {
     if (isMobile) {
       setAddEventSheetOpen(true);
@@ -60,7 +68,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="flex flex-col" style={{ height: '100vh', minHeight: '100vh' }}>
+    <div className="h-full min-h-screen flex flex-col">
       <div className="flex-shrink-0">
         <EventsHeader 
           onAddEvent={handleAddEvent} 
@@ -69,12 +77,12 @@ export default function EventsPage() {
         />
       </div>
       
-      <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex-1 overflow-hidden">
         <EventsPageContent
           events={events}
           onEventClick={handleEventClick}
-          onEditEvent={eventActions.editHandler}
-          onDeleteEvent={eventActions.deleteHandler}
+          onEditEvent={handleEditEvent}
+          onDeleteEvent={handleDeleteEvent}
           getEventStatus={getEventStatus}
         />
       </div>
