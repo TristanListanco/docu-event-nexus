@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "@/hooks/events/use-events";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -60,14 +60,16 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="flex h-full min-h-screen flex-col">
-      <EventsHeader 
-        onAddEvent={handleAddEvent} 
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-      />
+    <div className="flex flex-col" style={{ height: '100vh', minHeight: '100vh' }}>
+      <div className="flex-shrink-0">
+        <EventsHeader 
+          onAddEvent={handleAddEvent} 
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
+        />
+      </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
         <EventsPageContent
           events={events}
           onEventClick={handleEventClick}

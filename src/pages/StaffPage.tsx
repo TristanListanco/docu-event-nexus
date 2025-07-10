@@ -10,6 +10,7 @@ import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
 import StaffListItem from "@/components/staff/staff-list-item";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users } from "lucide-react";
 
 export default function StaffPage() {
@@ -53,8 +54,8 @@ export default function StaffPage() {
     <div className="flex h-screen flex-col">
       <StaffHeader onAddStaff={() => setIsAddDialogOpen(true)} />
       
-      <div className="flex-1 overflow-hidden p-6">
-        <div className="space-y-6">
+      <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0">
+        <div className="flex-shrink-0 mb-6">
           <StaffViewControls
             viewMode={viewMode}
             onViewModeChange={setViewMode}
@@ -67,17 +68,19 @@ export default function StaffPage() {
             roleFilter={roleFilter}
             onRoleFilterChange={setRoleFilter}
           />
+        </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Staff Members ({filteredStaff.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {filteredStaff.length === 0 ? (
-                <div className="text-center py-8">
+        <Card className="flex-1 flex flex-col min-h-0">
+          <CardHeader className="flex-shrink-0">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Staff Members ({filteredStaff.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 p-0">
+            {filteredStaff.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center py-8 px-6">
+                <div>
                   <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-foreground mb-2">No staff members found</h3>
                   <p className="text-muted-foreground mb-4">
@@ -87,8 +90,10 @@ export default function StaffPage() {
                     }
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
+              </div>
+            ) : (
+              <ScrollArea className="h-full">
+                <div className="space-y-4 p-6">
                   {filteredStaff.map((member) => (
                     <StaffListItem
                       key={member.id}
@@ -99,10 +104,10 @@ export default function StaffPage() {
                     />
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Dialogs */}

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Bell, Check, X, Trash2 } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,7 @@ export default function NotificationsPanel() {
     unreadCount, 
     loading, 
     markAsRead, 
-    markAllAsRead, 
-    clearNotification, 
-    clearAllNotifications 
+    clearNotification
   } = useNotifications();
 
   if (loading) {
@@ -54,32 +52,8 @@ export default function NotificationsPanel() {
             onClick={() => setIsOpen(false)}
           />
           <Card className="absolute right-0 top-12 z-50 w-96 max-h-[500px] shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="pb-2">
               <CardTitle className="text-lg">Notifications</CardTitle>
-              <div className="flex gap-2">
-                {unreadCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={markAllAsRead}
-                    className="text-xs"
-                  >
-                    <Check className="h-3 w-3 mr-1" />
-                    Mark all read
-                  </Button>
-                )}
-                {notifications.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllNotifications}
-                    className="text-xs text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Clear all
-                  </Button>
-                )}
-              </div>
             </CardHeader>
             <CardContent className="p-0">
               {notifications.length === 0 ? (
@@ -92,11 +66,12 @@ export default function NotificationsPanel() {
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-3 rounded-lg border transition-colors ${
+                        className={`p-3 rounded-lg border transition-colors cursor-pointer ${
                           !notification.read 
                             ? 'bg-primary/5 border-primary/20' 
                             : 'bg-muted/50'
                         }`}
+                        onClick={() => !notification.read && markAsRead(notification.id)}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
@@ -120,26 +95,6 @@ export default function NotificationsPanel() {
                             <p className="text-xs text-muted-foreground">
                               {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                             </p>
-                          </div>
-                          <div className="flex gap-1">
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => markAsRead(notification.id)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <Check className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => clearNotification(notification.id)}
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
                           </div>
                         </div>
                       </div>

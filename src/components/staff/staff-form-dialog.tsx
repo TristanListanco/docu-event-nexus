@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffRole, SubjectSchedule, StaffPosition } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
@@ -36,8 +37,9 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    roles: [] as StaffRole[],
+    role: "" as StaffRole | "",
     position: undefined as StaffPosition | undefined,
+    workingCom: false,
   });
   
   const [subjectSchedules, setSubjectSchedules] = useState<SubjectSchedule[]>([]);
@@ -68,24 +70,23 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
     }
   };
 
-  const handleRoleChange = (role: StaffRole, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      roles: checked 
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
+  const handleRoleChange = (role: StaffRole) => {
+    setFormData((prev) => ({ ...prev, role }));
   };
 
   const handlePositionChange = (position: string) => {
     setFormData((prev) => ({ ...prev, position: position as StaffPosition }));
   };
 
+  const handleWorkingComChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, workingCom: checked }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.roles.length === 0) {
-      return; // Require at least one role
+    if (!formData.role) {
+      return; // Require a role
     }
     
     if (formData.email && !validateEmail(formData.email)) {
@@ -95,9 +96,14 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
     setLoading(true);
     
     try {
+      const roles: StaffRole[] = [formData.role];
+      if (formData.workingCom) {
+        roles.push("Working Com");
+      }
+
       const success = await addStaff({
         name: formData.name,
-        roles: formData.roles,
+        roles: roles,
         email: formData.email || undefined,
         schedules: [],
         subjectSchedules: subjectSchedules,
@@ -110,8 +116,9 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
         setFormData({
           name: "",
           email: "",
-          roles: [],
-          position: undefined
+          role: "",
+          position: undefined,
+          workingCom: false
         });
         setSubjectSchedules([]);
         setEmailError("");
@@ -183,6 +190,23 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">
+                Role
+              </Label>
+              <div className="col-span-3">
+                <RadioGroup value={formData.role} onValueChange={handleRoleChange}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Photographer" id="photographer" />
+                    <Label htmlFor="photographer">Photographer</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Videographer" id="videographer" />
+                    <Label htmlFor="videographer">Videographer</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
                 Position
               </Label>
               <div className="col-span-3">
@@ -196,39 +220,9 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
                     <SelectItem value="Secretary">Secretary</SelectItem>
                     <SelectItem value="Undersecretary">Undersecretary</SelectItem>
                     <SelectItem value="Associate">Associate</SelectItem>
+                    <SelectItem value="Working Com">Working Com</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
-                Roles
-              </Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="photographer"
-                    checked={formData.roles.includes("Photographer")}
-                    onCheckedChange={(checked) => handleRoleChange("Photographer", !!checked)}
-                  />
-                  <Label htmlFor="photographer">Photographer</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="videographer"
-                    checked={formData.roles.includes("Videographer")}
-                    onCheckedChange={(checked) => handleRoleChange("Videographer", !!checked)}
-                  />
-                  <Label htmlFor="videographer">Videographer</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="working-com"
-                    checked={formData.roles.includes("Working Com")}
-                    onCheckedChange={(checked) => handleRoleChange("Working Com", !!checked)}
-                  />
-                  <Label htmlFor="working-com">Working Com</Label>
-                </div>
               </div>
             </div>
             
@@ -244,7 +238,7 @@ export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: St
           <DialogFooter>
             <Button 
               type="submit" 
-              disabled={loading || formData.roles.length === 0 || !!emailError}
+              disabled={loading || !formData.role || !!emailError}
             >
               {loading ? "Adding..." : "Add Staff"}
             </Button>

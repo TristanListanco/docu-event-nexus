@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StaffRole, StaffMember, LeaveDate, SubjectSchedule, StaffPosition } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
@@ -30,7 +30,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
   
   const [formData, setFormData] = useState({
     name: staff.name,
-    roles: staff.roles || [],
+    role: (staff.roles?.find(r => r === "Photographer" || r === "Videographer") || "") as StaffRole | "",
     email: staff.email || "",
     position: staff.position || undefined as StaffPosition | undefined,
   });
@@ -43,9 +43,11 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     if (open && staff) {
       console.log('Staff data from props:', staff);
       
+      const primaryRole = staff.roles?.find(r => r === "Photographer" || r === "Videographer") || "";
+      
       setFormData({
         name: staff.name,
-        roles: staff.roles || [],
+        role: primaryRole as StaffRole | "",
         email: staff.email || "",
         position: staff.position || undefined,
       });
@@ -91,13 +93,8 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
     }
   };
 
-  const handleRoleChange = (role: StaffRole, checked: boolean) => {
-    setFormData((prev) => ({
-      ...prev,
-      roles: checked 
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
+  const handleRoleChange = (role: StaffRole) => {
+    setFormData((prev) => ({ ...prev, role }));
   };
 
   const handlePositionChange = (position: string) => {
@@ -117,9 +114,18 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
       console.log('Submitting leave dates:', leaveDates);
       console.log('Submitting subject schedules:', subjectSchedules);
       
+      const roles: StaffRole[] = [];
+      if (formData.role) {
+        roles.push(formData.role);
+      }
+      // Keep Working Com if it was originally there
+      if (staff.roles?.includes("Working Com")) {
+        roles.push("Working Com");
+      }
+      
       const success = await updateStaff(staff.id, {
         name: formData.name,
-        roles: formData.roles,
+        roles: roles,
         email: formData.email || undefined,
         leaveDates: leaveDates,
         subjectSchedules: subjectSchedules,
@@ -184,6 +190,23 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">
+                Role
+              </Label>
+              <div className="col-span-3">
+                <RadioGroup value={formData.role} onValueChange={handleRoleChange}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Photographer" id="photographer" />
+                    <Label htmlFor="photographer">Photographer</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Videographer" id="videographer" />
+                    <Label htmlFor="videographer">Videographer</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
                 Position
               </Label>
               <div className="col-span-3">
@@ -197,39 +220,9 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
                     <SelectItem value="Secretary">Secretary</SelectItem>
                     <SelectItem value="Undersecretary">Undersecretary</SelectItem>
                     <SelectItem value="Associate">Associate</SelectItem>
+                    <SelectItem value="Working Com">Working Com</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">
-                Roles
-              </Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="photographer"
-                    checked={formData.roles.includes("Photographer")}
-                    onCheckedChange={(checked) => handleRoleChange("Photographer", !!checked)}
-                  />
-                  <Label htmlFor="photographer">Photographer</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="videographer"
-                    checked={formData.roles.includes("Videographer")}
-                    onCheckedChange={(checked) => handleRoleChange("Videographer", !!checked)}
-                  />
-                  <Label htmlFor="videographer">Videographer</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="working-com"
-                    checked={formData.roles.includes("Working Com")}
-                    onCheckedChange={(checked) => handleRoleChange("Working Com", !!checked)}
-                  />
-                  <Label htmlFor="working-com">Working Com</Label>
-                </div>
               </div>
             </div>
             
@@ -252,7 +245,7 @@ export default function StaffEditDialog({ open, onOpenChange, staff, onStaffUpda
           <DialogFooter>
             <Button 
               type="submit" 
-              disabled={loading || formData.roles.length === 0 || !!emailError}
+              disabled={loading || !formData.role || !!emailError}
             >
               {loading ? "Saving..." : "Save Changes"}
             </Button>
