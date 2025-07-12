@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Info, LogOut, Building2 } from "lucide-react";
+import { Calendar, Users, Info, LogOut, Building2, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sidebar,
@@ -43,6 +43,12 @@ export default function MainLayout() {
       icon: Users,
       path: "/staff",
       isActive: isActive("/staff"),
+    },
+    {
+      title: "Borrowing Log",
+      icon: ClipboardList,
+      path: "/borrowing",
+      isActive: isActive("/borrowing"),
     },
     {
       title: "About",
