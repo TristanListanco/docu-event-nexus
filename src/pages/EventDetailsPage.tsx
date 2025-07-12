@@ -106,9 +106,7 @@ export default function EventDetailsPage() {
     
     if (success) {
       setMarkDoneDialogOpen(false);
-      // Reload the main events to update status display
       await loadEvents();
-      // Reload event details to reflect changes
       await loadEventDetails();
       toast({
         title: "Event Completed",
@@ -123,9 +121,7 @@ export default function EventDetailsPage() {
     const success = await cancelEvent(eventId);
     if (success) {
       setCancelDialogOpen(false);
-      // Reload the main events to update status display
       await loadEvents();
-      // Reload event details to reflect changes
       await loadEventDetails();
     }
   };
@@ -141,11 +137,10 @@ export default function EventDetailsPage() {
 
   const handleEventUpdated = async () => {
     console.log("Event updated - refreshing data...");
-    // Force reload both event details and assignment statuses
     await Promise.all([
       loadEventDetails(),
       loadAssignmentStatuses(),
-      loadEvents() // Also reload main events list to sync status
+      loadEvents()
     ]);
     console.log("Data refresh completed");
   };
@@ -163,7 +158,6 @@ export default function EventDetailsPage() {
 
       if (error) throw error;
 
-      // Update local state
       setAssignmentStatuses(prev => 
         prev.map(assignment => 
           assignment.staffId === staffId 
@@ -207,7 +201,6 @@ export default function EventDetailsPage() {
 
       if (response.error) throw response.error;
 
-      // Create and trigger download
       const blob = new Blob([response.data], { type: 'text/calendar' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -292,14 +285,18 @@ export default function EventDetailsPage() {
 
   if (!event) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Event Not Found</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">The requested event could not be found.</p>
-          <Button onClick={() => navigate("/events")}>
-            Back to Events
-          </Button>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Event Not Found</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">The requested event could not be found.</p>
+              <Button onClick={() => navigate("/events")}>
+                Back to Events
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -308,303 +305,306 @@ export default function EventDetailsPage() {
   const currentStatus = isElapsed && event.status !== "Completed" ? "Elapsed" : event.status;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate("/events")}
-            className="h-10 w-10"
-            title="Back to Events"
-          >
-            <ArrowLeft className="h-5 w-5 text-primary" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{event.name}</h1>
-            {getStatusBadge(currentStatus)}
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+        {/* Header with Back Button - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate("/events")}
+              className="h-10 w-10 shrink-0"
+              title="Back to Events"
+            >
+              <ArrowLeft className="h-5 w-5 text-primary" />
+            </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100 truncate">{event.name}</h1>
+              {getStatusBadge(currentStatus)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isElapsed && event.status !== "Completed" && (
+              <Button 
+                onClick={() => setMarkDoneDialogOpen(true)} 
+                className="bg-green-600 hover:bg-green-700 text-sm md:text-base"
+                size="sm"
+              >
+                Mark as Done
+              </Button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isElapsed && event.status !== "Completed" && (
-            <Button 
-              onClick={() => setMarkDoneDialogOpen(true)} 
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Mark as Done
-            </Button>
-          )}
-        </div>
-      </div>
 
-      <div className="relative">
-        {event.status === "Cancelled" && (
-          <CancelledEventOverlay 
-            isVisible={true}
-            onDelete={handleDelete}
-          />
-        )}
-        
-        <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
-          {/* Event Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 bg-muted rounded-lg">
-                  <Calendar className="h-5 w-5 text-primary" />
-                </div>
-                Event Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <CalendarDays className="h-5 w-5 text-primary" />
+        <div className="relative">
+          {event.status === "Cancelled" && (
+            <CancelledEventOverlay 
+              isVisible={true}
+              onDelete={handleDelete}
+            />
+          )}
+          
+          <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
+            {/* Event Details Card - Mobile Optimized */}
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                  <div className="p-2 bg-muted rounded-lg">
+                    <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  </div>
+                  Event Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-muted rounded-lg shrink-0">
+                        <CalendarDays className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm md:text-base">Date</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base break-words">
+                          {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
+                          {event.endDate && event.endDate !== event.date && 
+                            ` - ${format(new Date(event.endDate), 'EEEE, MMMM d, yyyy')}`
+                          }
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Date</p>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
-                        {event.endDate && event.endDate !== event.date && 
-                          ` - ${format(new Date(event.endDate), 'EEEE, MMMM d, yyyy')}`
-                        }
-                      </p>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-muted rounded-lg shrink-0">
+                        <Clock className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm md:text-base">Time</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">{event.startTime} - {event.endTime}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-muted rounded-lg shrink-0">
+                        <MapPin className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm md:text-base">Location</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base break-words">{event.location}</p>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <Clock className="h-5 w-5 text-primary" />
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-muted rounded-lg shrink-0">
+                        <User className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm md:text-base">Organizer</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base break-words">{event.organizer || "Not specified"}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Time</p>
-                      <p className="text-gray-600 dark:text-gray-400">{event.startTime} - {event.endTime}</p>
+                    
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-muted rounded-lg shrink-0">
+                        <Users className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm md:text-base">Event Type</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">{event.type}</p>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <MapPin className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Location</p>
-                      <p className="text-gray-600 dark:text-gray-400">{event.location}</p>
-                    </div>
+                    
+                    {event.logId && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-muted rounded-lg shrink-0">
+                          <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base">Log ID</p>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base break-all">{event.logId}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Organizer</p>
-                      <p className="text-gray-600 dark:text-gray-400">{event.organizer || "Not specified"}</p>
-                    </div>
-                  </div>
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+                  <Button 
+                    onClick={() => setEditDialogOpen(true)} 
+                    variant="outline" 
+                    className="flex items-center gap-2 text-sm"
+                    size="sm"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Event
+                  </Button>
                   
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-muted rounded-lg">
-                      <Users className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Event Type</p>
-                      <p className="text-gray-600 dark:text-gray-400">{event.type}</p>
-                    </div>
-                  </div>
+                  <Button 
+                    onClick={() => setDeleteDialogOpen(true)} 
+                    variant="outline"
+                    className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 text-sm"
+                    size="sm"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Event
+                  </Button>
                   
-                  {event.logId && (
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-muted rounded-lg">
-                        <Calendar className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Log ID</p>
-                        <p className="text-gray-600 dark:text-gray-400">{event.logId}</p>
-                      </div>
-                    </div>
+                  {event.status !== "Cancelled" && (
+                    <Button 
+                      onClick={() => setCancelDialogOpen(true)} 
+                      variant="outline" 
+                      className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950 dark:text-orange-400 text-sm"
+                      size="sm"
+                    >
+                      <Ban className="h-4 w-4" />
+                      Cancel Event
+                    </Button>
                   )}
                 </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button 
-                  onClick={() => setEditDialogOpen(true)} 
-                  variant="outline" 
-                  className="flex items-center gap-2"
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Event
-                </Button>
-                
-                <Button 
-                  onClick={() => setDeleteDialogOpen(true)} 
-                  variant="outline"
-                  className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Event
-                </Button>
-                
-                {event.status !== "Cancelled" && (
-                  <Button 
-                    onClick={() => setCancelDialogOpen(true)} 
-                    variant="outline" 
-                    className="flex items-center gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950 dark:text-orange-400"
-                  >
-                    <Ban className="h-4 w-4" />
-                    Cancel Event
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Staff Assignments */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Staff Assignments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {assignmentStatuses.length > 0 ? (
-                <div className="space-y-4">
-                  {assignmentStatuses.map((assignment) => (
-                    <div key={assignment.staffId} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-medium">{assignment.staffName}</h4>
-                          <Badge variant="outline">{assignment.role}</Badge>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.staffEmail}</p>
+            {/* Staff Assignments - Mobile Optimized */}
+            <Card className="w-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                  <Users className="h-4 w-4 md:h-5 md:w-5" />
+                  Staff Assignments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {assignmentStatuses.length > 0 ? (
+                  <div className="space-y-4">
+                    {assignmentStatuses.map((assignment) => (
+                      <div key={assignment.staffId} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                            <h4 className="font-medium text-sm md:text-base truncate">{assignment.staffName}</h4>
+                            <Badge variant="outline" className="text-xs w-fit">{assignment.role}</Badge>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 break-all">{assignment.staffEmail}</p>
+                          </div>
+                          
+                          {event.status === "Completed" && (
+                            <div className="mt-2">
+                              <Select
+                                value={assignment.attendanceStatus}
+                                onValueChange={(value: AttendanceStatus) => 
+                                  updateAttendanceStatus(assignment.staffId, value)
+                                }
+                              >
+                                <SelectTrigger className="w-full sm:w-40">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Pending">Pending</SelectItem>
+                                  <SelectItem value="Completed">Completed</SelectItem>
+                                  <SelectItem value="Absent">Absent</SelectItem>
+                                  <SelectItem value="Excused">Excused</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                         
-                        {event.status === "Completed" && (
-                          <div className="mt-2">
-                            <Select
-                              value={assignment.attendanceStatus}
-                              onValueChange={(value: AttendanceStatus) => 
-                                updateAttendanceStatus(assignment.staffId, value)
-                              }
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Completed">Completed</SelectItem>
-                                <SelectItem value="Absent">Absent</SelectItem>
-                                <SelectItem value="Excused">Excused</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          {getConfirmationBadge(assignment)}
+                          {assignment.confirmationStatus !== 'confirmed' && assignment.confirmationStatus !== 'declined' && (
+                            <SendInvitationButton
+                              eventId={event.id}
+                              staffMember={{
+                                id: assignment.staffId,
+                                name: assignment.staffName || '',
+                                email: assignment.staffEmail || '',
+                                role: assignment.role || ''
+                              }}
+                              eventData={{
+                                name: event.name,
+                                date: event.date,
+                                startTime: event.startTime,
+                                endTime: event.endTime,
+                                location: event.location,
+                                type: event.type
+                              }}
+                              lastSentAt={assignment.manualInvitationSentAt}
+                              onInvitationSent={loadAssignmentStatuses}
+                            />
+                          )}
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-3">
-                        {getConfirmationBadge(assignment)}
-                        {/* Only show send invitation button if not confirmed or declined */}
-                        {assignment.confirmationStatus !== 'confirmed' && assignment.confirmationStatus !== 'declined' && (
-                          <SendInvitationButton
-                            eventId={event.id}
-                            staffMember={{
-                              id: assignment.staffId,
-                              name: assignment.staffName || '',
-                              email: assignment.staffEmail || '',
-                              role: assignment.role || ''
-                            }}
-                            eventData={{
-                              name: event.name,
-                              date: event.date,
-                              startTime: event.startTime,
-                              endTime: event.endTime,
-                              location: event.location,
-                              type: event.type
-                            }}
-                            lastSentAt={assignment.manualInvitationSentAt}
-                            onInvitationSent={loadAssignmentStatuses}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  No staff members assigned to this event.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-8 text-sm md:text-base">
+                    No staff members assigned to this event.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
+        <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Mark Event as Completed</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to mark "{event.name}" as completed? This action will change the event status and allow you to track attendance.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMarkAsDone}>Mark as Done</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancel Event</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to cancel "{event.name}"? This will notify all assigned staff members about the cancellation.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>No, Keep Event</AlertDialogCancel>
+              <AlertDialogAction onClick={handleCancel} className="bg-orange-600 hover:bg-orange-700">
+                Yes, Cancel Event
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Event</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{event.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                Delete Event
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {editDialogOpen && (
+          <EventEditDialog
+            event={event}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            onEventUpdated={handleEventUpdated}
+          />
+        )}
       </div>
-
-      {/* Mark as Done Dialog */}
-      <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mark Event as Completed</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to mark "{event.name}" as completed? This action will change the event status and allow you to track attendance.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkAsDone}>Mark as Done</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel Event Dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Event</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel "{event.name}"? This will notify all assigned staff members about the cancellation.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No, Keep Event</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCancel} className="bg-orange-600 hover:bg-orange-700">
-              Yes, Cancel Event
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Event</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{event.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Delete Event
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {editDialogOpen && (
-        <EventEditDialog
-          event={event}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onEventUpdated={handleEventUpdated}
-        />
-      )}
     </div>
   );
 }

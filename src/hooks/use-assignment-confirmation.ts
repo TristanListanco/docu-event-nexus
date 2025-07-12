@@ -11,6 +11,8 @@ interface AssignmentData {
   startTime: string;
   endTime: string;
   location: string;
+  organizer?: string;
+  type?: string;
 }
 
 interface UseAssignmentConfirmationProps {
@@ -75,7 +77,11 @@ export function useAssignmentConfirmation({ token }: UseAssignmentConfirmationPr
     if (!assignment) return;
 
     try {
-      const eventDate = new Date(assignment.eventDate).toISOString().split('T')[0];
+      console.log("Downloading calendar for assignment:", assignment);
+      
+      const eventDate = assignment.eventDate.includes('T') 
+        ? assignment.eventDate.split('T')[0] 
+        : assignment.eventDate;
       
       const { data, error } = await supabase.functions.invoke('send-event-notification', {
         body: {
@@ -84,9 +90,9 @@ export function useAssignmentConfirmation({ token }: UseAssignmentConfirmationPr
           eventDate: eventDate,
           startTime: assignment.startTime,
           endTime: assignment.endTime,
-          location: assignment.location,
-          organizer: '',
-          type: 'General',
+          location: assignment.location || '',
+          organizer: assignment.organizer || '',
+          type: assignment.type || 'General',
           assignedStaff: [],
           downloadOnly: true
         }
@@ -97,9 +103,11 @@ export function useAssignmentConfirmation({ token }: UseAssignmentConfirmationPr
         throw new Error(error.message || "Failed to generate calendar file");
       }
 
-      if (!data) {
-        throw new Error("No calendar data received");
+      if (!data || typeof data !== 'string') {
+        throw new Error("Invalid calendar data received");
       }
+
+      console.log("Calendar data received, creating download...");
 
       const blob = new Blob([data], { type: 'text/calendar; charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
