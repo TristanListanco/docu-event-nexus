@@ -40,12 +40,12 @@ export default function BorrowingFormDialog({
   useEffect(() => {
     if (record) {
       setFormData({
-        borrowerName: record.borrowerName,
-        equipmentNames: record.equipmentNames,
-        dateTaken: record.dateTaken,
-        timeTaken: record.timeTaken,
-        dateReturned: record.dateReturned || "",
-        timeReturned: record.timeReturned || ""
+        borrowerName: record.borrower_name,
+        equipmentNames: record.equipment_names,
+        dateTaken: record.date_taken,
+        timeTaken: record.time_taken,
+        dateReturned: record.date_returned || "",
+        timeReturned: record.time_returned || ""
       });
     } else {
       setFormData({

@@ -54,20 +54,20 @@ export default function BorrowingLogTable({
           ) : (
             records.map((record) => (
               <TableRow key={record.id}>
-                <TableCell className="font-medium">{record.borrowerName}</TableCell>
+                <TableCell className="font-medium">{record.borrower_name}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
-                    {record.equipmentNames.map((equipment, index) => (
+                    {record.equipment_names.map((equipment, index) => (
                       <Badge key={index} variant="secondary" className="mr-1">
                         {equipment}
                       </Badge>
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{formatDateTime(record.dateTaken, record.timeTaken)}</TableCell>
+                <TableCell>{formatDateTime(record.date_taken, record.time_taken)}</TableCell>
                 <TableCell>
-                  {record.dateReturned && record.timeReturned
-                    ? formatDateTime(record.dateReturned, record.timeReturned)
+                  {record.date_returned && record.time_returned
+                    ? formatDateTime(record.date_returned, record.time_returned)
                     : "-"
                   }
                 </TableCell>
