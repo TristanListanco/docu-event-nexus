@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, Camera, Video, UserX, Clock, TrendingUp } from "lucide-react";
+import { X, Plus, Camera, Video, UserX, Clock, TrendingUp, Lightbulb } from "lucide-react";
 import { StaffAvailability, StaffRole } from "@/types/models";
 import { useStaff } from "@/hooks/use-staff";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -54,15 +54,23 @@ export default function EnhancedMultiStaffSelector({
     onSelectionChange(newSelection);
   };
 
+  const handleSmartPick = (staffId: string) => {
+    if (!selectedStaffIds.includes(staffId)) {
+      const newSelection = [...selectedStaffIds, staffId];
+      onSelectionChange(newSelection);
+    }
+  };
+
   const getStaffName = (staffId: string) => {
     const staffMember = staff?.find(s => s.id === staffId);
     return staffMember?.name || "Unknown Staff";
   };
 
-  // Filter staff by role and availability - REMOVE UNAVAILABLE STAFF
+  // Filter staff by role and availability - ONLY show available staff (fully + partially)
   const roleStaff = staffAvailability.filter(availability => 
     availability.staff.roles?.includes(role) && 
-    !excludeStaffIds.includes(availability.staff.id)
+    !excludeStaffIds.includes(availability.staff.id) &&
+    (availability.isFullyAvailable || (availability.availableTimeSlots && availability.availableTimeSlots.length > 0))
   );
 
   const fullyAvailableStaff = roleStaff.filter(s => s.isFullyAvailable);
@@ -86,10 +94,67 @@ export default function EnhancedMultiStaffSelector({
     return "Schedule conflict";
   };
 
-  // Smart allocation summary
-  const smartAllocation = eventStartTime && eventEndTime 
-    ? getSmartStaffAllocation(roleStaff, eventStartTime, eventEndTime)
-    : null;
+  // Enhanced smart allocation with gap detection
+  const getEnhancedSmartAllocation = () => {
+    if (!eventStartTime || !eventEndTime || selectedStaffIds.length === 0) return null;
+    
+    const eventStart = timeToMinutes(eventStartTime);
+    const eventEnd = timeToMinutes(eventEndTime);
+    const eventDuration = eventEnd - eventStart;
+    
+    // Get all selected staff availability
+    const selectedStaffAvailability = roleStaff.filter(s => selectedStaffIds.includes(s.staff.id));
+    
+    // Create coverage map
+    const coverageMap: boolean[] = new Array(eventDuration).fill(false);
+    
+    selectedStaffAvailability.forEach(availability => {
+      if (availability.isFullyAvailable) {
+        // Full coverage
+        coverageMap.fill(true);
+      } else if (availability.availableTimeSlots) {
+        availability.availableTimeSlots.forEach(slot => {
+          const slotStart = Math.max(0, timeToMinutes(slot.startTime) - eventStart);
+          const slotEnd = Math.min(eventDuration, timeToMinutes(slot.endTime) - eventStart);
+          
+          for (let i = slotStart; i < slotEnd; i++) {
+            coverageMap[i] = true;
+          }
+        });
+      }
+    });
+    
+    const coveredMinutes = coverageMap.filter(Boolean).length;
+    const coveragePercentage = Math.round((coveredMinutes / eventDuration) * 100);
+    
+    // Find gaps
+    const gaps: Array<{start: string; end: string}> = [];
+    let gapStart = -1;
+    
+    for (let i = 0; i < coverageMap.length; i++) {
+      if (!coverageMap[i] && gapStart === -1) {
+        gapStart = i;
+      } else if (coverageMap[i] && gapStart !== -1) {
+        gaps.push({
+          start: minutesToTime(eventStart + gapStart),
+          end: minutesToTime(eventStart + i)
+        });
+        gapStart = -1;
+      }
+    }
+    
+    // Handle gap at the end
+    if (gapStart !== -1) {
+      gaps.push({
+        start: minutesToTime(eventStart + gapStart),
+        end: eventEndTime
+      });
+    }
+    
+    return { coveragePercentage, gaps };
+  };
+
+  const smartAllocation = getEnhancedSmartAllocation();
 
   const getCoverageColor = (coverage: number) => {
     if (coverage >= 90) return "text-green-600 dark:text-green-400";
@@ -97,31 +162,71 @@ export default function EnhancedMultiStaffSelector({
     return "text-red-600 dark:text-red-400";
   };
 
+  // Helper function for time calculations
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="space-y-3">
-      <Label className="flex items-center">
-        <RoleIcon className="h-4 w-4 mr-2 text-primary" />
-        {role} (Max {maxSelection})
-      </Label>
+      <div className="flex items-center justify-between">
+        <Label className="flex items-center">
+          <RoleIcon className="h-4 w-4 mr-2 text-primary" />
+          {role} (Max {maxSelection})
+        </Label>
+        
+        {/* Smart Select Button */}
+        {roleStaff.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => {
+              // Smart select logic - pick the best available staff
+              const bestOption = fullyAvailableStaff[0] || partiallyAvailableStaff[0];
+              if (bestOption && !selectedStaffIds.includes(bestOption.staff.id)) {
+                handleSmartPick(bestOption.staff.id);
+              }
+            }}
+            disabled={disabled || hasNoAssignment === false}
+          >
+            <Lightbulb className="h-4 w-4" />
+            Smart Select
+          </Button>
+        )}
+      </div>
       
       {/* Smart Allocation Summary */}
       {smartAllocation && selectedStaffIds.length > 0 && (
-        <div className="p-3 bg-muted/50 rounded-lg border">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Coverage Analysis</span>
+            <span className="text-sm font-medium">Smart Allocation Summary</span>
           </div>
-          <div className="text-sm">
-            <span className="text-muted-foreground">Current coverage: </span>
-            <span className={`font-semibold ${getCoverageColor(smartAllocation.coverage)}`}>
-              {smartAllocation.coverage}%
-            </span>
+          <div className="space-y-2">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Coverage: </span>
+              <span className={`font-semibold ${getCoverageColor(smartAllocation.coveragePercentage)}`}>
+                {smartAllocation.coveragePercentage}% of event time
+              </span>
+            </div>
+            {smartAllocation.gaps.length > 0 && (
+              <div className="text-sm">
+                <span className="text-muted-foreground">Gaps: </span>
+                <span className="text-orange-600 dark:text-orange-400 font-medium">
+                  {smartAllocation.gaps.map(gap => `${gap.start}-${gap.end}`).join(", ")}
+                </span>
+              </div>
+            )}
           </div>
-          {smartAllocation.coverage < 100 && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Consider adding more staff or selecting different time slots for full coverage
-            </p>
-          )}
         </div>
       )}
       
@@ -230,44 +335,58 @@ export default function EnhancedMultiStaffSelector({
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-2 mt-2">
-            {partiallyAvailableStaff.map((availability) => (
-              <div key={availability.staff.id} className="p-3 border rounded-lg bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{availability.staff.name}</span>
-                    <Badge variant="outline" className="text-xs">
-                      Partial
-                    </Badge>
+            {partiallyAvailableStaff.map((availability) => {
+              const isSelected = selectedStaffIds.includes(availability.staff.id);
+              
+              return (
+                <div key={availability.staff.id} className={`p-3 border rounded-lg bg-orange-50 dark:bg-orange-950 ${isSelected ? 'border-blue-300 dark:border-blue-600' : 'border-orange-200 dark:border-orange-800'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {isSelected && <div className="w-3 h-3 bg-green-500 rounded-full" />}
+                      <span className="font-medium">{availability.staff.name}</span>
+                      <Badge variant="outline" className="text-xs">
+                        Partially Available
+                      </Badge>
+                      {/* Smart Pick Button */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs px-2 py-1 h-6 bg-blue-500 text-white hover:bg-blue-600"
+                        onClick={() => handleSmartPick(availability.staff.id)}
+                        disabled={disabled || isSelected}
+                      >
+                        <Lightbulb className="h-3 w-3 mr-1" />
+                        Smart Pick
+                      </Button>
+                    </div>
+                    {!isSelected && canAddMore && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSmartPick(availability.staff.id)}
+                        disabled={disabled}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-                  {!selectedStaffIds.includes(availability.staff.id) && canAddMore && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const newSelection = [...selectedStaffIds, availability.staff.id];
-                        onSelectionChange(newSelection);
-                      }}
-                      disabled={disabled}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                  {availability.availableTimeSlots && (
+                    <div className="text-sm text-muted-foreground">
+                      <span className="font-medium">Available: </span>
+                      {formatTimeSlots(availability.availableTimeSlots)}
+                    </div>
+                  )}
+                  {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
+                    <div className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                      <span className="font-medium">Conflicts: </span>
+                      {getConflictReason(availability)}
+                    </div>
                   )}
                 </div>
-                {availability.availableTimeSlots && (
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium">Available: </span>
-                    {formatTimeSlots(availability.availableTimeSlots)}
-                  </div>
-                )}
-                {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
-                  <div className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-                    <span className="font-medium">Conflicts: </span>
-                    {getConflictReason(availability)}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </CollapsibleContent>
         </Collapsible>
       )}
