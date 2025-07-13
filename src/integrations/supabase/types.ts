@@ -38,45 +38,6 @@ export type Database = {
         }
         Relationships: []
       }
-      borrowing_records: {
-        Row: {
-          borrower_name: string
-          created_at: string
-          date_returned: string | null
-          date_taken: string
-          equipment_names: string[]
-          id: string
-          status: string
-          time_returned: string | null
-          time_taken: string
-          user_id: string
-        }
-        Insert: {
-          borrower_name: string
-          created_at?: string
-          date_returned?: string | null
-          date_taken: string
-          equipment_names: string[]
-          id?: string
-          status?: string
-          time_returned?: string | null
-          time_taken: string
-          user_id: string
-        }
-        Update: {
-          borrower_name?: string
-          created_at?: string
-          date_returned?: string | null
-          date_taken?: string
-          equipment_names?: string[]
-          id?: string
-          status?: string
-          time_returned?: string | null
-          time_taken?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       events: {
         Row: {
           big_event_id: string | null
