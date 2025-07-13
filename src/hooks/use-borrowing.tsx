@@ -21,7 +21,14 @@ export const useBorrowing = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRecords(data || []);
+      
+      // Type the data properly to match our BorrowingRecord interface
+      const typedRecords: BorrowingRecord[] = (data || []).map(record => ({
+        ...record,
+        status: record.status as 'borrowed' | 'returned'
+      }));
+      
+      setRecords(typedRecords);
     } catch (error) {
       console.error('Error fetching borrowing records:', error);
       toast({
