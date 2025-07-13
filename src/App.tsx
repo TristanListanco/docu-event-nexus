@@ -40,14 +40,16 @@ const App = () => (
               <Route path="/confirm-assignment" element={<ConfirmAssignmentPage />} />
               
               {/* Protected routes */}
-              <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-                <Route path="/" element={<Index />} />
-                <Route path="/events" element={<EventsPage />} />
-                <Route path="/events/add" element={<AddEventPage />} />
-                <Route path="/events/:id" element={<EventDetailsPage />} />
-                <Route path="/staff" element={<StaffPage />} />
-                <Route path="/borrowing" element={<BorrowingLogPage />} />
-                <Route path="/about" element={<AboutPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/events" element={<EventsPage />} />
+                  <Route path="/events/add" element={<AddEventPage />} />
+                  <Route path="/events/:id" element={<EventDetailsPage />} />
+                  <Route path="/staff" element={<StaffPage />} />
+                  <Route path="/borrowing" element={<BorrowingLogPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                </Route>
               </Route>
               
               {/* 404 route */}
