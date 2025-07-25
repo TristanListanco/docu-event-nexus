@@ -55,11 +55,10 @@ export default function EnhancedMultiStaffSelector({
     return staffMember?.name || "Unknown Staff";
   };
 
-  // Filter staff by role and availability - ONLY show available staff (fully + partially)
+  // Filter staff by role and availability
   const roleStaff = staffAvailability.filter(availability => 
     availability.staff.roles?.includes(role) && 
-    !excludeStaffIds.includes(availability.staff.id) &&
-    (availability.isFullyAvailable || (availability.availableTimeSlots && availability.availableTimeSlots.length > 0))
+    !excludeStaffIds.includes(availability.staff.id)
   );
 
   const fullyAvailableStaff = roleStaff.filter(s => s.isFullyAvailable);
