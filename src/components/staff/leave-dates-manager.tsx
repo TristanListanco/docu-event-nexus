@@ -20,6 +20,15 @@ export default function LeaveDatesManager({ leaveDates, onLeaveDatesChange }: Le
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [endCalendarOpen, setEndCalendarOpen] = useState(false);
 
+  // Filter out expired leave dates (where end date has passed)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const currentLeaveDates = leaveDates.filter(leave => {
+    const endDate = new Date(leave.endDate);
+    return !isBefore(endDate, today);
+  });
+
   const addLeaveDate = () => {
     if (!startDate || !endDate) return;
     
@@ -127,11 +136,11 @@ export default function LeaveDatesManager({ leaveDates, onLeaveDatesChange }: Le
         </div>
       </div>
 
-      {leaveDates.length > 0 && (
+      {currentLeaveDates.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">Leave Dates</p>
           <div className="flex flex-wrap gap-2">
-            {leaveDates.map((leave) => (
+            {currentLeaveDates.map((leave) => (
               <Badge key={leave.id} variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-200">
                 <span className="mr-2">
                   {format(new Date(leave.startDate), "MMM dd")} - {format(new Date(leave.endDate), "MMM dd, yyyy")}
