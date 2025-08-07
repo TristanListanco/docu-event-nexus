@@ -50,18 +50,21 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
+  console.log('App ProtectedRoute: user:', user?.email, 'loading:', loading);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background animate-fade-in">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground">Initializing application...</p>
         </div>
       </div>
     );
   }
 
   if (!user) {
+    console.log('App ProtectedRoute: No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -69,6 +72,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  console.log('App: Rendering');
+  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="ui-theme">

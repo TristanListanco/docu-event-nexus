@@ -23,31 +23,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('AuthProvider: Starting auth initialization');
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      console.log('AuthProvider: Loading timeout reached, setting loading to false');
+      if (mounted) {
+        setLoading(false);
+      }
+    }, 10000); // 10 seconds timeout
 
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user?.email);
+      console.log('AuthProvider: Auth state changed:', event, session?.user?.email);
       
       if (!mounted) return;
+      
+      // Clear the loading timeout since we got a response
+      clearTimeout(loadingTimeout);
       
       // Handle session changes synchronously to avoid re-renders
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // Only set loading to false after we've processed the auth change
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
-    // Get initial session
+    // Get initial session with error handling and timeout
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('AuthProvider: Getting initial session');
+        
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Session fetch timeout'));
+          }, 8000);
+        });
+
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+        
+        clearTimeout(timeoutId);
         
         if (error) {
-          console.error("Error getting session:", error.message);
+          console.error("AuthProvider: Error getting session:", error.message);
+        } else {
+          console.log('AuthProvider: Initial session retrieved:', session?.user?.email || 'No session');
         }
         
         if (mounted) {
@@ -56,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       } catch (error: any) {
-        console.error("Error in getInitialSession:", error.message);
+        console.error("AuthProvider: Error in getInitialSession:", error.message);
         if (mounted) {
           setLoading(false);
         }
@@ -66,7 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getInitialSession();
 
     return () => {
+      console.log('AuthProvider: Cleaning up');
       mounted = false;
+      clearTimeout(loadingTimeout);
+      if (timeoutId) clearTimeout(timeoutId);
       subscription.unsubscribe();
     };
   }, []);
