@@ -1,7 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
-import { sendEmail } from './email-service.ts';
+import { sendEmailWithNodemailer } from './email-service.ts';
 import { generateUpdateEmailTemplate, generateConfirmationEmailTemplate } from './email-templates.ts';
 import { generateICSContent } from './calendar.ts';
 
@@ -50,19 +49,21 @@ const handler = async (req: Request): Promise<Response> => {
     // If this is a download-only request, return ICS file
     if (requestData.downloadOnly) {
       const icsContent = generateICSContent({
-        id: requestData.eventId,
-        name: requestData.eventName,
-        date: requestData.eventDate,
-        start_time: requestData.startTime,
-        end_time: requestData.endTime,
-        location: requestData.location,
+        eventId: requestData.eventId,
+        eventName: requestData.eventName,
+        eventDate: requestData.eventDate,
+        startTime: requestData.startTime,
+        endTime: requestData.endTime,
+        location: requestData.location || '',
         organizer: requestData.organizer || 'N/A'
-      }, 'Staff Member');
+      });
+
+      console.log("Generated ICS content for download");
 
       return new Response(icsContent, {
         status: 200,
         headers: {
-          "Content-Type": "text/calendar",
+          "Content-Type": "text/calendar; charset=utf-8",
           "Content-Disposition": `attachment; filename="${requestData.eventName.replace(/[^a-zA-Z0-9]/g, '_')}.ics"`,
           ...corsHeaders,
         },
@@ -228,16 +229,14 @@ const handler = async (req: Request): Promise<Response> => {
           emailSubject = `Assignment Confirmation Required: ${requestData.eventName}`;
         }
 
-        const emailResult = await sendEmail({
-          to: staff.email,
-          subject: emailSubject,
-          html: emailTemplate,
-          replyTo: 'noreply@yourdomain.com'
-        });
+        const emailResult = await sendEmailWithNodemailer(
+          staff.email,
+          emailSubject,
+          emailTemplate
+        );
 
         if (emailResult.success) {
           console.log(`Email sent to ${staff.email}: ${emailResult.messageId}`);
-          console.log(`Email sent to ${staff.name} (${staff.email}):`, emailResult);
           successCount++;
         } else {
           console.error(`Failed to send email to ${staff.name}:`, emailResult.error);

@@ -1,7 +1,17 @@
 
 import { NotificationRequest } from "./types.ts";
 
-export function generateICSContent(event: NotificationRequest): string {
+interface CalendarEvent {
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  organizer?: string;
+}
+
+export function generateICSContent(event: CalendarEvent): string {
   // Parse the date and times correctly for Philippine timezone
   const eventDateStr = event.eventDate; // Format: YYYY-MM-DD
   const startTimeStr = event.startTime; // Format: HH:MM (24-hour)
@@ -40,7 +50,7 @@ DTSTAMP:${now}
 DTSTART;TZID=Asia/Manila:${startFormatted}
 DTEND;TZID=Asia/Manila:${endFormatted}
 SUMMARY:${event.eventName}
-DESCRIPTION:${event.isUpdate ? 'Event details have been updated.' : 'You have been assigned to this event.'} Event: ${event.eventName}${organizerInfo}
+DESCRIPTION:Event: ${event.eventName}${organizerInfo}
 LOCATION:${event.location}
 STATUS:CONFIRMED
 BEGIN:VALARM
