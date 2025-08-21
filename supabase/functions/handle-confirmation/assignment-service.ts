@@ -1,161 +1,137 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { AssignmentData } from './types.ts';
 
-export interface AssignmentData {
-  id: string;
-  eventName: string;
-  staffName: string;
-  eventDate: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  organizer?: string;
-  type?: string;
-}
+export class AssignmentService {
+  private supabase;
 
-export async function getAssignmentByToken(token: string): Promise<{
-  assignment: AssignmentData | null;
-  status: string;
-  confirmedAt?: string;
-  declinedAt?: string;
-}> {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
-  console.log('Fetching assignment for token:', token);
-
-  const { data, error } = await supabase
-    .from('staff_assignments')
-    .select(`
-      *,
-      events!inner(
-        id,
-        name,
-        date,
-        start_time,
-        end_time,
-        location,
-        organizer,
-        type
-      ),
-      staff_members!inner(
-        name
-      )
-    `)
-    .eq('confirmation_token', token)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Database error:', error);
-    throw new Error('Failed to fetch assignment');
+  constructor() {
+    this.supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
   }
 
-  if (!data) {
-    console.log('No assignment found for token');
-    return {
-      assignment: null,
-      status: 'not_found'
-    };
-  }
+  async findAssignmentByToken(token: string): Promise<AssignmentData | null> {
+    console.log('Fetching assignment for token:', token);
 
-  console.log('Assignment found:', data);
-
-  const assignment: AssignmentData = {
-    id: data.events.id,
-    eventName: data.events.name,
-    staffName: data.staff_members.name,
-    eventDate: data.events.date,
-    startTime: data.events.start_time,
-    endTime: data.events.end_time,
-    location: data.events.location,
-    organizer: data.events.organizer,
-    type: data.events.type
-  };
-
-  let status = 'pending';
-  if (data.confirmation_status === 'confirmed') {
-    status = 'confirmed';
-  } else if (data.confirmation_status === 'declined') {
-    status = 'declined';
-  }
-
-  return {
-    assignment,
-    status,
-    confirmedAt: data.confirmed_at,
-    declinedAt: data.declined_at
-  };
-}
-
-export async function updateAssignmentStatus(
-  token: string, 
-  action: 'confirm' | 'decline'
-): Promise<{ success: boolean; message?: string }> {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
-  console.log(`Updating assignment status to ${action} for token:`, token);
-
-  const now = new Date().toISOString();
-  const updateData: any = {
-    confirmation_status: action === 'confirm' ? 'confirmed' : 'declined'
-  };
-
-  if (action === 'confirm') {
-    updateData.confirmed_at = now;
-    updateData.declined_at = null;
-  } else {
-    updateData.declined_at = now;
-    updateData.confirmed_at = null;
-  }
-
-  const { error } = await supabase
-    .from('staff_assignments')
-    .update(updateData)
-    .eq('confirmation_token', token);
-
-  if (error) {
-    console.error('Error updating assignment:', error);
-    throw new Error(`Failed to ${action} assignment`);
-  }
-
-  // Create notification for the admin
-  try {
-    const { data: assignmentData } = await supabase
+    const { data, error } = await this.supabase
       .from('staff_assignments')
       .select(`
-        user_id,
-        events!inner(name, id),
-        staff_members!inner(name)
+        *,
+        events!inner(
+          id,
+          name,
+          date,
+          start_time,
+          end_time,
+          location
+        ),
+        staff_members!inner(
+          name,
+          email
+        )
       `)
       .eq('confirmation_token', token)
-      .single();
+      .maybeSingle();
 
-    if (assignmentData) {
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: assignmentData.user_id,
-          event_id: assignmentData.events.id,
-          staff_id: assignmentData.staff_members.name,
-          type: action === 'confirm' ? 'confirmation' : 'decline',
-          message: `${assignmentData.staff_members.name} has ${action === 'confirm' ? 'confirmed' : 'declined'} assignment for ${assignmentData.events.name}`,
-          staff_name: assignmentData.staff_members.name,
-          event_name: assignmentData.events.name
-        });
+    if (error) {
+      console.error('Database error:', error);
+      throw new Error('Failed to fetch assignment');
     }
-  } catch (notificationError) {
-    console.error('Error creating notification:', notificationError);
-    // Don't fail the main operation if notification fails
+
+    if (!data) {
+      console.log('No assignment found for token');
+      return null;
+    }
+
+    console.log('Assignment found:', data);
+
+    const assignment: AssignmentData = {
+      id: data.id,
+      confirmation_status: data.confirmation_status,
+      confirmation_token_expires_at: data.confirmation_token_expires_at,
+      confirmed_at: data.confirmed_at,
+      declined_at: data.declined_at,
+      user_id: data.user_id,
+      staff_id: data.staff_id,
+      event_id: data.event_id,
+      events: {
+        name: data.events.name,
+        date: data.events.date,
+        start_time: data.events.start_time,
+        end_time: data.events.end_time,
+        location: data.events.location
+      },
+      staff_members: {
+        name: data.staff_members.name,
+        email: data.staff_members.email
+      }
+    };
+
+    return assignment;
   }
 
-  console.log(`Assignment ${action}ed successfully`);
-  return {
-    success: true,
-    message: `Assignment ${action}ed successfully`
-  };
+  async updateAssignmentStatus(
+    assignmentId: string, 
+    action: 'confirm' | 'decline'
+  ): Promise<boolean> {
+    console.log(`Updating assignment status to ${action} for ID:`, assignmentId);
+
+    const now = new Date().toISOString();
+    const updateData: any = {
+      confirmation_status: action === 'confirm' ? 'confirmed' : 'declined'
+    };
+
+    if (action === 'confirm') {
+      updateData.confirmed_at = now;
+      updateData.declined_at = null;
+    } else {
+      updateData.declined_at = now;
+      updateData.confirmed_at = null;
+    }
+
+    const { error } = await this.supabase
+      .from('staff_assignments')
+      .update(updateData)
+      .eq('id', assignmentId);
+
+    if (error) {
+      console.error('Error updating assignment:', error);
+      return false;
+    }
+
+    console.log(`Assignment ${action}ed successfully`);
+    return true;
+  }
+
+  async createNotification(assignment: AssignmentData, action: 'confirm' | 'decline'): Promise<void> {
+    try {
+      await this.supabase
+        .from('notifications')
+        .insert({
+          user_id: assignment.user_id,
+          event_id: assignment.event_id,
+          staff_id: assignment.staff_id,
+          type: action === 'confirm' ? 'confirmation' : 'decline',
+          message: `${assignment.staff_members.name} has ${action === 'confirm' ? 'confirmed' : 'declined'} assignment for ${assignment.events.name}`,
+          staff_name: assignment.staff_members.name,
+          event_name: assignment.events.name
+        });
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+      // Don't fail the main operation if notification fails
+    }
+  }
+
+  async updateTokenExpiration(assignmentId: string, expiresAt: Date): Promise<void> {
+    const { error } = await this.supabase
+      .from('staff_assignments')
+      .update({ confirmation_token_expires_at: expiresAt.toISOString() })
+      .eq('id', assignmentId);
+
+    if (error) {
+      console.error('Error updating token expiration:', error);
+    }
+  }
 }
