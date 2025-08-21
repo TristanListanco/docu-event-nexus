@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Check, AlertCircle } from "lucide-react";
+import { Send, Check, AlertCircle, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -33,7 +33,7 @@ export default function SendInvitationButton({
   onInvitationSent 
 }: SendInvitationButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [sendStatus, setSendStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
   const canSendEmail = () => {
     if (!lastSentAt) return true;
@@ -55,10 +55,15 @@ export default function SendInvitationButton({
     }
 
     setIsLoading(true);
-    setSendStatus('idle');
+    setSendStatus('sending');
+    
+    // Show immediate feedback
+    toast({
+      title: "Sending Invitation",
+      description: `Sending invitation to ${staffMember.name}...`,
+    });
     
     try {
-      // Use the confirmation-email function for consistency
       const { error } = await supabase.functions.invoke('confirmation-email', {
         body: {
           eventId: eventId,
@@ -79,7 +84,7 @@ export default function SendInvitationButton({
         throw error;
       }
 
-      // Update the manual invitation timestamp
+      // Update the invitation timestamp immediately for better UX
       const now = new Date().toISOString();
       const { error: updateError } = await supabase
         .from('staff_assignments')
@@ -100,32 +105,37 @@ export default function SendInvitationButton({
         description: `Event invitation has been sent to ${staffMember.name}`,
       });
 
-      // Call the callback to refresh data
       if (onInvitationSent) {
         onInvitationSent();
       }
 
-      // Reset success status after 3 seconds
-      setTimeout(() => setSendStatus('idle'), 3000);
+      // Reset success status after 2 seconds (faster feedback)
+      setTimeout(() => setSendStatus('idle'), 2000);
 
     } catch (error: any) {
       console.error("Error sending invitation:", error);
       setSendStatus('error');
+      
+      let errorMessage = "Failed to send invitation. Please try again.";
+      if (error.message?.includes("Rate limit exceeded")) {
+        errorMessage = "Please wait before sending another invitation.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to send invitation. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
 
-      // Reset error status after 3 seconds
-      setTimeout(() => setSendStatus('idle'), 3000);
+      // Reset error status after 2 seconds
+      setTimeout(() => setSendStatus('idle'), 2000);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getIcon = () => {
-    if (isLoading) return <Send className="h-4 w-4 animate-pulse" />;
+    if (sendStatus === 'sending') return <Clock className="h-4 w-4 animate-spin" />;
     if (sendStatus === 'success') return <Check className="h-4 w-4 text-green-600" />;
     if (sendStatus === 'error') return <AlertCircle className="h-4 w-4 text-red-600" />;
     return <Send className="h-4 w-4" />;
@@ -137,16 +147,20 @@ export default function SendInvitationButton({
     return 'ghost';
   };
 
+  const isDisabled = isLoading || !canSendEmail() || sendStatus === 'sending';
+
   return (
     <Button
       variant={getButtonVariant()}
       size="sm"
       onClick={handleSendInvitation}
-      disabled={isLoading || !canSendEmail()}
+      disabled={isDisabled}
       className="h-8 w-8 p-0"
       title={
         !canSendEmail() 
           ? `Please wait ${Math.ceil((30000 - (Date.now() - new Date(lastSentAt!).getTime())) / 1000)}s before resending`
+          : sendStatus === 'sending'
+          ? `Sending invitation to ${staffMember.name}...`
           : `Send invitation to ${staffMember.name}`
       }
     >
