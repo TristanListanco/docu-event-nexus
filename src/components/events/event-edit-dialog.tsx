@@ -405,6 +405,7 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
+                maxSelection={5}
               />
               
               <EnhancedMultiStaffSelector
@@ -416,6 +417,7 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
+                maxSelection={5}
               />
             </div>
           </div>
