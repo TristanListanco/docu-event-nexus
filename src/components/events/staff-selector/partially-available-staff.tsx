@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Plus, Lightbulb } from "lucide-react";
 import { StaffAvailability } from "@/types/models";
-import { formatTimeSlots, getConflictReason } from "./utils";
+import { formatTimeSlots, getDetailedConflictReasons } from "./utils";
 
 interface PartiallyAvailableStaffProps {
   partiallyAvailableStaff: StaffAvailability[];
@@ -50,6 +50,7 @@ export default function PartiallyAvailableStaff({
       <CollapsibleContent className="space-y-2 mt-2">
         {partiallyAvailableStaff.map((availability) => {
           const isSelected = selectedStaffIds.includes(availability.staff.id);
+          const conflictReasons = getDetailedConflictReasons(availability);
           
           return (
             <div key={availability.staff.id} className={`p-3 border rounded-lg bg-orange-50 dark:bg-orange-950 ${isSelected ? 'border-blue-300 dark:border-blue-600' : 'border-orange-200 dark:border-orange-800'}`}>
@@ -85,15 +86,15 @@ export default function PartiallyAvailableStaff({
                 )}
               </div>
               {availability.availableTimeSlots && (
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground mb-2">
                   <span className="font-medium">Available: </span>
                   {formatTimeSlots(availability.availableTimeSlots)}
                 </div>
               )}
               {availability.conflictingTimeSlots && availability.conflictingTimeSlots.length > 0 && (
-                <div className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                <div className="text-sm text-orange-600 dark:text-orange-400">
                   <span className="font-medium">Conflicts: </span>
-                  {getConflictReason(availability)}
+                  {conflictReasons}
                 </div>
               )}
             </div>

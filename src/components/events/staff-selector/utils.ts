@@ -30,6 +30,30 @@ export const getConflictReason = (availability: StaffAvailability): string => {
   return "Schedule conflict";
 };
 
+export const getDetailedConflictReasons = (availability: StaffAvailability): string => {
+  if (!availability.conflictingTimeSlots || availability.conflictingTimeSlots.length === 0) {
+    return "No conflicts";
+  }
+
+  // Group conflicts by subject/reason
+  const conflictGroups = availability.conflictingTimeSlots.reduce((groups, conflict) => {
+    const key = conflict.reason;
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(`${conflict.startTime}-${conflict.endTime}`);
+    return groups;
+  }, {} as Record<string, string[]>);
+
+  // Format the conflicts with subject names and time slots
+  const formattedConflicts = Object.entries(conflictGroups).map(([reason, timeSlots]) => {
+    const uniqueTimeSlots = [...new Set(timeSlots)];
+    return `${reason} (${uniqueTimeSlots.join(', ')})`;
+  });
+
+  return formattedConflicts.join('; ');
+};
+
 export const getEnhancedSmartAllocation = (
   selectedStaffIds: string[],
   roleStaff: StaffAvailability[],
