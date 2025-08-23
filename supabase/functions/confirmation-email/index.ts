@@ -126,15 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
       declineUrl: declineUrl
     });
 
-    // Send email in background for faster response
-    console.log("Sending email...");
-    const emailPromise = sendEmailWithNodemailer(
-      requestData.staffEmail,
-      emailSubject,
-      emailHtml
-    );
-
-    // Return success immediately, don't wait for email
+    // Return success immediately - send email in background
     const response = new Response(
       JSON.stringify({ 
         success: true,
@@ -144,15 +136,40 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers }
     );
 
-    // Use background task to complete email sending
+    // Use background task to send email and update database
     EdgeRuntime.waitUntil(
-      emailPromise
-        .then((result) => {
-          console.log("Email sent successfully:", result.messageId);
-        })
-        .catch((error) => {
-          console.error("Email sending failed:", error);
-        })
+      (async () => {
+        try {
+          console.log("Sending email in background...");
+          const emailResult = await sendEmailWithNodemailer(
+            requestData.staffEmail,
+            emailSubject,
+            emailHtml
+          );
+
+          console.log("Email sent successfully:", emailResult.messageId);
+
+          // Update invitation timestamp in background
+          const now = new Date().toISOString();
+          const { error: updateError } = await supabase
+            .from('staff_assignments')
+            .update({ 
+              manual_invitation_sent_at: now,
+              last_invitation_sent_at: now
+            })
+            .eq('event_id', requestData.eventId)
+            .eq('staff_id', requestData.staffId);
+
+          if (updateError) {
+            console.error("Error updating invitation timestamp:", updateError);
+          } else {
+            console.log("Invitation timestamp updated successfully");
+          }
+
+        } catch (error: any) {
+          console.error("Background email sending failed:", error);
+        }
+      })()
     );
 
     return response;
