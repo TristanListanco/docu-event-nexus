@@ -1,9 +1,8 @@
 
-
 import nodemailer from "npm:nodemailer@6.9.8";
 
-// Create a reusable transporter with connection pooling for better performance
-let transporter: any = null;
+// Global transporter for connection reuse
+let globalTransporter: any = null;
 
 const createTransporter = () => {
   const gmailUser = Deno.env.get("GMAIL_USER");
@@ -19,18 +18,20 @@ const createTransporter = () => {
       user: gmailUser,
       pass: gmailAppPassword,
     },
+    // Optimized settings for faster delivery
     pool: true, // Use connection pooling
-    maxConnections: 3, // Limit concurrent connections
+    maxConnections: 5, // Increase concurrent connections
     maxMessages: 100, // Send up to 100 messages per connection
+    rateLimit: 14, // Send up to 14 messages per second
   });
 };
 
 export async function sendEmailWithNodemailer(to: string, subject: string, html: string) {
   try {
-    // Create transporter if it doesn't exist or reuse existing one
-    if (!transporter) {
-      console.log("Creating new email transporter with pooling...");
-      transporter = createTransporter();
+    // Reuse global transporter or create new one
+    if (!globalTransporter) {
+      console.log("Creating new optimized email transporter...");
+      globalTransporter = createTransporter();
     }
 
     const mailOptions = {
@@ -38,15 +39,17 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
       to: to,
       subject: subject,
       html: html,
+      // Add priority headers for faster delivery
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high'
+      }
     };
 
-    console.log("Sending email with options:", {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject
-    });
+    console.log("Sending high-priority email to:", to);
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await globalTransporter.sendMail(mailOptions);
     console.log(`Email sent successfully. Message ID: ${info.messageId}`);
     
     return {
@@ -57,10 +60,9 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
   } catch (error: any) {
     console.error("Email sending error:", error);
     
-    // Reset transporter on error to force recreation
-    transporter = null;
+    // Reset transporter on error
+    globalTransporter = null;
     
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
-

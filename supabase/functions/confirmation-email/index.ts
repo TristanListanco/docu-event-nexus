@@ -17,7 +17,7 @@ const corsHeaders = {
 
 // Simplified rate limiting
 const RATE_LIMIT_WINDOW = 30 * 1000; // 30 seconds
-const MAX_REQUESTS_PER_WINDOW = 3; // 3 email requests per 30 seconds
+const MAX_REQUESTS_PER_WINDOW = 3;
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 const checkRateLimit = (ip: string): boolean => {
@@ -83,11 +83,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Single query to get assignment - no retries for better performance
+    // Quick assignment check
     console.log("Fetching assignment...");
     const { data: assignment, error: assignmentError } = await supabase
       .from('staff_assignments')
-      .select('id, confirmation_token, confirmation_token_expires_at')
+      .select('id, confirmation_token')
       .eq('event_id', requestData.eventId)
       .eq('staff_id', requestData.staffId)
       .limit(1)
@@ -106,27 +106,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Assignment found:", assignment.id);
 
-    // Generate confirmation links
-    const baseUrl = Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app";
-    const confirmUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
-    const declineUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
+    // Update invitation timestamp immediately for better UX
+    const now = new Date().toISOString();
+    const updatePromise = supabase
+      .from('staff_assignments')
+      .update({ 
+        manual_invitation_sent_at: now,
+        last_invitation_sent_at: now
+      })
+      .eq('event_id', requestData.eventId)
+      .eq('staff_id', requestData.staffId);
 
-    // Generate email content
-    const emailSubject = `Event Assignment: ${requestData.eventName}`;
-    const emailHtml = generateEmailTemplate({
-      staffName: requestData.staffName,
-      eventName: requestData.eventName,
-      eventDate: requestData.eventDate,
-      startTime: requestData.startTime,
-      endTime: requestData.endTime,
-      location: requestData.location,
-      organizer: requestData.organizer || 'N/A',
-      role: requestData.staffRole,
-      confirmUrl: confirmUrl,
-      declineUrl: declineUrl
-    });
-
-    // Return success immediately - send email in background
+    // Return success immediately - don't wait for email
     const response = new Response(
       JSON.stringify({ 
         success: true,
@@ -136,35 +127,45 @@ const handler = async (req: Request): Promise<Response> => {
       { status: 200, headers }
     );
 
-    // Use background task to send email and update database
+    // Send email in background using EdgeRuntime.waitUntil
     EdgeRuntime.waitUntil(
       (async () => {
         try {
-          console.log("Sending email in background...");
+          console.log("Starting background email send...");
+          
+          // Wait for database update
+          const { error: updateError } = await updatePromise;
+          if (updateError) {
+            console.error("Error updating invitation timestamp:", updateError);
+          }
+
+          // Generate email content
+          const baseUrl = Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app";
+          const confirmUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
+          const declineUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
+
+          const emailSubject = `Event Assignment: ${requestData.eventName}`;
+          const emailHtml = generateEmailTemplate({
+            staffName: requestData.staffName,
+            eventName: requestData.eventName,
+            eventDate: requestData.eventDate,
+            startTime: requestData.startTime,
+            endTime: requestData.endTime,
+            location: requestData.location,
+            organizer: requestData.organizer || 'N/A',
+            role: requestData.staffRole,
+            confirmUrl: confirmUrl,
+            declineUrl: declineUrl
+          });
+
+          // Send email
           const emailResult = await sendEmailWithNodemailer(
             requestData.staffEmail,
             emailSubject,
             emailHtml
           );
 
-          console.log("Email sent successfully:", emailResult.messageId);
-
-          // Update invitation timestamp in background
-          const now = new Date().toISOString();
-          const { error: updateError } = await supabase
-            .from('staff_assignments')
-            .update({ 
-              manual_invitation_sent_at: now,
-              last_invitation_sent_at: now
-            })
-            .eq('event_id', requestData.eventId)
-            .eq('staff_id', requestData.staffId);
-
-          if (updateError) {
-            console.error("Error updating invitation timestamp:", updateError);
-          } else {
-            console.log("Invitation timestamp updated successfully");
-          }
+          console.log("Background email sent successfully:", emailResult.messageId);
 
         } catch (error: any) {
           console.error("Background email sending failed:", error);
