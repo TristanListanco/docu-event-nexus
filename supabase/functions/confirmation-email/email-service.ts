@@ -1,4 +1,5 @@
 
+
 import nodemailer from "npm:nodemailer@6.9.8";
 
 // Create a reusable transporter with connection pooling for better performance
@@ -12,7 +13,7 @@ const createTransporter = () => {
     throw new Error("Gmail credentials not configured");
   }
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: gmailUser,
@@ -62,3 +63,4 @@ export async function sendEmailWithNodemailer(to: string, subject: string, html:
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
+
