@@ -1,4 +1,3 @@
-
 import { StaffAvailability } from "@/types/models";
 import { SmartAllocationResult } from "./types";
 
@@ -35,19 +34,22 @@ export const getDetailedConflictReasons = (availability: StaffAvailability): str
     return "No conflicts";
   }
 
-  // Group conflicts by subject/reason
-  const conflictGroups = availability.conflictingTimeSlots.reduce((groups, conflict) => {
-    const key = conflict.reason;
-    if (!groups[key]) {
-      groups[key] = [];
-    }
-    groups[key].push(`${conflict.startTime}-${conflict.endTime}`);
-    return groups;
-  }, {} as Record<string, string[]>);
+  // Create a map to track unique conflicts by subject/reason and their time slots
+  const conflictMap = new Map<string, Set<string>>();
 
-  // Format the conflicts with subject names and time slots
-  const formattedConflicts = Object.entries(conflictGroups).map(([reason, timeSlots]) => {
-    const uniqueTimeSlots = [...new Set(timeSlots)];
+  availability.conflictingTimeSlots.forEach(conflict => {
+    const reason = conflict.reason;
+    const timeSlot = `${conflict.startTime}-${conflict.endTime}`;
+    
+    if (!conflictMap.has(reason)) {
+      conflictMap.set(reason, new Set());
+    }
+    conflictMap.get(reason)!.add(timeSlot);
+  });
+
+  // Format each conflict with its subject and time slots
+  const formattedConflicts = Array.from(conflictMap.entries()).map(([reason, timeSlots]) => {
+    const uniqueTimeSlots = Array.from(timeSlots).sort();
     return `${reason} (${uniqueTimeSlots.join(', ')})`;
   });
 
