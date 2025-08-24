@@ -34,26 +34,15 @@ export const getDetailedConflictReasons = (availability: StaffAvailability): str
     return "No conflicts";
   }
 
-  // Create a map to track unique conflicts by subject/reason and their time slots
-  const conflictMap = new Map<string, Set<string>>();
+  // Get unique subject names from conflicts
+  const uniqueSubjects = new Set<string>();
 
   availability.conflictingTimeSlots.forEach(conflict => {
-    const reason = conflict.reason;
-    const timeSlot = `${conflict.startTime}-${conflict.endTime}`;
-    
-    if (!conflictMap.has(reason)) {
-      conflictMap.set(reason, new Set());
-    }
-    conflictMap.get(reason)!.add(timeSlot);
+    uniqueSubjects.add(conflict.reason);
   });
 
-  // Format each conflict with its subject and time slots
-  const formattedConflicts = Array.from(conflictMap.entries()).map(([reason, timeSlots]) => {
-    const uniqueTimeSlots = Array.from(timeSlots).sort();
-    return `${reason} (${uniqueTimeSlots.join(', ')})`;
-  });
-
-  return formattedConflicts.join('; ');
+  // Return just the subject names separated by commas
+  return Array.from(uniqueSubjects).sort().join(', ');
 };
 
 export const getEnhancedSmartAllocation = (

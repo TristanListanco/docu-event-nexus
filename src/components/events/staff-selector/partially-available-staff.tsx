@@ -1,8 +1,7 @@
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, Lightbulb } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import { StaffAvailability } from "@/types/models";
 import { formatTimeSlots, getDetailedConflictReasons } from "./utils";
 
@@ -58,20 +57,6 @@ export default function PartiallyAvailableStaff({
                 <div className="flex items-center gap-2">
                   {isSelected && <div className="w-3 h-3 bg-green-500 rounded-full" />}
                   <span className="font-medium">{availability.staff.name}</span>
-                  <Badge variant="outline" className="text-xs">
-                    Partially Available
-                  </Badge>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs px-2 py-1 h-6 bg-blue-500 text-white hover:bg-blue-600"
-                    onClick={() => onSmartPick(availability.staff.id)}
-                    disabled={disabled || isSelected}
-                  >
-                    <Lightbulb className="h-3 w-3 mr-1" />
-                    Smart Pick
-                  </Button>
                 </div>
                 {!isSelected && canAddMore && (
                   <Button
