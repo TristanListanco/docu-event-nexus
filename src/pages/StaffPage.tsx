@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -9,6 +8,7 @@ import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
 import StaffDeleteDialog from "@/components/staff/staff-delete-dialog";
 import StaffListItem from "@/components/staff/staff-list-item";
+import StaffDetailModal from "@/components/staff/staff-detail-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users } from "lucide-react";
@@ -27,6 +27,7 @@ export default function StaffPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
+  const [selectedStaffForDetail, setSelectedStaffForDetail] = useState<StaffMember | null>(null);
 
   const filteredStaff = staff.filter((member) => {
     const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -100,6 +101,7 @@ export default function StaffPage() {
                       staff={member}
                       onEdit={(staff) => setEditingStaff(staff)}
                       onDelete={(staff) => setDeletingStaff(staff)}
+                      onNameClick={(staff) => setSelectedStaffForDetail(staff)}
                       viewMode={viewMode}
                     />
                   ))}
@@ -134,6 +136,12 @@ export default function StaffPage() {
           onStaffDeleted={() => setDeletingStaff(null)}
         />
       )}
+
+      <StaffDetailModal
+        staff={selectedStaffForDetail}
+        open={!!selectedStaffForDetail}
+        onOpenChange={(open) => !open && setSelectedStaffForDetail(null)}
+      />
     </div>
   );
 }

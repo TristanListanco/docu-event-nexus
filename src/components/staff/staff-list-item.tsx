@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,10 +14,11 @@ interface StaffListItemProps {
   staff: StaffMember;
   onEdit: (staff: StaffMember) => void;
   onDelete: (staff: StaffMember) => void;
+  onNameClick?: (staff: StaffMember) => void;
   viewMode: "list" | "grid";
 }
 
-export default function StaffListItem({ staff, onEdit, onDelete, viewMode }: StaffListItemProps) {
+export default function StaffListItem({ staff, onEdit, onDelete, onNameClick, viewMode }: StaffListItemProps) {
   const { name, roles, subjectSchedules, position, leaveDates } = staff;
   
   // Check if staff is currently on leave
@@ -63,7 +63,12 @@ export default function StaffListItem({ staff, onEdit, onDelete, viewMode }: Sta
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
-              <h3 className="font-medium truncate">{name}</h3>
+              <h3 
+                className="font-medium truncate cursor-pointer hover:text-primary transition-colors"
+                onClick={() => onNameClick?.(staff)}
+              >
+                {name}
+              </h3>
             </div>
             <div className="flex flex-col space-y-1">
               <p className="text-sm text-muted-foreground">{roles.join(' & ')}</p>

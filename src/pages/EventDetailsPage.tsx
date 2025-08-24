@@ -218,14 +218,14 @@ export default function EventDetailsPage() {
       );
 
       toast({
-        title: "Status Updated",
-        description: "Attendance status has been updated successfully.",
+        title: "Attendance Recorded",
+        description: "Attendance status has been saved successfully.",
       });
     } catch (error) {
       console.error("Error updating attendance status:", error);
       toast({
         title: "Error",
-        description: "Failed to update attendance status",
+        description: "Failed to save attendance status",
         variant: "destructive",
       });
     }
@@ -360,6 +360,7 @@ export default function EventDetailsPage() {
 
   const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed";
   const isOngoing = event.status === "Ongoing";
+  const isCompleted = event.status === "Completed";
   const currentStatus = isElapsed && event.status !== "Completed" ? "Elapsed" : event.status;
 
   return (
@@ -509,7 +510,7 @@ export default function EventDetailsPage() {
                     Delete Event
                   </Button>
                   
-                  {event.status !== "Cancelled" && !isOngoing && !isElapsed && (
+                  {event.status !== "Cancelled" && !isOngoing && !isElapsed && !isCompleted && (
                     <Button 
                       onClick={() => setCancelDialogOpen(true)} 
                       variant="outline" 
@@ -546,23 +547,41 @@ export default function EventDetailsPage() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 break-all">{assignment.staffEmail}</p>
                           </div>
                           
-                          {event.status === "Completed" && assignment.confirmationStatus === 'confirmed' && (
+                          {isCompleted && assignment.confirmationStatus === 'confirmed' && (
                             <div className="mt-2">
-                              <Select
-                                value={assignment.attendanceStatus}
-                                onValueChange={(value: AttendanceStatus) => 
-                                  updateAttendanceStatus(assignment.staffId, value)
-                                }
-                              >
-                                <SelectTrigger className="w-full sm:w-40">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Completed">Present</SelectItem>
-                                  <SelectItem value="Absent">Absent</SelectItem>
-                                  <SelectItem value="Excused">Excused</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              {assignment.attendanceStatus === "Pending" ? (
+                                <Select
+                                  value={assignment.attendanceStatus}
+                                  onValueChange={(value: AttendanceStatus) => 
+                                    updateAttendanceStatus(assignment.staffId, value)
+                                  }
+                                >
+                                  <SelectTrigger className="w-full sm:w-40">
+                                    <SelectValue placeholder="Mark attendance" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Completed">Present</SelectItem>
+                                    <SelectItem value="Absent">Absent</SelectItem>
+                                    <SelectItem value="Excused">Excused</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <span className="font-medium">Attendance:</span>
+                                  <Badge 
+                                    variant="secondary"
+                                    className={
+                                      assignment.attendanceStatus === "Completed" 
+                                        ? "bg-green-100 text-green-800" 
+                                        : assignment.attendanceStatus === "Absent"
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-gray-100 text-gray-800"
+                                    }
+                                  >
+                                    {assignment.attendanceStatus === "Completed" ? "Present" : assignment.attendanceStatus}
+                                  </Badge>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
