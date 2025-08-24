@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -95,8 +94,59 @@ export default function EventDetailsPage() {
 
       console.log("Loaded assignment statuses:", assignments);
       setAssignmentStatuses(assignments);
+
+      // Auto-decline pending confirmations for ongoing events
+      if (event && event.status === "Ongoing") {
+        await autoDeclinePendingConfirmations(assignments);
+      }
     } catch (error) {
       console.error("Error loading assignment statuses:", error);
+    }
+  };
+
+  const autoDeclinePendingConfirmations = async (assignments: ExtendedStaffAssignment[]) => {
+    const pendingAssignments = assignments.filter(
+      assignment => assignment.confirmationStatus === 'pending'
+    );
+
+    if (pendingAssignments.length === 0) return;
+
+    try {
+      const updates = pendingAssignments.map(assignment => 
+        supabase
+          .from('staff_assignments')
+          .update({
+            confirmation_status: 'declined',
+            declined_at: new Date().toISOString()
+          })
+          .eq('event_id', eventId)
+          .eq('staff_id', assignment.staffId)
+          .eq('user_id', user!.id)
+      );
+
+      await Promise.all(updates);
+
+      // Update local state
+      setAssignmentStatuses(prev => 
+        prev.map(assignment => 
+          assignment.confirmationStatus === 'pending'
+            ? {
+                ...assignment,
+                confirmationStatus: 'declined' as ConfirmationStatus,
+                declinedAt: new Date().toISOString()
+              }
+            : assignment
+        )
+      );
+
+      if (pendingAssignments.length > 0) {
+        toast({
+          title: "Auto-declined Pending Confirmations",
+          description: `${pendingAssignments.length} pending confirmation(s) have been automatically declined as the event is ongoing.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error auto-declining pending confirmations:", error);
     }
   };
 
@@ -279,6 +329,12 @@ export default function EventDetailsPage() {
       );
     }
   };
+
+  useEffect(() => {
+    if (event && event.status === "Ongoing" && assignmentStatuses.length > 0) {
+      autoDeclinePendingConfirmations(assignmentStatuses);
+    }
+  }, [event?.status]);
 
   if (loading) {
     return <EventDetailsSkeleton />;
@@ -502,7 +558,6 @@ export default function EventDetailsPage() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Pending">Pending</SelectItem>
                                   <SelectItem value="Completed">Present</SelectItem>
                                   <SelectItem value="Absent">Absent</SelectItem>
                                   <SelectItem value="Excused">Excused</SelectItem>
