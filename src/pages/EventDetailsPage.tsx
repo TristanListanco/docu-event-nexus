@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -302,6 +303,7 @@ export default function EventDetailsPage() {
   }
 
   const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed";
+  const isOngoing = event.status === "Ongoing";
   const currentStatus = isElapsed && event.status !== "Completed" ? "Elapsed" : event.status;
 
   return (
@@ -451,7 +453,7 @@ export default function EventDetailsPage() {
                     Delete Event
                   </Button>
                   
-                  {event.status !== "Cancelled" && (
+                  {event.status !== "Cancelled" && !isOngoing && !isElapsed && (
                     <Button 
                       onClick={() => setCancelDialogOpen(true)} 
                       variant="outline" 
@@ -488,7 +490,7 @@ export default function EventDetailsPage() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 break-all">{assignment.staffEmail}</p>
                           </div>
                           
-                          {event.status === "Completed" && (
+                          {event.status === "Completed" && assignment.confirmationStatus === 'confirmed' && (
                             <div className="mt-2">
                               <Select
                                 value={assignment.attendanceStatus}
@@ -501,7 +503,7 @@ export default function EventDetailsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="Pending">Pending</SelectItem>
-                                  <SelectItem value="Completed">Completed</SelectItem>
+                                  <SelectItem value="Completed">Present</SelectItem>
                                   <SelectItem value="Absent">Absent</SelectItem>
                                   <SelectItem value="Excused">Excused</SelectItem>
                                 </SelectContent>
