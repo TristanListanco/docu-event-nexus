@@ -16,6 +16,7 @@ interface EventsFiltersProps {
   onSortChange: (sort: SortOption) => void;
   filterBy: FilterOption;
   onFilterChange: (filter: FilterOption) => void;
+  isArchived?: boolean;
 }
 
 export default function EventsFilters({
@@ -24,24 +25,41 @@ export default function EventsFilters({
   sortBy,
   onSortChange,
   filterBy,
-  onFilterChange
+  onFilterChange,
+  isArchived = false
 }: EventsFiltersProps) {
   const isMobile = useIsMobile();
 
+  const getFilterOptions = () => {
+    if (isArchived) {
+      return [
+        { value: "all", label: "All Archived" },
+        { value: "elapsed", label: "Elapsed" },
+        { value: "completed", label: "Completed" }
+      ];
+    }
+    
+    return [
+      { value: "all", label: "All Events" },
+      { value: "upcoming", label: "Upcoming" },
+      { value: "ongoing", label: "On Going" },
+      { value: "cancelled", label: "Cancelled" }
+    ];
+  };
+
+  const filterOptions = getFilterOptions();
+
   if (isMobile) {
     return (
-      <div className="space-y-4 mb-6">
-        {/* Search Field */}
+      <div className="space-y-4">
         <Input
-          placeholder="Search events..."
+          placeholder={`Search ${isArchived ? 'archived ' : ''}events...`}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full"
         />
 
-        {/* Filter and Sort Icons Row */}
         <div className="flex items-center gap-2">
-          {/* Filter Popover */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">
@@ -49,24 +67,22 @@ export default function EventsFilters({
                 Filter
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48">
+            <PopoverContent className="w-48 bg-popover border border-border shadow-md" sideOffset={4}>
               <Select value={filterBy} onValueChange={(value: FilterOption) => onFilterChange(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Events</SelectItem>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="ongoing">On Going</SelectItem>
-                  <SelectItem value="elapsed">Elapsed</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  {filterOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </PopoverContent>
           </Popover>
 
-          {/* Sort Popover */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="flex items-center gap-2">
@@ -74,7 +90,7 @@ export default function EventsFilters({
                 Sort
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48">
+            <PopoverContent className="w-48 bg-popover border border-border shadow-md" sideOffset={4}>
               <Select value={sortBy} onValueChange={(value: SortOption) => onSortChange(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sort by" />
@@ -92,13 +108,11 @@ export default function EventsFilters({
     );
   }
 
-  // Desktop/Tablet view - no view mode toggle
   return (
-    <div className="space-y-4 mb-6">
-      {/* Search and Filter Row */}
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Input
-          placeholder="Search events..."
+          placeholder={`Search ${isArchived ? 'archived ' : ''}events...`}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full sm:max-w-sm"
@@ -107,24 +121,22 @@ export default function EventsFilters({
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Filter by" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Events</SelectItem>
-            <SelectItem value="upcoming">Upcoming</SelectItem>
-            <SelectItem value="ongoing">On Going</SelectItem>
-            <SelectItem value="elapsed">Elapsed</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
+          <SelectContent className="bg-popover border border-border shadow-md">
+            {filterOptions.map(option => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Sort Row */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <Select value={sortBy} onValueChange={(value: SortOption) => onSortChange(value)}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-popover border border-border shadow-md">
             <SelectItem value="date">Sort by Date</SelectItem>
             <SelectItem value="name">Sort by Name</SelectItem>
             <SelectItem value="status">Sort by Status</SelectItem>

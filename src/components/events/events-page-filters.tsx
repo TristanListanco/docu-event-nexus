@@ -11,9 +11,10 @@ interface EventsPageFiltersProps {
     sortBy: SortOption;
     filterBy: FilterOption;
   }) => void;
+  isArchived?: boolean;
 }
 
-export default function EventsPageFilters({ onFiltersChange }: EventsPageFiltersProps) {
+export default function EventsPageFilters({ onFiltersChange, isArchived = false }: EventsPageFiltersProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
@@ -41,6 +42,7 @@ export default function EventsPageFilters({ onFiltersChange }: EventsPageFilters
       onSortChange={handleSortChange}
       filterBy={filterBy}
       onFilterChange={handleFilterChange}
+      isArchived={isArchived}
     />
   );
 }
