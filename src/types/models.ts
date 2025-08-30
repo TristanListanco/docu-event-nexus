@@ -1,4 +1,3 @@
-
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
 export type StaffPosition = "Chairperson" | "Co-Chairperson" | "Secretary" | "Undersecretary" | "Associate";
@@ -51,26 +50,10 @@ export interface StaffAssignment {
   declinedAt?: string;
 }
 
-// Add this interface for database assignment data
-export interface StaffAssignmentData {
-  staff_id: string;
-  attendance_status: AttendanceStatus;
-  confirmation_status?: ConfirmationStatus;
-  confirmation_token?: string;
-  confirmed_at?: string;
-  declined_at?: string;
-  staff_members?: {
-    id: string;
-    name: string;
-    role: StaffRole; // Note: database has single role, not array
-  };
-}
-
 export interface Event {
   id: string;
   logId: string;
   name: string;
-  description?: string; // Add description field
   date: string;
   endDate?: string; // New field for multi-day events
   startTime: string;
