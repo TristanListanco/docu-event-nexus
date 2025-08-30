@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,10 +18,8 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Event, StaffAssignmentData } from "@/types/models";
+import { Event, StaffAssignmentData, AttendanceStatus } from "@/types/models";
 import { supabase } from "@/integrations/supabase/client";
-import { StaffAssignment } from "@/components/events/event-form";
-import { AttendanceStatus } from "@/types/models";
 import { StaffAttendance } from "@/components/events/event-attendance";
 import StaffAvailabilityTimeline from "@/components/events/staff-availability-timeline";
 
@@ -61,14 +60,34 @@ export default function EventDetailsPage() {
         throw new Error("Event not found");
       }
 
-      setEvent(eventData);
-      setEditedName(eventData.name);
-      setEditedDescription(eventData.description);
-      setEditedDate(new Date(eventData.date));
-      setEditedStartTime(eventData.startTime);
-      setEditedEndTime(eventData.endTime);
+      // Map database fields to Event interface
+      const mappedEvent: Event = {
+        id: eventData.id,
+        logId: eventData.log_id || eventData.id,
+        name: eventData.name,
+        description: eventData.description || "",
+        date: eventData.date,
+        endDate: eventData.end_date,
+        startTime: eventData.start_time,
+        endTime: eventData.end_time,
+        location: eventData.location || "",
+        organizer: eventData.organizer,
+        type: eventData.type,
+        status: eventData.status,
+        ignoreScheduleConflicts: eventData.ignore_schedule_conflicts,
+        ccsOnlyEvent: eventData.ccs_only_event,
+        isBigEvent: eventData.is_big_event,
+        bigEventId: eventData.big_event_id,
+      };
 
-      return eventData;
+      setEvent(mappedEvent);
+      setEditedName(mappedEvent.name);
+      setEditedDescription(mappedEvent.description || "");
+      setEditedDate(new Date(mappedEvent.date));
+      setEditedStartTime(mappedEvent.startTime);
+      setEditedEndTime(mappedEvent.endTime);
+
+      return mappedEvent;
     },
   });
 
@@ -85,7 +104,7 @@ export default function EventDetailsPage() {
           confirmation_token,
           confirmed_at,
           declined_at,
-          staff_members!inner(id, name)
+          staff_members!inner(id, name, role)
         `)
         .eq('event_id', eventId);
 
@@ -99,17 +118,13 @@ export default function EventDetailsPage() {
         return;
       }
 
-      // Filter and set videographers and photographers
+      // Filter and set videographers and photographers based on database structure
       const videographers = data?.filter(assignment => {
-        return assignment.staff_members && staff && staff.some(staffMember => {
-          return staffMember.id === assignment.staff_id && staffMember.roles.includes('Videographer');
-        });
+        return assignment.staff_members && assignment.staff_members.role === 'Videographer';
       }) || [];
 
       const photographers = data?.filter(assignment => {
-        return assignment.staff_members && staff && staff.some(staffMember => {
-          return staffMember.id === assignment.staff_id && staffMember.roles.includes('Photographer');
-        });
+        return assignment.staff_members && assignment.staff_members.role === 'Photographer';
       }) || [];
 
       setAssignedVideographers(videographers);
@@ -131,15 +146,24 @@ export default function EventDetailsPage() {
     },
   });
 
-  const updateEventMutation = useMutation(
-    async (updatedEvent: Partial<Event>) => {
+  const updateEventMutation = useMutation({
+    mutationFn: async (updatedEvent: Partial<Event>) => {
       if (!eventId) {
         throw new Error("Event ID is required");
       }
 
+      // Map camelCase fields to snake_case for database
+      const dbUpdateData = {
+        name: updatedEvent.name,
+        description: updatedEvent.description,
+        date: updatedEvent.date,
+        start_time: updatedEvent.startTime,
+        end_time: updatedEvent.endTime,
+      };
+
       const { data, error } = await supabase
         .from("events")
-        .update(updatedEvent)
+        .update(dbUpdateData)
         .eq("id", eventId)
         .select()
         .single();
@@ -151,28 +175,26 @@ export default function EventDetailsPage() {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Event updated successfully.",
-        });
-        setIsEditing(false);
-        queryClient.invalidateQueries(["events"]); // Invalidate events query to refetch
-        queryClient.invalidateQueries(["event", eventId]); // Invalidate single event query
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to update event.",
-          variant: "destructive",
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Event updated successfully.",
+      });
+      setIsEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["event", eventId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update event.",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const deleteEventMutation = useMutation(
-    async () => {
+  const deleteEventMutation = useMutation({
+    mutationFn: async () => {
       if (!eventId) {
         throw new Error("Event ID is required");
       }
@@ -189,24 +211,22 @@ export default function EventDetailsPage() {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Event deleted successfully.",
-        });
-        navigate("/events");
-        queryClient.invalidateQueries(["events"]); // Invalidate events query to refetch
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to delete event.",
-          variant: "destructive",
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Event deleted successfully.",
+      });
+      navigate("/events");
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -268,8 +288,8 @@ export default function EventDetailsPage() {
               <Button variant="secondary" onClick={() => setIsEditing(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveClick} disabled={updateEventMutation.isLoading}>
-                {updateEventMutation.isLoading ? "Saving..." : "Save"}
+              <Button onClick={handleSaveClick} disabled={updateEventMutation.isPending}>
+                {updateEventMutation.isPending ? "Saving..." : "Save"}
               </Button>
             </div>
           )}
@@ -427,7 +447,7 @@ export default function EventDetailsPage() {
                         <StaffAttendance
                           key={v.staff_id}
                           staffId={v.staff_id}
-                          eventId={eventId}
+                          eventId={eventId!}
                           initialAttendanceStatus={v.attendance_status as AttendanceStatus}
                         />
                       ))}
@@ -445,7 +465,7 @@ export default function EventDetailsPage() {
                         <StaffAttendance
                           key={p.staff_id}
                           staffId={p.staff_id}
-                          eventId={eventId}
+                          eventId={eventId!}
                           initialAttendanceStatus={p.attendance_status as AttendanceStatus}
                         />
                       ))}
@@ -473,12 +493,10 @@ export default function EventDetailsPage() {
 
       {/* Action Buttons */}
       <div className="flex justify-between items-center pt-4 border-t">
-        <Button variant="destructive" onClick={handleDeleteClick} disabled={deleteEventMutation.isLoading}>
-          {deleteEventMutation.isLoading ? "Deleting..." : "Delete Event"}
+        <Button variant="destructive" onClick={handleDeleteClick} disabled={deleteEventMutation.isPending}>
+          {deleteEventMutation.isPending ? "Deleting..." : "Delete Event"}
         </Button>
       </div>
-
-      {/* Modals */}
     </div>
   );
 }
