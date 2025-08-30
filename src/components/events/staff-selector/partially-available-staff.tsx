@@ -227,7 +227,10 @@ export default function PartiallyAvailableStaff({
               {gapAnalysis.gapsFilled.length > 0 && selectedStaffIds.length > 0 && (
                 <div className="text-sm text-green-600 dark:text-green-400 mb-2">
                   <span className="font-medium">Can fill gaps: </span>
-                  {formatTimeSlots(gapAnalysis.gapsFilled)}
+                  {formatTimeSlots(gapAnalysis.gapsFilled.map(gap => ({ 
+                    startTime: gap.start, 
+                    endTime: gap.end 
+                  })))}
                   <span className="text-xs ml-2 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">
                     Score: {gapAnalysis.score}
                   </span>
