@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useStaff } from "@/hooks/use-staff";
 import { useEvents } from "@/hooks/events/use-events";
@@ -47,7 +46,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     photographerIds: event.photographers?.map(p => p.staffId) || [],
     ignoreScheduleConflicts: event.ignoreScheduleConflicts,
     ccsOnlyEvent: event.ccsOnlyEvent,
-    sendEmailNotifications: true,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +66,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         photographerIds: event.photographers?.map(p => p.staffId) || [],
         ignoreScheduleConflicts: event.ignoreScheduleConflicts,
         ccsOnlyEvent: event.ccsOnlyEvent,
-        sendEmailNotifications: true,
       });
     }
   }, [event]);
@@ -161,7 +158,6 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         type: formData.type,
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
         ccsOnlyEvent: formData.ccsOnlyEvent,
-        sendEmailNotifications: formData.sendEmailNotifications,
       };
 
       await updateEvent(

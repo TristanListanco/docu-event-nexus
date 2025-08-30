@@ -106,7 +106,7 @@ export default function PartiallyAvailableStaff({
   }
 
   return (
-    <Accordion type="multiple" collapsible className="w-full space-y-2">
+    <Accordion type="multiple" className="w-full space-y-2">
       {sortedStaff.map((availability) => {
         const staff = availability.staff;
         const isSelected = selectedStaffIds.includes(staff.id);
