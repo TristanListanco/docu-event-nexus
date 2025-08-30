@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Event, StaffAssignmentData, AttendanceStatus } from "@/types/models";
+import { Event, StaffAssignmentData, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { supabase } from "@/integrations/supabase/client";
 import { StaffAttendance } from "@/components/events/event-attendance";
 import StaffAvailabilityTimeline from "@/components/events/staff-availability-timeline";
@@ -65,7 +65,7 @@ export default function EventDetailsPage() {
         id: eventData.id,
         logId: eventData.log_id || eventData.id,
         name: eventData.name,
-        description: eventData.description || "",
+        description: eventData.description || "", // Handle optional description
         date: eventData.date,
         endDate: eventData.end_date,
         startTime: eventData.start_time,
@@ -121,11 +121,17 @@ export default function EventDetailsPage() {
       // Filter and set videographers and photographers based on database structure
       const videographers = data?.filter(assignment => {
         return assignment.staff_members && assignment.staff_members.role === 'Videographer';
-      }) || [];
+      }).map(assignment => ({
+        ...assignment,
+        confirmation_status: (assignment.confirmation_status || 'pending') as ConfirmationStatus
+      })) || [];
 
       const photographers = data?.filter(assignment => {
         return assignment.staff_members && assignment.staff_members.role === 'Photographer';
-      }) || [];
+      }).map(assignment => ({
+        ...assignment,
+        confirmation_status: (assignment.confirmation_status || 'pending') as ConfirmationStatus
+      })) || [];
 
       setAssignedVideographers(videographers);
       setAssignedPhotographers(photographers);
@@ -379,7 +385,7 @@ export default function EventDetailsPage() {
               <div className="space-y-4">
                 <div>
                   <span className="font-semibold">Description:</span>
-                  <p>{event.description}</p>
+                  <p>{event.description || "No description provided"}</p>
                 </div>
                 <div>
                   <span className="font-semibold">Date:</span>
