@@ -50,6 +50,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [timeValidationError, setTimeValidationError] = useState("");
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
 
   // Reset form when event changes
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         ignoreScheduleConflicts: event.ignoreScheduleConflicts,
         ccsOnlyEvent: event.ccsOnlyEvent,
       });
+      setSendEmailNotifications(false);
     }
   }, [event]);
 
@@ -162,7 +164,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
       await updateEvent(
         event.id,
-        eventData,
+        { ...eventData, sendEmailNotifications },
         formData.videographerIds,
         formData.photographerIds
       );
@@ -178,41 +180,41 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl h-[95vh] sm:h-[90vh] p-0 gap-0">
-        <DialogHeader className="px-4 sm:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-semibold">
-            <CalendarIconLarge className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            Edit Event
+      <DialogContent className="w-full max-w-2xl lg:max-w-4xl h-[95vh] sm:h-[90vh] p-0 gap-0">
+        <DialogHeader className="px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl font-semibold">
+            <CalendarIconLarge className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+            <span className="truncate">Edit Event</span>
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-4 sm:px-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 py-4 sm:py-6">
+        <ScrollArea className="flex-1 px-3 sm:px-6">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 lg:space-y-6 py-3 sm:py-4 lg:py-6">
             {/* Basic Information */}
             <Card>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Tag className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Basic Information</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <Tag className="h-4 w-4 text-primary flex-shrink-0" />
+                  <h3 className="font-medium text-sm sm:text-base">Basic Information</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Event Name *</Label>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="name" className="text-xs sm:text-sm">Event Name *</Label>
                     <Input
                       id="name"
                       value={formData.name}
                       onChange={(e) => updateFormData({ name: e.target.value })}
                       placeholder="Enter event name"
                       required
-                      className="w-full"
+                      className="w-full text-sm sm:text-base"
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Event Type *</Label>
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="type" className="text-xs sm:text-sm">Event Type *</Label>
                     <Select value={formData.type} onValueChange={(value) => updateFormData({ type: value as EventType })}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full text-sm sm:text-base">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -225,16 +227,16 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="organizer">Organizer</Label>
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label htmlFor="organizer" className="text-xs sm:text-sm">Organizer</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <User className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                       <Input
                         id="organizer"
                         value={formData.organizer}
                         onChange={(e) => updateFormData({ organizer: e.target.value })}
                         placeholder="Enter organizer name"
-                        className="pl-10 w-full"
+                        className="pl-8 sm:pl-10 w-full text-sm sm:text-base"
                       />
                     </div>
                   </div>
@@ -244,28 +246,28 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
             {/* Date & Time */}
             <Card>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Date & Time</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <Clock className="h-4 w-4 text-primary flex-shrink-0" />
+                  <h3 className="font-medium text-sm sm:text-base">Date & Time</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label>Date *</Label>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label className="text-xs sm:text-sm">Date *</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "w-full justify-start text-left font-normal",
+                            "w-full justify-start text-left font-normal text-xs sm:text-sm",
                             !formData.date && "text-muted-foreground"
                           )}
                         >
                           {formData.date ? format(formData.date, "MMMM dd, yyyy") : (
                             <span>Pick a date</span>
                           )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          <CalendarIcon className="ml-auto h-3 w-3 sm:h-4 sm:w-4 opacity-50 flex-shrink-0" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -275,43 +277,49 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                           onSelect={(date) => updateFormData({ date })}
                           disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           initialFocus
-                          className={cn("p-3 pointer-events-auto")}
+                          className="p-3 pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="startTime">Start Time *</Label>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label htmlFor="startTime" className="text-xs sm:text-sm">Start Time *</Label>
                       <Input
                         id="startTime"
                         type="time"
                         value={formData.startTime}
                         onChange={(e) => handleStartTimeChange(e.target.value)}
                         required
-                        className={cn(timeValidationError && "border-red-500", "w-full")}
+                        className={cn(
+                          timeValidationError && "border-red-500", 
+                          "w-full text-xs sm:text-sm"
+                        )}
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="endTime">End Time *</Label>
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label htmlFor="endTime" className="text-xs sm:text-sm">End Time *</Label>
                       <Input
                         id="endTime"
                         type="time"
                         value={formData.endTime}
                         onChange={(e) => handleEndTimeChange(e.target.value)}
                         required
-                        className={cn(timeValidationError && "border-red-500", "w-full")}
+                        className={cn(
+                          timeValidationError && "border-red-500", 
+                          "w-full text-xs sm:text-sm"
+                        )}
                       />
                     </div>
                   </div>
                 </div>
                 
                 {timeValidationError && (
-                  <div className="text-sm text-red-500 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    {timeValidationError}
+                  <div className="text-xs sm:text-sm text-red-500 flex items-center gap-2">
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span>{timeValidationError}</span>
                   </div>
                 )}
               </CardContent>
@@ -319,22 +327,22 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
             {/* Location */}
             <Card>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Location</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
+                  <h3 className="font-medium text-sm sm:text-base">Location</h3>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
+                <div className="space-y-1 sm:space-y-2">
+                  <Label htmlFor="location" className="text-xs sm:text-sm">Location *</Label>
                   <Textarea
                     id="location"
                     value={formData.location}
                     onChange={(e) => updateFormData({ location: e.target.value })}
                     placeholder="Enter event location"
                     required
-                    rows={3}
-                    className="w-full resize-none"
+                    rows={2}
+                    className="w-full resize-none text-xs sm:text-sm"
                   />
                 </div>
               </CardContent>
@@ -342,21 +350,21 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
             {/* Staff Assignment */}
             <Card>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Staff Assignment</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <User className="h-4 w-4 text-primary flex-shrink-0" />
+                  <h3 className="font-medium text-sm sm:text-base">Staff Assignment</h3>
                 </div>
                 
                 {!canSelectStaff && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-amber-800">
-                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2 text-amber-800">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-medium">
                           {timeValidationError ? "Invalid time range" : "Date and time required"}
                         </p>
-                        <p className="text-sm text-amber-700 mt-1">
+                        <p className="text-xs text-amber-700 mt-1">
                           {timeValidationError 
                             ? "Please fix the time validation error to see available staff for assignment."
                             : "Please select event date and time first to see available staff for assignment."
@@ -367,7 +375,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                   </div>
                 )}
                 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <MultiStaffSelector
                     role="Videographer"
                     availableStaff={canSelectStaff ? availableStaff.videographers : []}
@@ -393,16 +401,16 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
             {/* Options */}
             <Card>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <AlertCircle className="h-4 w-4 text-primary" />
-                  <h3 className="font-medium">Options</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <AlertCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                  <h3 className="font-medium text-sm sm:text-base">Options</h3>
                 </div>
                 
-                <div className="space-y-6">
-                  <div className="flex items-start justify-between gap-4">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="space-y-0.5 min-w-0 flex-1">
-                      <Label className="text-sm font-medium">Ignore Schedule Conflicts</Label>
+                      <Label className="text-xs sm:text-sm font-medium">Ignore Schedule Conflicts</Label>
                       <p className="text-xs text-muted-foreground">
                         Allow assignment even if staff has scheduling conflicts
                       </p>
@@ -416,9 +424,9 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
                   <Separator />
 
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="space-y-0.5 min-w-0 flex-1">
-                      <Label className="text-sm font-medium">CCS Only Event</Label>
+                      <Label className="text-xs sm:text-sm font-medium">CCS Only Event</Label>
                       <p className="text-xs text-muted-foreground">
                         Show only CCS staff members for assignment
                       </p>
@@ -432,16 +440,16 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
 
                   <Separator />
 
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="space-y-0.5 min-w-0 flex-1">
-                      <Label className="text-sm font-medium">Send Email Notifications</Label>
+                      <Label className="text-xs sm:text-sm font-medium">Send Email Notifications</Label>
                       <p className="text-xs text-muted-foreground">
                         Notify assigned staff via email
                       </p>
                     </div>
                     <Switch
-                      checked={formData.sendEmailNotifications}
-                      onCheckedChange={(checked) => updateFormData({ sendEmailNotifications: checked })}
+                      checked={sendEmailNotifications}
+                      onCheckedChange={setSendEmailNotifications}
                       className="flex-shrink-0"
                     />
                   </div>
@@ -452,14 +460,14 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         </ScrollArea>
 
         {/* Fixed Footer */}
-        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 sm:px-6 py-2 sm:py-3 lg:py-4">
           <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               Cancel
             </Button>
@@ -467,7 +475,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting || !!timeValidationError}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               {isSubmitting ? "Updating..." : "Update Event"}
             </Button>
