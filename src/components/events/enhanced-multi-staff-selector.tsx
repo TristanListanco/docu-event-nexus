@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -138,14 +139,15 @@ export default function EnhancedMultiStaffSelector({
 
       {/* Partially Available Staff with Gap Analysis */}
       <PartiallyAvailableStaff
-        availableStaff={partiallyAvailableStaff}
+        partiallyAvailableStaff={partiallyAvailableStaff}
         selectedStaffIds={selectedStaffIds}
-        maxSelection={maxSelection}
-        onSelectionChange={onSelectionChange}
-        excludeStaffIds={excludeStaffIds}
-        eventStartTime={eventStartTime || ""}
-        eventEndTime={eventEndTime || ""}
+        showPartiallyAvailable={showPartiallyAvailable}
+        setShowPartiallyAvailable={setShowPartiallyAvailable}
+        onSmartPick={handleSmartPick}
         disabled={disabled}
+        canAddMore={canAddMore}
+        eventStartTime={eventStartTime}
+        eventEndTime={eventEndTime}
       />
 
       {/* Status Messages */}
