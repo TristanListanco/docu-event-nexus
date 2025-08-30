@@ -137,7 +137,7 @@ export default function EnhancedMultiStaffSelector({
         hasNoAssignment={hasNoAssignment}
       />
 
-      {/* Partially Available Staff */}
+      {/* Partially Available Staff with Gap Analysis */}
       <PartiallyAvailableStaff
         partiallyAvailableStaff={partiallyAvailableStaff}
         selectedStaffIds={selectedStaffIds}
@@ -146,6 +146,8 @@ export default function EnhancedMultiStaffSelector({
         onSmartPick={handleSmartPick}
         disabled={disabled}
         canAddMore={canAddMore}
+        eventStartTime={eventStartTime}
+        eventEndTime={eventEndTime}
       />
 
       {/* Status Messages */}
