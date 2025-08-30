@@ -43,8 +43,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
     location: event.location,
     organizer: event.organizer || "",
     type: event.type,
-    videographerIds: event.videographers?.map(v => v.id) || [],
-    photographerIds: event.photographers?.map(p => p.id) || [],
+    videographerIds: event.videographers?.map(v => v.staffId) || [],
+    photographerIds: event.photographers?.map(p => p.staffId) || [],
     ignoreScheduleConflicts: event.ignoreScheduleConflicts,
     ccsOnlyEvent: event.ccsOnlyEvent,
     sendEmailNotifications: true,
@@ -64,8 +64,8 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         location: event.location,
         organizer: event.organizer || "",
         type: event.type,
-        videographerIds: event.videographers?.map(v => v.id) || [],
-        photographerIds: event.photographers?.map(p => p.id) || [],
+        videographerIds: event.videographers?.map(v => v.staffId) || [],
+        photographerIds: event.photographers?.map(p => p.staffId) || [],
         ignoreScheduleConflicts: event.ignoreScheduleConflicts,
         ccsOnlyEvent: event.ccsOnlyEvent,
         sendEmailNotifications: true,
@@ -161,14 +161,14 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
         type: formData.type,
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
         ccsOnlyEvent: formData.ccsOnlyEvent,
+        sendEmailNotifications: formData.sendEmailNotifications,
       };
 
       await updateEvent(
         event.id,
         eventData,
         formData.videographerIds,
-        formData.photographerIds,
-        formData.sendEmailNotifications
+        formData.photographerIds
       );
 
       onOpenChange(false);
@@ -285,7 +285,7 @@ export default function EventEditDialog({ open, onOpenChange, event, onEventUpda
                     </Popover>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="startTime">Start Time *</Label>
                       <Input
