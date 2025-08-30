@@ -1,9 +1,9 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Clock, CheckCircle } from "lucide-react";
 import { StaffAvailability } from "@/types/models";
-import { getEventGaps } from "./utils";
 
 interface PartiallyAvailableStaffProps {
   partiallyAvailableStaff: StaffAvailability[];
@@ -35,20 +35,6 @@ export default function PartiallyAvailableStaff({
     return `${hours}:${minutes}`;
   };
 
-  const calculateEventGaps = (availableSlots: { start: string; end: string }[]) => {
-    if (!eventStartTime || !eventEndTime || availableSlots.length === 0) {
-      return [];
-    }
-
-    // Convert available slots to the expected format
-    const formattedSlots = availableSlots.map(slot => ({
-      startTime: slot.start,
-      endTime: slot.end
-    }));
-
-    return getEventGaps(eventStartTime, eventEndTime, formattedSlots);
-  };
-
   return (
     <div>
       {hasPartiallyAvailable && (
@@ -62,10 +48,8 @@ export default function PartiallyAvailableStaff({
           </Button>
 
           {showPartiallyAvailable && (
-            <Accordion type="multiple" collapsible>
+            <Accordion type="multiple">
               {partiallyAvailableStaff.map((staff) => {
-                const gaps = calculateEventGaps(staff.availableTimeSlots || []);
-                const hasGaps = gaps.length > 0;
                 const staffId = staff.staff.id;
                 const isSelected = selectedStaffIds.includes(staffId);
 
@@ -80,17 +64,11 @@ export default function PartiallyAvailableStaff({
                         {staff.availableTimeSlots && staff.availableTimeSlots.length > 0 ? (
                           staff.availableTimeSlots.map((slot, index) => (
                             <div key={index} className="text-sm">
-                              Available from {getFormattedTime(slot.start)} to {getFormattedTime(slot.end)}
+                              Available from {getFormattedTime(slot.startTime)} to {getFormattedTime(slot.endTime)}
                             </div>
                           ))
                         ) : (
                           <div className="text-sm text-muted-foreground">No specific availability provided.</div>
-                        )}
-
-                        {hasGaps && (
-                          <div className="text-sm text-red-500">
-                            Gaps in availability detected.
-                          </div>
                         )}
 
                         <Button
