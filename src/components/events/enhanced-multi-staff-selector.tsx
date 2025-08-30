@@ -11,14 +11,6 @@ import SelectedStaffDisplay from "./staff-selector/selected-staff-display";
 import FullyAvailableStaff from "./staff-selector/fully-available-staff";
 import PartiallyAvailableStaff from "./staff-selector/partially-available-staff";
 
-interface ExtendedEnhancedMultiStaffSelectorProps extends EnhancedMultiStaffSelectorProps {
-  confirmedStaffIds?: string[];
-  existingAssignments?: Array<{
-    staffId: string;
-    confirmationStatus: string;
-  }>;
-}
-
 export default function EnhancedMultiStaffSelector({
   role,
   staffAvailability,
@@ -28,26 +20,16 @@ export default function EnhancedMultiStaffSelector({
   disabled = false,
   excludeStaffIds = [],
   eventStartTime,
-  eventEndTime,
-  confirmedStaffIds = [],
-  existingAssignments = []
-}: ExtendedEnhancedMultiStaffSelectorProps) {
+  eventEndTime
+}: EnhancedMultiStaffSelectorProps) {
   const { staff } = useStaff();
   const [pendingSelection, setPendingSelection] = useState<string>("");
   const [showPartiallyAvailable, setShowPartiallyAvailable] = useState(false);
 
-  // Determine confirmed staff from existing assignments
-  const confirmedStaff = existingAssignments
-    .filter(assignment => assignment.confirmationStatus === 'confirmed')
-    .map(assignment => assignment.staffId);
-
   const handleAddStaff = () => {
     if (pendingSelection) {
       if (pendingSelection === "none") {
-        // Only clear non-confirmed staff
-        const nonConfirmedStaff = selectedStaffIds.filter(id => !confirmedStaff.includes(id));
-        const remainingConfirmed = selectedStaffIds.filter(id => confirmedStaff.includes(id));
-        onSelectionChange(remainingConfirmed);
+        onSelectionChange([]);
       } else if (!selectedStaffIds.includes(pendingSelection)) {
         const newSelection = [...selectedStaffIds, pendingSelection];
         onSelectionChange(newSelection);
@@ -57,11 +39,6 @@ export default function EnhancedMultiStaffSelector({
   };
 
   const handleRemoveStaff = (staffId: string) => {
-    // Prevent removal of confirmed staff
-    if (confirmedStaff.includes(staffId)) {
-      return;
-    }
-    
     const newSelection = selectedStaffIds.filter(id => id !== staffId);
     onSelectionChange(newSelection);
   };
@@ -145,7 +122,6 @@ export default function EnhancedMultiStaffSelector({
         disabled={disabled}
         onRemoveStaff={handleRemoveStaff}
         getStaffName={getStaffName}
-        confirmedStaffIds={confirmedStaff}
       />
 
       {/* Add New Staff - Fully Available */}

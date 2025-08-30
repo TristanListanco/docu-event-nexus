@@ -14,16 +14,6 @@ interface AddEventStaffAssignmentProps {
   startTime?: string;
   endTime?: string;
   ignoreScheduleConflicts?: boolean;
-  existingEvent?: {
-    videographers?: Array<{
-      staffId: string;
-      confirmationStatus: string;
-    }>;
-    photographers?: Array<{
-      staffId: string;
-      confirmationStatus: string;
-    }>;
-  };
 }
 
 export default function AddEventStaffAssignment({
@@ -34,8 +24,7 @@ export default function AddEventStaffAssignment({
   eventDate,
   startTime,
   endTime,
-  ignoreScheduleConflicts = false,
-  existingEvent
+  ignoreScheduleConflicts = false
 }: AddEventStaffAssignmentProps) {
   const { staff, leaveDates } = useStaff();
   const isDateTimeSelected = eventDate && startTime && endTime;
@@ -82,7 +71,6 @@ export default function AddEventStaffAssignment({
               excludeStaffIds={selectedPhotographers}
               eventStartTime={startTime}
               eventEndTime={endTime}
-              existingAssignments={existingEvent?.videographers}
             />
             
             <EnhancedMultiStaffSelector
@@ -93,7 +81,6 @@ export default function AddEventStaffAssignment({
               excludeStaffIds={selectedVideographers}
               eventStartTime={startTime}
               eventEndTime={endTime}
-              existingAssignments={existingEvent?.photographers}
             />
           </div>
         )}
