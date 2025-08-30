@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,12 +59,12 @@ export default function EventDetailsPage() {
         throw new Error("Event not found");
       }
 
-      // Map database fields to Event interface
+      // Map database fields to Event interface - handle description properly
       const mappedEvent: Event = {
         id: eventData.id,
         logId: eventData.log_id || eventData.id,
         name: eventData.name,
-        description: eventData.description || "", // Handle optional description
+        description: (eventData as any).description || "", // Cast to any to access description
         date: eventData.date,
         endDate: eventData.end_date,
         startTime: eventData.start_time,
