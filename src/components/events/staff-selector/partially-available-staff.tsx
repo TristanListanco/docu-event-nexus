@@ -36,7 +36,7 @@ export default function PartiallyAvailableStaff({
     return `${slot.start} - ${slot.end}`;
   };
 
-  const calculateCoveragePercentage = (availableSlots: { start: string; end: string }[], eventStart?: string, eventEnd?: string) => {
+  const calculateCoveragePercentage = (availableSlots: { startTime: string; endTime: string }[], eventStart?: string, eventEnd?: string) => {
     if (!eventStart || !eventEnd || !availableSlots.length) return 0;
     
     const eventStartMinutes = timeToMinutes(eventStart);
@@ -46,8 +46,8 @@ export default function PartiallyAvailableStaff({
     let coveredMinutes = 0;
     
     availableSlots.forEach(slot => {
-      const slotStart = Math.max(timeToMinutes(slot.start), eventStartMinutes);
-      const slotEnd = Math.min(timeToMinutes(slot.end), eventEndMinutes);
+      const slotStart = Math.max(timeToMinutes(slot.startTime), eventStartMinutes);
+      const slotEnd = Math.min(timeToMinutes(slot.endTime), eventEndMinutes);
       if (slotEnd > slotStart) {
         coveredMinutes += slotEnd - slotStart;
       }
@@ -61,7 +61,7 @@ export default function PartiallyAvailableStaff({
     return hours * 60 + minutes;
   };
 
-  const identifyGaps = (availableSlots: { start: string; end: string }[], eventStart?: string, eventEnd?: string) => {
+  const identifyGaps = (availableSlots: { startTime: string; endTime: string }[], eventStart?: string, eventEnd?: string) => {
     if (!eventStart || !eventEnd || !availableSlots.length) return [];
     
     const eventStartMinutes = timeToMinutes(eventStart);
@@ -70,8 +70,8 @@ export default function PartiallyAvailableStaff({
     // Sort slots by start time
     const sortedSlots = [...availableSlots]
       .map(slot => ({
-        start: Math.max(timeToMinutes(slot.start), eventStartMinutes),
-        end: Math.min(timeToMinutes(slot.end), eventEndMinutes)
+        start: Math.max(timeToMinutes(slot.startTime), eventStartMinutes),
+        end: Math.min(timeToMinutes(slot.endTime), eventEndMinutes)
       }))
       .filter(slot => slot.end > slot.start)
       .sort((a, b) => a.start - b.start);
@@ -198,7 +198,7 @@ export default function PartiallyAvailableStaff({
                         <div className="grid gap-1">
                           {staffMember.availableTimeSlots?.map((slot, slotIndex) => (
                             <Badge key={slotIndex} variant="outline" className="justify-start text-xs">
-                              {formatTimeSlot(slot)}
+                              {slot.startTime} - {slot.endTime}
                             </Badge>
                           ))}
                         </div>

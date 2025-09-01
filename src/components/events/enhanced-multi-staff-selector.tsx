@@ -139,7 +139,7 @@ export default function EnhancedMultiStaffSelector({
 
       {/* Partially Available Staff with Gap Analysis */}
       <PartiallyAvailableStaff
-        partiallyAvailableStaff={partiallyAvailableStaff}
+        availableStaff={partiallyAvailableStaff}
         selectedStaffIds={selectedStaffIds}
         showPartiallyAvailable={showPartiallyAvailable}
         setShowPartiallyAvailable={setShowPartiallyAvailable}
