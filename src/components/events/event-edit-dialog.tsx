@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CalendarIcon, Save, Trash2 } from "lucide-react";
+import { CalendarIcon, Save, Trash2, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Event, EventType, StaffAvailability } from "@/types/models";
@@ -42,6 +42,7 @@ export default function EventEditDialog({
   const { updateEvent, deleteEvent } = useEvents();
   const { staff } = useStaff();
   const [loading, setLoading] = useState(false);
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
 
   const [formData, setFormData] = useState({
     name: event.name,
@@ -55,7 +56,8 @@ export default function EventEditDialog({
     ignoreScheduleConflicts: event.ignoreScheduleConflicts,
     ccsOnlyEvent: event.ccsOnlyEvent,
     isMultiDay: !!event.endDate,
-    status: event.status
+    status: event.status,
+    isUniversityWideEvent: false // Default to false, could be derived from existing data if needed
   });
 
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
@@ -77,6 +79,13 @@ export default function EventEditDialog({
       
       setSelectedVideographers(videographerIds);
       setSelectedPhotographers(photographerIds);
+      
+      // Determine if this might be a university wide event based on staff count
+      const totalStaff = videographerIds.length + photographerIds.length;
+      setFormData(prev => ({
+        ...prev,
+        isUniversityWideEvent: totalStaff > 6 // Assume it's university wide if more than 6 staff
+      }));
       
       // Calculate staff availability
       updateStaffAvailability();
@@ -168,7 +177,7 @@ export default function EventEditDialog({
         ignoreScheduleConflicts: formData.ignoreScheduleConflicts,
         ccsOnlyEvent: formData.ccsOnlyEvent,
         status: formData.status
-      }, selectedVideographers, selectedPhotographers);
+      }, selectedVideographers, selectedPhotographers, sendEmailNotifications);
 
       if (success) {
         onEventUpdated?.();
@@ -392,6 +401,45 @@ export default function EventEditDialog({
             </div>
           </div>
 
+          {/* Options Section - Add University Wide Event checkbox */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Event Options</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isUniversityWideEvent"
+                  checked={formData.isUniversityWideEvent}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isUniversityWideEvent: !!checked }))}
+                  disabled={isReadOnly}
+                />
+                <Label htmlFor="isUniversityWideEvent" className="flex items-center">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  University Wide Event (no staff limits)
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ignoreScheduleConflicts"
+                  checked={formData.ignoreScheduleConflicts}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ignoreScheduleConflicts: !!checked }))}
+                  disabled={isReadOnly}
+                />
+                <Label htmlFor="ignoreScheduleConflicts">Ignore schedule conflicts</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="ccsOnlyEvent"
+                  checked={formData.ccsOnlyEvent}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, ccsOnlyEvent: !!checked }))}
+                  disabled={isReadOnly}
+                />
+                <Label htmlFor="ccsOnlyEvent">CCS classes suspended</Label>
+              </div>
+            </div>
+          </div>
+
           {/* Staff Assignment Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Staff Assignment</h3>
@@ -405,7 +453,7 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
-                maxSelection={5}
+                maxSelection={formData.isUniversityWideEvent ? undefined : 5}
               />
               
               <EnhancedMultiStaffSelector
@@ -417,7 +465,7 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
-                maxSelection={5}
+                maxSelection={formData.isUniversityWideEvent ? undefined : 5}
               />
             </div>
           </div>

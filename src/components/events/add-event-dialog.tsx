@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Event, EventType } from "@/types/models";
 import MultiStaffSelector from "./multi-staff-selector";
-import { Calendar as CalendarIconLarge, Clock, MapPin, User, Tag, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIconLarge, Clock, MapPin, User, Tag, AlertCircle, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAvailableStaff } from "@/hooks/staff/staff-availability";
 
@@ -42,6 +42,7 @@ interface FormState {
   ignoreScheduleConflicts: boolean;
   ccsOnlyEvent: boolean;
   sendEmailNotifications: boolean;
+  isUniversityWideEvent: boolean;
 }
 
 const initialFormState: FormState = {
@@ -57,6 +58,7 @@ const initialFormState: FormState = {
   ignoreScheduleConflicts: false,
   ccsOnlyEvent: false,
   sendEmailNotifications: true,
+  isUniversityWideEvent: false,
 };
 
 // Storage key for form persistence
@@ -422,7 +424,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     availableStaff={canSelectStaff ? availableStaff.videographers : []}
                     selectedStaffIds={formState.videographerIds}
                     onSelectionChange={(ids) => updateFormState({ videographerIds: ids })}
-                    maxSelection={3}
+                    maxSelection={formState.isUniversityWideEvent ? undefined : 3}
                     disabled={staffLoading || !canSelectStaff}
                     excludeStaffIds={formState.photographerIds}
                   />
@@ -432,7 +434,7 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     availableStaff={canSelectStaff ? availableStaff.photographers : []}
                     selectedStaffIds={formState.photographerIds}
                     onSelectionChange={(ids) => updateFormState({ photographerIds: ids })}
-                    maxSelection={3}
+                    maxSelection={formState.isUniversityWideEvent ? undefined : 3}
                     disabled={staffLoading || !canSelectStaff}
                     excludeStaffIds={formState.videographerIds}
                   />
@@ -449,6 +451,24 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                 </div>
                 
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        University Wide Event
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Remove staff selection limits for large scale events
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formState.isUniversityWideEvent}
+                      onCheckedChange={(checked) => updateFormState({ isUniversityWideEvent: checked })}
+                    />
+                  </div>
+
+                  <Separator />
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label>Ignore Schedule Conflicts</Label>
