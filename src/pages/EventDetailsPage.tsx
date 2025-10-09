@@ -547,7 +547,7 @@ export default function EventDetailsPage() {
                             <p className="text-sm text-gray-600 dark:text-gray-400 break-all">{assignment.staffEmail}</p>
                           </div>
                           
-                          {((isCompleted && assignment.confirmationStatus === 'confirmed') || isElapsed) && (
+                          {(isCompleted || isElapsed) && (
                             <div className="mt-2">
                               {assignment.attendanceStatus === "Pending" ? (
                                 <Select
