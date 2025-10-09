@@ -1,60 +1,47 @@
-import { Resend } from "npm:resend@4.0.0";
 
-// Reusable Resend client
-let resendClient: Resend | null = null;
 
-function getResendClient(): Resend {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY not configured");
+import nodemailer from "npm:nodemailer@6.9.8";
+
+export async function sendEmailWithNodemailer(to: string, subject: string, html: string, icsContent?: string) {
+  const gmailUser = Deno.env.get("GMAIL_USER");
+  const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
+
+  if (!gmailUser || !gmailAppPassword) {
+    throw new Error("Gmail credentials not configured");
   }
-  if (!resendClient) {
-    console.log("Creating Resend client...");
-    resendClient = new Resend(apiKey);
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+  });
+
+  const mailOptions: any = {
+    from: `"CCS Event Management" <${gmailUser}>`,
+    to: to,
+    subject: subject,
+    html: html,
+  };
+
+  if (icsContent) {
+    mailOptions.attachments = [
+      {
+        filename: 'event.ics',
+        content: icsContent,
+        contentType: 'text/calendar',
+      },
+    ];
   }
-  return resendClient;
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`Email sent to ${to}:`, info.messageId);
+  
+  return {
+    success: true,
+    messageId: info.messageId,
+    response: info.response,
+  };
 }
 
-export async function sendEmailWithNodemailer(
-  to: string,
-  subject: string,
-  html: string,
-  icsContent?: string
-) {
-  try {
-    const resend = getResendClient();
-
-    const attachments = icsContent
-      ? [
-          {
-            filename: "event.ics",
-            content: icsContent,
-            contentType: "text/calendar",
-          },
-        ]
-      : undefined;
-
-    const { data, error } = await resend.emails.send({
-      from: "CCS Event Management <onboarding@resend.dev>",
-      to: [to],
-      subject,
-      html,
-      attachments,
-    });
-
-    if (error) {
-      throw new Error(error.message ?? "Failed to send email");
-    }
-
-    console.log(`Email sent to ${to}:`, data?.id);
-
-    return {
-      success: true,
-      messageId: data?.id,
-      response: "sent",
-    };
-  } catch (error: any) {
-    console.error("Email sending error:", error);
-    throw new Error(`Failed to send email: ${error.message}`);
-  }
-}

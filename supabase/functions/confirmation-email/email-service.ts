@@ -1,56 +1,68 @@
-import { Resend } from "npm:resend@4.0.0";
 
-// Reusable Resend client
-let resendClient: Resend | null = null;
+import nodemailer from "npm:nodemailer@6.9.8";
 
-function getResendClient(): Resend {
-  const apiKey = Deno.env.get("RESEND_API_KEY");
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY not configured");
+// Global transporter for connection reuse
+let globalTransporter: any = null;
+
+const createTransporter = () => {
+  const gmailUser = Deno.env.get("GMAIL_USER");
+  const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
+
+  if (!gmailUser || !gmailAppPassword) {
+    throw new Error("Gmail credentials not configured");
   }
-  if (!resendClient) {
-    console.log("Creating Resend client...");
-    resendClient = new Resend(apiKey);
-  }
-  return resendClient;
-}
 
-// Keep the same function name/signature used by the rest of the codebase
-export async function sendEmailWithNodemailer(
-  to: string,
-  subject: string,
-  html: string
-) {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: gmailUser,
+      pass: gmailAppPassword,
+    },
+    // Optimized settings for faster delivery
+    pool: true, // Use connection pooling
+    maxConnections: 5, // Increase concurrent connections
+    maxMessages: 100, // Send up to 100 messages per connection
+    rateLimit: 14, // Send up to 14 messages per second
+  });
+};
+
+export async function sendEmailWithNodemailer(to: string, subject: string, html: string) {
   try {
-    const resend = getResendClient();
-
-    console.log("Sending high-priority email via Resend to:", to);
-
-    const { data, error } = await resend.emails.send({
-      from: "CCS Event Management <onboarding@resend.dev>",
-      to: [to],
-      subject,
-      html,
-      headers: {
-        "X-Priority": "1",
-        "X-MSMail-Priority": "High",
-        Importance: "high",
-      },
-    });
-
-    if (error) {
-      throw new Error(error.message ?? "Failed to send email");
+    // Reuse global transporter or create new one
+    if (!globalTransporter) {
+      console.log("Creating new optimized email transporter...");
+      globalTransporter = createTransporter();
     }
 
-    console.log(`Email sent successfully. ID: ${data?.id}`);
+    const mailOptions = {
+      from: `"CCS Event Management" <${Deno.env.get("GMAIL_USER")}>`,
+      to: to,
+      subject: subject,
+      html: html,
+      // Add priority headers for faster delivery
+      headers: {
+        'X-Priority': '1',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'high'
+      }
+    };
 
+    console.log("Sending high-priority email to:", to);
+
+    const info = await globalTransporter.sendMail(mailOptions);
+    console.log(`Email sent successfully. Message ID: ${info.messageId}`);
+    
     return {
       success: true,
-      messageId: data?.id,
-      response: "sent",
+      messageId: info.messageId,
+      response: info.response,
     };
   } catch (error: any) {
     console.error("Email sending error:", error);
+    
+    // Reset transporter on error
+    globalTransporter = null;
+    
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
