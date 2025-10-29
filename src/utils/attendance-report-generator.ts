@@ -10,6 +10,7 @@ interface AttendanceData {
   completed: number;
   absent: number;
   excused: number;
+  events: string[];
 }
 
 export async function fetchStaffAttendanceData(
@@ -18,9 +19,16 @@ export async function fetchStaffAttendanceData(
   const attendanceData: AttendanceData[] = [];
 
   for (const member of staff) {
+    // Fetch attendance status and event details
     const { data, error } = await supabase
       .from("staff_assignments")
-      .select("attendance_status")
+      .select(`
+        attendance_status,
+        event_id,
+        events (
+          name
+        )
+      `)
       .eq("staff_id", member.id);
 
     if (error) {
@@ -31,11 +39,19 @@ export async function fetchStaffAttendanceData(
         completed: 0,
         absent: 0,
         excused: 0,
+        events: [],
       });
     } else {
       const completed = data?.filter((a) => a.attendance_status === "Completed").length || 0;
       const absent = data?.filter((a) => a.attendance_status === "Absent").length || 0;
       const excused = data?.filter((a) => a.attendance_status === "Excused").length || 0;
+      
+      // Extract unique event names
+      const eventNames = [...new Set(
+        data
+          ?.map((a: any) => a.events?.name)
+          .filter((name): name is string => !!name) || []
+      )];
 
       attendanceData.push({
         staffId: member.id,
@@ -43,6 +59,7 @@ export async function fetchStaffAttendanceData(
         completed,
         absent,
         excused,
+        events: eventNames,
       });
     }
   }
@@ -61,42 +78,93 @@ export function generateAttendanceReportPDF(
     day: "numeric",
   });
 
-  // Add header
-  doc.setFontSize(20);
-  doc.text("Staff Attendance Report", 14, 20);
+  // Theme colors from the website (primary teal: hsl(175, 84%, 32%))
+  const primaryColor: [number, number, number] = [13, 148, 136]; // RGB equivalent of hsl(175, 84%, 32%)
+  const accentColor: [number, number, number] = [46, 196, 182]; // RGB equivalent of hsl(175, 84%, 47%)
+  
+  let yPos = 20;
+  
+  // Organization header
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text("Mindanao State University - Iligan Institute of Technology", 105, yPos, { align: "center" });
+  
+  yPos += 6;
+  doc.setFontSize(11);
+  doc.text("CCS Student Council", 105, yPos, { align: "center" });
+  
+  yPos += 6;
+  doc.text("Multimedia Management", 105, yPos, { align: "center" });
+  
+  yPos += 6;
+  doc.text("DOCUMENTATIONS COMMITTEE", 105, yPos, { align: "center" });
+  
+  yPos += 10;
+  
+  // Document title
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text("CCS-SC MMM (DOCUMENTATION)", 105, yPos, { align: "center" });
+  
+  yPos += 6;
+  doc.text("Attendance and Accomplishment Report", 105, yPos, { align: "center" });
+  
+  yPos += 10;
+  
+  // Document info
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Document ID: ${documentId}`, 14, yPos);
+  doc.text(`Generated: ${currentDate}`, 140, yPos);
+  
+  yPos += 8;
 
-  doc.setFontSize(10);
-  doc.text(`Document ID: ${documentId}`, 14, 28);
-  doc.text(`Generated: ${currentDate}`, 14, 34);
-
-  // Prepare table data
-  const tableData = attendanceData.map((data) => [
-    data.staffName,
-    data.completed.toString(),
-    data.excused.toString(),
-    data.absent.toString(),
-  ]);
+  // Create detailed table data with events
+  const tableData = attendanceData.map((data) => {
+    const eventsText = data.events.length > 0 
+      ? data.events.join(", ") 
+      : "No events assigned";
+    
+    return [
+      data.staffName,
+      data.completed.toString(),
+      data.excused.toString(),
+      data.absent.toString(),
+      eventsText,
+    ];
+  });
 
   // Add table
   autoTable(doc, {
-    startY: 42,
-    head: [["Staff Name", "Present", "Excused", "Absent"]],
+    startY: yPos,
+    head: [["Staff Name", "Present", "Excused", "Absent", "Events / Assignments"]],
     body: tableData,
     theme: "grid",
     headStyles: {
-      fillColor: [59, 130, 246], // Blue color
+      fillColor: primaryColor,
       textColor: 255,
       fontStyle: "bold",
+      fontSize: 10,
     },
     styles: {
-      fontSize: 10,
-      cellPadding: 5,
+      fontSize: 9,
+      cellPadding: 4,
     },
     alternateRowStyles: {
-      fillColor: [245, 247, 250],
+      fillColor: [245, 250, 249],
+    },
+    columnStyles: {
+      0: { cellWidth: 35 },
+      1: { cellWidth: 20, halign: "center" },
+      2: { cellWidth: 20, halign: "center" },
+      3: { cellWidth: 20, halign: "center" },
+      4: { cellWidth: 95 },
     },
   });
 
   // Save the PDF
-  doc.save(`attendance-report-${new Date().getTime()}.pdf`);
+  doc.save(`CCS-SC-MMM-Attendance-Report-${new Date().getTime()}.pdf`);
 }
