@@ -9,6 +9,7 @@ interface EventsGridProps {
   onEditEvent: (e: React.MouseEvent, event: Event) => void;
   onDeleteEvent: (e: React.MouseEvent, event: Event) => void;
   getEventStatus: (event: Event) => string;
+  isArchived?: boolean;
 }
 
 export default function EventsGrid({ 
@@ -16,7 +17,8 @@ export default function EventsGrid({
   onEventClick, 
   onEditEvent, 
   onDeleteEvent, 
-  getEventStatus 
+  getEventStatus,
+  isArchived = false
 }: EventsGridProps) {
   return (
     <ScrollArea className="h-[calc(100vh-300px)]">
@@ -29,6 +31,7 @@ export default function EventsGrid({
             onEditEvent={onEditEvent}
             onDeleteEvent={onDeleteEvent}
             getEventStatus={getEventStatus}
+            isArchived={isArchived}
           />
         ))}
       </div>

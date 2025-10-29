@@ -167,6 +167,7 @@ export default function EventsPageContent({
                   isCollapsed={collapsedMonths.has(monthYear)}
                   onToggleCollapse={() => toggleMonthCollapse(monthYear)}
                   defaultExpanded={true}
+                  isArchived={activeTab === "archived"}
                 />
               ))}
             </div>

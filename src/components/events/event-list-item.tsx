@@ -10,6 +10,7 @@ interface EventListItemProps {
   onEditEvent: (e: React.MouseEvent, event: Event) => void;
   onDeleteEvent: (e: React.MouseEvent, event: Event) => void;
   getEventStatus: (event: Event) => string;
+  isArchived?: boolean;
 }
 
 // Helper function to convert 24-hour time to 12-hour format
@@ -42,9 +43,11 @@ const getStatusBadgeColor = (status: string) => {
 export default function EventListItem({ 
   event, 
   onEventClick, 
-  getEventStatus 
+  getEventStatus,
+  isArchived = false
 }: EventListItemProps) {
   const dynamicStatus = getEventStatus(event);
+  const shouldShowStatus = !(isArchived && dynamicStatus === 'Elapsed');
 
   return (
     <Card 
@@ -60,12 +63,14 @@ export default function EventListItem({
                 <Calendar className="h-4 w-4 text-primary transition-transform duration-200 hover:scale-110" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate transition-colors duration-200 hover:text-primary">{event.name}</h3>
+              <h3 className="font-medium truncate transition-colors duration-200 hover:text-primary">{event.name}</h3>
               </div>
             </div>
-            <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
-              {dynamicStatus}
-            </Badge>
+            {shouldShowStatus && (
+              <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
+                {dynamicStatus}
+              </Badge>
+            )}
           </div>
           
           <div className="flex items-center justify-between">
@@ -115,11 +120,13 @@ export default function EventListItem({
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
-              {dynamicStatus}
-            </Badge>
-          </div>
+          {shouldShowStatus && (
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
+                {dynamicStatus}
+              </Badge>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

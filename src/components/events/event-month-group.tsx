@@ -16,6 +16,7 @@ interface EventMonthGroupProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   defaultExpanded?: boolean;
+  isArchived?: boolean;
 }
 
 export default function EventMonthGroup({
@@ -27,7 +28,8 @@ export default function EventMonthGroup({
   getEventStatus,
   isCollapsed,
   onToggleCollapse,
-  defaultExpanded = true
+  defaultExpanded = true,
+  isArchived = false
 }: EventMonthGroupProps) {
   const isMobile = useIsMobile();
 
@@ -62,6 +64,7 @@ export default function EventMonthGroup({
                 onEditEvent={onEditEvent}
                 onDeleteEvent={onDeleteEvent}
                 getEventStatus={getEventStatus}
+                isArchived={isArchived}
               />
             ) : (
               <EventsList
@@ -70,6 +73,7 @@ export default function EventMonthGroup({
                 onEditEvent={onEditEvent}
                 onDeleteEvent={onDeleteEvent}
                 getEventStatus={getEventStatus}
+                isArchived={isArchived}
               />
             )}
           </div>

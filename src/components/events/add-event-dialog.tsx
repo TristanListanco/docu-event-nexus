@@ -424,7 +424,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     availableStaff={canSelectStaff ? availableStaff.videographers : []}
                     selectedStaffIds={formState.videographerIds}
                     onSelectionChange={(ids) => updateFormState({ videographerIds: ids })}
-                    maxSelection={formState.isUniversityWideEvent ? undefined : 3}
                     disabled={staffLoading || !canSelectStaff}
                     excludeStaffIds={formState.photographerIds}
                   />
@@ -434,7 +433,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     availableStaff={canSelectStaff ? availableStaff.photographers : []}
                     selectedStaffIds={formState.photographerIds}
                     onSelectionChange={(ids) => updateFormState({ photographerIds: ids })}
-                    maxSelection={formState.isUniversityWideEvent ? undefined : 3}
                     disabled={staffLoading || !canSelectStaff}
                     excludeStaffIds={formState.videographerIds}
                   />

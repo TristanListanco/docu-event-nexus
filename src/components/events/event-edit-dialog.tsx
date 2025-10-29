@@ -168,7 +168,7 @@ export default function EventEditDialog({
       const success = await updateEvent(event.id, {
         name: formData.name,
         date: format(formData.date, 'yyyy-MM-dd'),
-        endDate: formData.isMultiDay && formData.endDate ? format(formData.endDate, 'yyyy-MM-dd') : format(formData.date, 'yyyy-MM-dd'),
+        endDate: format(formData.date, 'yyyy-MM-dd'),
         startTime: formData.startTime,
         endTime: formData.endTime,
         location: formData.location,
@@ -321,60 +321,25 @@ export default function EventEditDialog({
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Date & Options</h3>
               
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="multiDay"
-                  checked={formData.isMultiDay}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isMultiDay: !!checked }))}
-                  disabled={isReadOnly}
-                />
-                <Label htmlFor="multiDay">Multi-day event</Label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isReadOnly}>
-                        {formData.date ? format(formData.date, "MMMM dd, yyyy") : "Pick a date"}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.date}
-                        onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isReadOnly}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {formData.isMultiDay && (
-                  <div className="space-y-2">
-                    <Label>End Date</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isReadOnly}>
-                          {formData.endDate ? format(formData.endDate, "MMMM dd, yyyy") : "Pick end date"}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={formData.endDate}
-                          onSelect={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
-                          disabled={(date) => !date || date < formData.date || isReadOnly}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
+              <div className="space-y-2">
+                <Label>Event Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isReadOnly}>
+                      {formData.date ? format(formData.date, "MMMM dd, yyyy") : "Pick a date"}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.date}
+                      onSelect={(date) => date && setFormData(prev => ({ ...prev, date }))}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0)) || isReadOnly}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-3">
@@ -427,7 +392,6 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
-                maxSelection={formData.isUniversityWideEvent ? 999 : 3}
               />
               
               <EnhancedMultiStaffSelector
@@ -439,7 +403,6 @@ export default function EventEditDialog({
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
-                maxSelection={formData.isUniversityWideEvent ? 999 : 3}
               />
             </div>
           </div>

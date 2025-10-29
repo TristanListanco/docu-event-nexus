@@ -11,6 +11,7 @@ interface EventCardProps {
   onEditEvent: (e: React.MouseEvent, event: Event) => void;
   onDeleteEvent: (e: React.MouseEvent, event: Event) => void;
   getEventStatus: (event: Event) => string;
+  isArchived?: boolean;
 }
 
 // Helper function to convert 24-hour time to 12-hour format
@@ -43,9 +44,11 @@ const getStatusBadgeColor = (status: string) => {
 export default function EventCard({ 
   event, 
   onEventClick, 
-  getEventStatus 
+  getEventStatus,
+  isArchived = false
 }: EventCardProps) {
   const dynamicStatus = getEventStatus(event);
+  const shouldShowStatus = !(isArchived && dynamicStatus === 'Elapsed');
 
   return (
     <Card 
@@ -69,11 +72,13 @@ export default function EventCard({
       <CardContent>
         <p className="text-sm transition-colors duration-200 hover:text-foreground">📍 {event.location}</p>
         <p className="text-sm transition-colors duration-200 hover:text-foreground">🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</p>
-        <div className="flex justify-start mt-2">
-          <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
-            {dynamicStatus}
-          </Badge>
-        </div>
+        {shouldShowStatus && (
+          <div className="flex justify-start mt-2">
+            <Badge className={`${getStatusBadgeColor(dynamicStatus)} transition-all duration-200 hover:scale-105`}>
+              {dynamicStatus}
+            </Badge>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
