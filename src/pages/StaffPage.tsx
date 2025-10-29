@@ -3,6 +3,8 @@ import { useStaff } from "@/hooks/use-staff";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StaffMember, StaffViewMode } from "@/types/models";
 import StaffHeader from "@/components/staff/staff-header";
+import { fetchStaffAttendanceData, generateAttendanceReportPDF } from "@/utils/attendance-report-generator";
+import { toast } from "@/hooks/use-toast";
 import StaffViewControls from "@/components/staff/staff-view-controls";
 import StaffFormDialog from "@/components/staff/staff-form-dialog";
 import StaffEditDialog from "@/components/staff/staff-edit-dialog";
@@ -51,9 +53,36 @@ export default function StaffPage() {
     setDeletingStaff(null);
   };
 
+  const handleGenerateReport = async () => {
+    try {
+      toast({
+        title: "Generating Report",
+        description: "Please wait while we fetch attendance data...",
+      });
+
+      const attendanceData = await fetchStaffAttendanceData(staff);
+      generateAttendanceReportPDF(attendanceData);
+
+      toast({
+        title: "Report Generated",
+        description: "Your attendance report has been downloaded.",
+      });
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate attendance report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col">
-      <StaffHeader onAddStaff={() => setIsAddDialogOpen(true)} />
+      <StaffHeader 
+        onAddStaff={() => setIsAddDialogOpen(true)}
+        onGenerateReport={handleGenerateReport}
+      />
       
       <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0">
         <div className="flex-shrink-0 mb-6">
