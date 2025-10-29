@@ -57,7 +57,7 @@ const initialFormState: FormState = {
   photographerIds: [],
   ignoreScheduleConflicts: false,
   ccsOnlyEvent: false,
-  sendEmailNotifications: true,
+  sendEmailNotifications: false,
   isUniversityWideEvent: false,
 };
 
@@ -497,20 +497,6 @@ export default function AddEventDialog({ open, onOpenChange, onEventAdded }: Add
                     />
                   </div>
 
-                  <Separator />
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Send Email Notifications</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Notify assigned staff via email
-                      </p>
-                    </div>
-                    <Switch
-                      checked={formState.sendEmailNotifications}
-                      onCheckedChange={(checked) => updateFormState({ sendEmailNotifications: checked })}
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>

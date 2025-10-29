@@ -101,6 +101,11 @@ export default function EventsPageContent({
       comparison = getEventStatus(a).localeCompare(getEventStatus(b));
     }
     
+    // For archived events, reverse the date order to show current month at top
+    if (activeTab === "archived" && sortBy === "date") {
+      comparison = -comparison;
+    }
+    
     return comparison;
   });
 

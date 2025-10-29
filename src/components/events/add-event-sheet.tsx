@@ -15,7 +15,7 @@ import { useStaff } from "@/hooks/use-staff";
 import { EventType, StaffAvailability } from "@/types/models";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Clock, Mail, GraduationCap } from "lucide-react";
+import { CalendarIcon, Clock, GraduationCap } from "lucide-react";
 import EnhancedMultiStaffSelector from "@/components/events/enhanced-multi-staff-selector";
 import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
 
@@ -35,7 +35,7 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
   const [organizer, setOrganizer] = useState("");
   const [type, setType] = useState<EventType>("General");
   const [staffAvailabilityMode, setStaffAvailabilityMode] = useState("normal");
-  const [sendEmailNotifications, setSendEmailNotifications] = useState(true);
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -116,7 +116,7 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
       setOrganizer("");
       setType("General");
       setStaffAvailabilityMode("normal");
-      setSendEmailNotifications(true);
+      setSendEmailNotifications(false);
       setSelectedVideographers([]);
       setSelectedPhotographers([]);
       setSubmitting(false);
@@ -363,19 +363,6 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
                     </Label>
                   </div>
                 </RadioGroup>
-              </div>
-              
-              {/* Send Email Notifications checkbox */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="sendEmails"
-                  checked={sendEmailNotifications}
-                  onCheckedChange={(checked) => setSendEmailNotifications(!!checked)}
-                />
-                <Label htmlFor="sendEmails" className="flex items-center text-sm">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send email notifications to assigned staff
-                </Label>
               </div>
             </div>
             

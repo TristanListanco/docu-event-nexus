@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Camera, Video, Lightbulb } from "lucide-react";
+import { Camera, Video } from "lucide-react";
 import { useStaff } from "@/hooks/use-staff";
 import { EnhancedMultiStaffSelectorProps } from "./staff-selector/types";
 import { getEnhancedSmartAllocation } from "./staff-selector/utils";
@@ -86,27 +86,6 @@ export default function EnhancedMultiStaffSelector({
           <RoleIcon className="h-4 w-4 mr-2 text-primary" />
           {role} (Max {maxSelection})
         </Label>
-        
-        {/* Smart Select Button */}
-        {roleStaff.length > 0 && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={() => {
-              // Smart select logic - pick the best available staff
-              const bestOption = fullyAvailableStaff[0] || partiallyAvailableStaff[0];
-              if (bestOption && !selectedStaffIds.includes(bestOption.staff.id)) {
-                handleSmartPick(bestOption.staff.id);
-              }
-            }}
-            disabled={disabled || hasNoAssignment === false}
-          >
-            <Lightbulb className="h-4 w-4" />
-            Smart Select
-          </Button>
-        )}
       </div>
       
       {/* Smart Allocation Summary */}
