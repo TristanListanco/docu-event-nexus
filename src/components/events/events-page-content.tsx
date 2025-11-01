@@ -94,7 +94,10 @@ export default function EventsPageContent({
     let comparison = 0;
     
     if (sortBy === "date") {
-      comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+      // Safari-safe date parsing
+      const dateA = new Date(a.date.replace(/-/g, '/'));
+      const dateB = new Date(b.date.replace(/-/g, '/'));
+      comparison = dateA.getTime() - dateB.getTime();
     } else if (sortBy === "name") {
       comparison = a.name.localeCompare(b.name);
     } else if (sortBy === "status") {
@@ -111,7 +114,8 @@ export default function EventsPageContent({
 
   // Group events by month and year
   const groupedEvents = sortedEvents.reduce((groups, event) => {
-    const date = new Date(event.date);
+    // Safari-safe date parsing
+    const date = new Date(event.date.replace(/-/g, '/'));
     const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     
     if (!groups[monthYear]) {

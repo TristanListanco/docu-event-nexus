@@ -66,7 +66,7 @@ export default function EventCard({
         </div>
         <CardTitle className="mt-2 transition-colors duration-200 hover:text-primary">{event.name}</CardTitle>
         <p className="text-muted-foreground text-sm transition-colors duration-200">
-          {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}
+          {event.date ? format(new Date(event.date.replace(/-/g, '/')), 'MMM d, yyyy') : 'No date'}
         </p>
       </CardHeader>
       <CardContent>

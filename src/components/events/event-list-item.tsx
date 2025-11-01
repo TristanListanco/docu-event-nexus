@@ -82,7 +82,7 @@ export default function EventListItem({
           {/* Mobile: Each item on separate line */}
           <div className="space-y-2">
             <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
-              <span>🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
+              <span>🗓️ {event.date ? format(new Date(event.date.replace(/-/g, '/')), 'MMM d, yyyy') : 'No date'}</span>
             </div>
             <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
               <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>
@@ -109,7 +109,7 @@ export default function EventListItem({
               {/* Desktop: Each item on separate line for better readability */}
               <div className="space-y-1">
                 <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
-                  <span>🗓️ {event.date ? format(new Date(event.date), 'MMM d, yyyy') : 'No date'}</span>
+                  <span>🗓️ {event.date ? format(new Date(event.date.replace(/-/g, '/')), 'MMM d, yyyy') : 'No date'}</span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
                   <span>🕒 {formatTime12Hour(event.startTime)} - {formatTime12Hour(event.endTime)}</span>

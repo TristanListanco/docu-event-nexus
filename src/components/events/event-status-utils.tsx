@@ -1,6 +1,11 @@
 
 import { Event } from "@/types/models";
 
+// Safari-safe date parsing - replaces dashes with slashes
+const parseSafariDate = (dateStr: string): Date => {
+  return new Date(dateStr.replace(/-/g, '/'));
+};
+
 export const getEventStatus = (event: Event) => {
   // If event has explicit status (like Cancelled), use it
   if (event.status === "Cancelled") {
@@ -9,9 +14,10 @@ export const getEventStatus = (event: Event) => {
 
   // Calculate dynamic status based on time for other statuses
   const now = new Date();
-  const eventDate = new Date(event.date);
-  const eventStart = new Date(`${event.date}T${event.startTime}`);
-  const eventEnd = new Date(`${event.date}T${event.endTime}`);
+  const safeDateStr = event.date.replace(/-/g, '/');
+  const eventDate = new Date(safeDateStr);
+  const eventStart = new Date(`${safeDateStr} ${event.startTime}`);
+  const eventEnd = new Date(`${safeDateStr} ${event.endTime}`);
 
   if (now < eventStart) {
     return "Upcoming";

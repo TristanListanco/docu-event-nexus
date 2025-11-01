@@ -46,8 +46,8 @@ export default function EventEditDialog({
 
   const [formData, setFormData] = useState({
     name: event.name,
-    date: new Date(event.date),
-    endDate: event.endDate ? new Date(event.endDate) : undefined,
+    date: new Date(event.date.replace(/-/g, '/')),
+    endDate: event.endDate ? new Date(event.endDate.replace(/-/g, '/')) : undefined,
     startTime: event.startTime,
     endTime: event.endTime,
     location: event.location,
