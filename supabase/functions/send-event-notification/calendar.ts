@@ -26,11 +26,21 @@ export function generateICSContent(event: CalendarEvent): string {
     return dateTimeStr.replace(/[-:]/g, '').replace('T', 'T');
   };
   
+  // Escape special characters for ICS format
+  const escapeICSText = (text: string) => {
+    return text.replace(/\\/g, '\\\\')
+               .replace(/;/g, '\\;')
+               .replace(/,/g, '\\,')
+               .replace(/\n/g, '\\n');
+  };
+  
   const startFormatted = formatDateForICS(startDateTime);
   const endFormatted = formatDateForICS(endDateTime);
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
   
-  const organizerInfo = event.organizer ? `\\nOrganizer: ${event.organizer}` : '';
+  const organizerInfo = event.organizer ? `\\nOrganizer: ${escapeICSText(event.organizer)}` : '';
+  const escapedEventName = escapeICSText(event.eventName);
+  const escapedLocation = escapeICSText(event.location);
   
   return `BEGIN:VCALENDAR
 VERSION:2.0
@@ -49,19 +59,19 @@ UID:${event.eventId}@admin-ccsdocu.com
 DTSTAMP:${now}
 DTSTART;TZID=Asia/Manila:${startFormatted}
 DTEND;TZID=Asia/Manila:${endFormatted}
-SUMMARY:${event.eventName}
-DESCRIPTION:Event: ${event.eventName}${organizerInfo}
-LOCATION:${event.location}
+SUMMARY:${escapedEventName}
+DESCRIPTION:Event: ${escapedEventName}${organizerInfo}
+LOCATION:${escapedLocation}
 STATUS:CONFIRMED
 BEGIN:VALARM
 TRIGGER:-PT360M
 ACTION:DISPLAY
-DESCRIPTION:Event reminder (6 hours): ${event.eventName}
+DESCRIPTION:Event reminder (6 hours): ${escapedEventName}
 END:VALARM
 BEGIN:VALARM
 TRIGGER:-PT60M
 ACTION:DISPLAY
-DESCRIPTION:Event reminder (1 hour): ${event.eventName}
+DESCRIPTION:Event reminder (1 hour): ${escapedEventName}
 END:VALARM
 END:VEVENT
 END:VCALENDAR`;
