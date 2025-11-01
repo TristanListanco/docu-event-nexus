@@ -56,13 +56,8 @@ export default function EventCard({
       onClick={() => onEventClick(event)}
     >
       <CardHeader className="pb-2">
-        <div className="flex justify-between">
-          <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center transition-colors duration-200 hover:bg-primary/20">
-            <Calendar className="h-5 w-5 text-primary transition-transform duration-200 hover:scale-110" />
-          </div>
-          <Badge variant="outline" className="bg-primary/10 text-primary transition-colors duration-200 hover:bg-primary/20">
-            {event.type}
-          </Badge>
+        <div className="rounded-full bg-primary/10 w-10 h-10 flex items-center justify-center transition-colors duration-200 hover:bg-primary/20">
+          <Calendar className="h-5 w-5 text-primary transition-transform duration-200 hover:scale-110" />
         </div>
         <CardTitle className="mt-2 transition-colors duration-200 hover:text-primary">{event.name}</CardTitle>
         <p className="text-muted-foreground text-sm transition-colors duration-200">

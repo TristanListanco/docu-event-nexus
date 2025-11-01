@@ -50,8 +50,9 @@ export default function EventsPage() {
     }
   };
 
-  const handleEventAdded = () => {
-    // Events list will auto-refresh through the hook
+  const handleEventAdded = async () => {
+    // Refresh events list immediately
+    await loadEvents();
   };
 
   const handleRefresh = async () => {

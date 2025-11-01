@@ -73,12 +73,6 @@ export default function EventListItem({
             )}
           </div>
           
-          <div className="flex items-center justify-between">
-            <Badge variant="outline" className="bg-primary/10 text-primary text-xs transition-colors duration-200 hover:bg-primary/20">
-              {event.type}
-            </Badge>
-          </div>
-          
           {/* Mobile: Each item on separate line */}
           <div className="space-y-2">
             <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
@@ -100,12 +94,7 @@ export default function EventListItem({
               <Calendar className="h-4 w-4 text-primary transition-transform duration-200 hover:scale-110" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2 mb-1">
-                <h3 className="font-medium truncate transition-colors duration-200 hover:text-primary">{event.name}</h3>
-                <Badge variant="outline" className="bg-primary/10 text-primary text-xs flex-shrink-0 transition-colors duration-200 hover:bg-primary/20">
-                  {event.type}
-                </Badge>
-              </div>
+              <h3 className="font-medium truncate mb-1 transition-colors duration-200 hover:text-primary">{event.name}</h3>
               {/* Desktop: Each item on separate line for better readability */}
               <div className="space-y-1">
                 <div className="flex items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
