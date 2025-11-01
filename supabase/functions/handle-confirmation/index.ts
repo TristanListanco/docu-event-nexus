@@ -39,6 +39,15 @@ serve(async (req) => {
       }
     }
 
+    // Check if event is cancelled
+    if (assignment.events.status === 'Cancelled') {
+      if (isDirectCall) {
+        return htmlResponses.createCancelledEventResponse(assignment);
+      } else {
+        return jsonResponses.createCancelledEventJsonResponse();
+      }
+    }
+
     const tokenValidator = new TokenValidator(assignmentService);
     const { isExpired } = await tokenValidator.validateToken(assignment);
     

@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Ban } from "lucide-react";
 
 interface AssignmentStatusBadgeProps {
   status: string;
@@ -20,6 +20,13 @@ export function AssignmentStatusBadge({ status }: AssignmentStatusBadgeProps) {
         <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
           <XCircle className="h-3 w-3 mr-1" />
           Declined
+        </Badge>
+      );
+    case 'cancelled':
+      return (
+        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+          <Ban className="h-3 w-3 mr-1" />
+          Event Cancelled
         </Badge>
       );
     default:

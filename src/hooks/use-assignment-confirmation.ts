@@ -55,6 +55,10 @@ export function useAssignmentConfirmation({ token }: UseAssignmentConfirmationPr
 
       if (data.error) {
         setError(data.error);
+        // Check if it's a cancelled event
+        if (data.status === 'cancelled') {
+          setStatus('cancelled');
+        }
         return;
       }
 

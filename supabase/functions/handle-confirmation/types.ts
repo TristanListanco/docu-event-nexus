@@ -14,6 +14,7 @@ export interface AssignmentData {
     start_time: string;
     end_time?: string;
     location: string;
+    status: string;
   };
   staff_members: {
     name: string;

@@ -2,6 +2,82 @@
 import { corsHeaders } from './cors-utils.ts';
 import { AssignmentData } from './types.ts';
 
+export function createCancelledEventResponse(assignment: AssignmentData): Response {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Cancelled</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+          }
+          .icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            background: #ff4444;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+          }
+          h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 24px;
+          }
+          p {
+            color: #666;
+            line-height: 1.6;
+            margin: 10px 0;
+            text-align: center;
+          }
+          .event-name {
+            font-weight: bold;
+            color: #ff4444;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="icon">✕</div>
+          <h1>Event Cancelled</h1>
+          <p>The event <span class="event-name">"${assignment.events.name}"</span> has been cancelled.</p>
+          <p>We apologize for any inconvenience.</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html',
+      ...corsHeaders,
+    },
+  });
+}
+
 export function createInvalidRequestResponse(): Response {
   return new Response(
     `<!DOCTYPE html>

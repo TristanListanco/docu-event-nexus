@@ -18,6 +18,12 @@ export function AssignmentActions({
   onDownloadCalendar 
 }: AssignmentActionsProps) {
   const isAlreadyProcessed = status === 'confirmed' || status === 'declined';
+  const isCancelled = status === 'cancelled';
+
+  // Don't show any actions for cancelled events
+  if (isCancelled) {
+    return null;
+  }
 
   if (!isAlreadyProcessed) {
     return (

@@ -2,6 +2,22 @@
 import { corsHeaders } from './cors-utils.ts';
 import { AssignmentData } from './types.ts';
 
+export function createCancelledEventJsonResponse(): Response {
+  return new Response(
+    JSON.stringify({ 
+      error: 'Event has been cancelled',
+      status: 'cancelled'
+    }),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    }
+  );
+}
+
 export function createInvalidRequestJsonResponse(): Response {
   return new Response(
     JSON.stringify({ error: 'Missing token or action' }),

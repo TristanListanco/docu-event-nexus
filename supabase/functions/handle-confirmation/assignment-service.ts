@@ -25,7 +25,8 @@ export class AssignmentService {
           date,
           start_time,
           end_time,
-          location
+          location,
+          status
         ),
         staff_members!inner(
           name,
@@ -61,7 +62,8 @@ export class AssignmentService {
         date: data.events.date,
         start_time: data.events.start_time,
         end_time: data.events.end_time,
-        location: data.events.location
+        location: data.events.location,
+        status: data.events.status
       },
       staff_members: {
         name: data.staff_members.name,

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Edit, Trash2, Ban, ArrowLeft } from "lucide-react";
+import { CalendarDays, Clock, MapPin, User, Users, CheckCircle, XCircle, Calendar, Edit, Ban, ArrowLeft } from "lucide-react";
 import { useEvents } from "@/hooks/events/use-events";
 import { Event, StaffAssignment, AttendanceStatus, ConfirmationStatus } from "@/types/models";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -35,7 +35,6 @@ export default function EventDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [markDoneDialogOpen, setMarkDoneDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -177,14 +176,6 @@ export default function EventDetailsPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!eventId) return;
-    
-    const success = await deleteEvent(eventId);
-    if (success) {
-      navigate("/events");
-    }
-  };
 
   const handleEventUpdated = async () => {
     console.log("Event updated - refreshing data...");
@@ -398,10 +389,12 @@ export default function EventDetailsPage() {
 
         <div className="relative">
           {event.status === "Cancelled" && (
-            <CancelledEventOverlay 
-              isVisible={true}
-              onDelete={handleDelete}
-            />
+            <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center rounded-lg">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
+                <h3 className="text-2xl font-bold text-red-600 mb-2">Event Cancelled</h3>
+                <p className="text-gray-600 dark:text-gray-400">This event has been cancelled</p>
+              </div>
+            </div>
           )}
           
           <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
@@ -498,16 +491,6 @@ export default function EventDetailsPage() {
                   >
                     <Edit className="h-4 w-4" />
                     Edit Event
-                  </Button>
-                  
-                  <Button 
-                    onClick={() => setDeleteDialogOpen(true)} 
-                    variant="outline"
-                    className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 text-sm"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Event
                   </Button>
                   
                   {event.status !== "Cancelled" && !isOngoing && !isElapsed && !isCompleted && (
@@ -650,23 +633,6 @@ export default function EventDetailsPage() {
               <AlertDialogCancel>No, Keep Event</AlertDialogCancel>
               <AlertDialogAction onClick={handleCancel} className="bg-orange-600 hover:bg-orange-700">
                 Yes, Cancel Event
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Event</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{event.name}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-                Delete Event
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
