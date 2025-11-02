@@ -102,12 +102,6 @@ export default function StaffPage() {
         </div>
 
         <Card className="flex-1 flex flex-col min-h-0">
-          <CardHeader className="flex-shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Staff Members ({filteredStaff.length})
-            </CardTitle>
-          </CardHeader>
           <CardContent className="flex-1 min-h-0 p-0">
             {filteredStaff.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center py-8 px-6">

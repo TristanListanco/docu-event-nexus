@@ -77,42 +77,44 @@ const handler = async (req: Request): Promise<Response> => {
     if (requestData.isCancellation) {
       console.log("Processing cancellation notifications...");
       
-      let successCount = 0;
-      let failureCount = 0;
-
-      for (const staff of requestData.assignedStaff) {
-        if (!staff.email) {
-          console.log(`Skipping ${staff.name} - no email provided`);
-          failureCount++;
-          continue;
-        }
-
-        try {
-          const emailTemplate = generateCancellationEmailTemplate({
-            staffName: staff.name,
-            eventName: requestData.eventName
-          });
-          const emailSubject = `Event Cancelled: ${requestData.eventName}`;
-
-          const emailResult = await sendEmailWithNodemailer(
-            staff.email,
-            emailSubject,
-            emailTemplate
-          );
-
-          if (emailResult.success) {
-            console.log(`Cancellation email sent to ${staff.email}: ${emailResult.messageId}`);
-            successCount++;
-          } else {
-            console.error(`Failed to send cancellation email to ${staff.name}:`, emailResult.error);
-            failureCount++;
+      // Send cancellation emails in parallel for better performance
+      const emailResults = await Promise.all(
+        requestData.assignedStaff.map(async (staff) => {
+          if (!staff.email) {
+            console.log(`Skipping ${staff.name} - no email provided`);
+            return { success: false };
           }
-        } catch (error) {
-          console.error(`Error processing cancellation email for ${staff.name}:`, error);
-          failureCount++;
-        }
-      }
 
+          try {
+            const emailTemplate = generateCancellationEmailTemplate({
+              staffName: staff.name,
+              eventName: requestData.eventName
+            });
+            const emailSubject = `Event Cancelled: ${requestData.eventName}`;
+
+            const emailResult = await sendEmailWithNodemailer(
+              staff.email,
+              emailSubject,
+              emailTemplate
+            );
+
+            if (emailResult.success) {
+              console.log(`Cancellation email sent to ${staff.email}: ${emailResult.messageId}`);
+            } else {
+              console.error(`Failed to send cancellation email to ${staff.name}:`, emailResult.error);
+            }
+            
+            return emailResult;
+          } catch (error) {
+            console.error(`Error processing cancellation email for ${staff.name}:`, error);
+            return { success: false, error };
+          }
+        })
+      );
+
+      const successCount = emailResults.filter(r => r.success).length;
+      const failureCount = emailResults.filter(r => !r.success).length;
+      
       console.log(`Cancellation emails sent: ${successCount} successful, ${failureCount} failed`);
 
       return new Response(
@@ -220,93 +222,92 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Processed ${requestData.assignedStaff.length} staff members, tokens generated for: ${tokensGenerated}`);
 
-    // Send emails to staff members
-    let successCount = 0;
-    let failureCount = 0;
-
-    for (const staff of requestData.assignedStaff) {
-      if (!staff.email) {
-        console.log(`Skipping ${staff.name} - no email provided`);
-        failureCount++;
-        continue;
-      }
-
-      try {
-        // Get the current assignment status and token
-        const { data: assignment } = await supabase
-          .from('staff_assignments')
-          .select('confirmation_status, confirmation_token')
-          .eq('event_id', requestData.eventId)
-          .eq('staff_id', staff.id)
-          .single();
-
-        // Skip sending emails to confirmed staff for updates
-        if (requestData.isUpdate && assignment?.confirmation_status === 'confirmed') {
-          console.log(`Skipping email for ${staff.name} - already confirmed`);
-          successCount++;
-          continue;
+    // Send emails to staff members in parallel for better performance
+    const emailResults = await Promise.all(
+      requestData.assignedStaff.map(async (staff) => {
+        if (!staff.email) {
+          console.log(`Skipping ${staff.name} - no email provided`);
+          return { success: false, skip: true };
         }
 
-        // Skip sending emails to declined staff
-        if (assignment?.confirmation_status === 'declined') {
-          console.log(`Skipping email for ${staff.name} - declined assignment`);
-          failureCount++;
-          continue;
-        }
+        try {
+          // Get the current assignment status and token
+          const { data: assignment } = await supabase
+            .from('staff_assignments')
+            .select('confirmation_status, confirmation_token')
+            .eq('event_id', requestData.eventId)
+            .eq('staff_id', staff.id)
+            .single();
 
-        let emailTemplate: string;
-        let emailSubject: string;
+          // Skip sending emails to confirmed staff for updates
+          if (requestData.isUpdate && assignment?.confirmation_status === 'confirmed') {
+            console.log(`Skipping email for ${staff.name} - already confirmed`);
+            return { success: true, skipped: true };
+          }
 
-        if (requestData.isUpdate) {
-          emailTemplate = generateUpdateEmailTemplate({
-            staffName: staff.name,
-            eventName: requestData.eventName,
-            eventDate: requestData.eventDate,
-            startTime: requestData.startTime,
-            endTime: requestData.endTime,
-            location: requestData.location,
-            organizer: requestData.organizer || 'N/A',
-            type: requestData.type,
-            changes: requestData.changes || {}
-          });
-          emailSubject = `Event Updated: ${requestData.eventName}`;
-        } else {
-          const confirmationUrl = `${supabaseUrl.replace('/supabase', '')}/confirm-assignment?token=${assignment?.confirmation_token}`;
+          // Skip sending emails to declined staff
+          if (assignment?.confirmation_status === 'declined') {
+            console.log(`Skipping email for ${staff.name} - declined assignment`);
+            return { success: false, skipped: true };
+          }
+
+          let emailTemplate: string;
+          let emailSubject: string;
+
+          if (requestData.isUpdate) {
+            emailTemplate = generateUpdateEmailTemplate({
+              staffName: staff.name,
+              eventName: requestData.eventName,
+              eventDate: requestData.eventDate,
+              startTime: requestData.startTime,
+              endTime: requestData.endTime,
+              location: requestData.location,
+              organizer: requestData.organizer || 'N/A',
+              type: requestData.type,
+              changes: requestData.changes || {}
+            });
+            emailSubject = `Event Updated: ${requestData.eventName}`;
+          } else {
+            const confirmationUrl = `${supabaseUrl.replace('/supabase', '')}/confirm-assignment?token=${assignment?.confirmation_token}`;
+            
+            emailTemplate = generateConfirmationEmailTemplate({
+              staffName: staff.name,
+              staffRole: staff.role,
+              eventName: requestData.eventName,
+              eventDate: requestData.eventDate,
+              startTime: requestData.startTime,
+              endTime: requestData.endTime,
+              location: requestData.location,
+              organizer: requestData.organizer || 'N/A',
+              type: requestData.type,
+              confirmationUrl: confirmationUrl
+            });
+            emailSubject = `Assignment Confirmation Required: ${requestData.eventName}`;
+          }
+
+          const emailResult = await sendEmailWithNodemailer(
+            staff.email,
+            emailSubject,
+            emailTemplate
+          );
+
+          if (emailResult.success) {
+            console.log(`Email sent to ${staff.email}: ${emailResult.messageId}`);
+          } else {
+            console.error(`Failed to send email to ${staff.name}:`, emailResult.error);
+          }
           
-          emailTemplate = generateConfirmationEmailTemplate({
-            staffName: staff.name,
-            staffRole: staff.role,
-            eventName: requestData.eventName,
-            eventDate: requestData.eventDate,
-            startTime: requestData.startTime,
-            endTime: requestData.endTime,
-            location: requestData.location,
-            organizer: requestData.organizer || 'N/A',
-            type: requestData.type,
-            confirmationUrl: confirmationUrl
-          });
-          emailSubject = `Assignment Confirmation Required: ${requestData.eventName}`;
+          return emailResult;
+        } catch (error) {
+          console.error(`Error processing email for ${staff.name}:`, error);
+          return { success: false, error };
         }
+      })
+    );
 
-        const emailResult = await sendEmailWithNodemailer(
-          staff.email,
-          emailSubject,
-          emailTemplate
-        );
-
-        if (emailResult.success) {
-          console.log(`Email sent to ${staff.email}: ${emailResult.messageId}`);
-          successCount++;
-        } else {
-          console.error(`Failed to send email to ${staff.name}:`, emailResult.error);
-          failureCount++;
-        }
-      } catch (error) {
-        console.error(`Error processing email for ${staff.name}:`, error);
-        failureCount++;
-      }
-    }
-
+    const successCount = emailResults.filter(r => r.success).length;
+    const failureCount = emailResults.filter(r => !r.success && !r.skipped).length;
+    
     console.log(`Email notifications sent: ${successCount} successful, ${failureCount} failed`);
 
     return new Response(

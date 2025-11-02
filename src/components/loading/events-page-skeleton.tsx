@@ -17,8 +17,15 @@ export default function EventsPageSkeleton() {
         </div>
       </div>
 
-      {/* Filters skeleton */}
+      {/* Tabs and Filters skeleton */}
       <div className="p-6">
+        {/* Tabs skeleton */}
+        <div className="flex space-x-4 mb-6 border-b border-border">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-32" />
+        </div>
+        
+        {/* Filters skeleton */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <Skeleton className="h-10 flex-1" />
           <Skeleton className="h-10 w-32" />
