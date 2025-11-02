@@ -153,7 +153,7 @@ export const sendEventNotifications = async (
   }
 };
 
-// New function to send cancellation emails
+// New function to send cancellation emails to confirmed staff only
 export const sendCancellationNotifications = async (
   eventId: string,
   eventName: string,
@@ -164,10 +164,30 @@ export const sendCancellationNotifications = async (
   }
 
   try {
+    // First, get only the confirmed staff assignments
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from("staff_assignments")
+      .select("staff_id")
+      .eq("event_id", eventId)
+      .eq("confirmation_status", "confirmed");
+
+    if (assignmentsError) {
+      console.error("Error fetching confirmed assignments:", assignmentsError);
+      throw assignmentsError;
+    }
+
+    const confirmedStaffIds = assignments?.map(a => a.staff_id) || [];
+    
+    if (confirmedStaffIds.length === 0) {
+      console.log("No confirmed staff to notify for cancellation");
+      return;
+    }
+
+    // Get staff details for confirmed staff only
     const { data: staffData, error: staffError } = await supabase
       .from("staff_members")
       .select("id, name, email")
-      .in("id", assignedStaffIds);
+      .in("id", confirmedStaffIds);
 
     if (staffError) {
       console.error("Error fetching staff for cancellation notifications:", staffError);
@@ -175,62 +195,39 @@ export const sendCancellationNotifications = async (
     }
 
     if (staffData && staffData.length > 0) {
-      // Send cancellation notifications using a simple approach
-      const emailPromises = staffData.map(async (staff) => {
-        if (!staff.email) {
-          console.log(`Skipping ${staff.name} - no email provided`);
-          return { success: false, staff: staff.name, reason: "No email provided" };
-        }
+      // Prepare staff data for the notification function
+      const staffWithRoles = staffData.map(staff => ({
+        id: staff.id,
+        name: staff.name,
+        email: staff.email,
+        role: "Staff"
+      }));
 
-        try {
-          const { data, error: emailError } = await supabase.functions.invoke('send-event-notification', {
-            body: {
-              eventId: eventId,
-              eventName: eventName,
-              eventDate: new Date().toISOString().split('T')[0],
-              startTime: "00:00",
-              endTime: "00:00",
-              location: "N/A",
-              organizer: "System",
-              type: "General",
-              assignedStaff: [{
-                id: staff.id,
-                name: staff.name,
-                email: staff.email,
-                role: "Staff"
-              }],
-              isCancellation: true
-            }
-          });
-
-          if (emailError) {
-            console.error(`Cancellation email error for ${staff.name}:`, emailError);
-            return { success: false, staff: staff.name, error: emailError };
-          } else {
-            console.log(`Cancellation email sent to ${staff.name}:`, data);
-            return { success: true, staff: staff.name };
-          }
-        } catch (error) {
-          console.error(`Failed to send cancellation email to ${staff.name}:`, error);
-          return { success: false, staff: staff.name, error };
+      // Send cancellation notifications using the send-event-notification function
+      const { data, error: emailError } = await supabase.functions.invoke('send-event-notification', {
+        body: {
+          eventId: eventId,
+          eventName: eventName,
+          eventDate: new Date().toISOString().split('T')[0],
+          startTime: "00:00",
+          endTime: "00:00",
+          location: "N/A",
+          organizer: "System",
+          type: "General",
+          assignedStaff: staffWithRoles,
+          isCancellation: true
         }
       });
 
-      const emailResults = await Promise.all(emailPromises);
-      const successCount = emailResults.filter(result => result.success).length;
-      const failureCount = emailResults.filter(result => !result.success).length;
-
-      if (successCount > 0) {
+      if (emailError) {
+        console.error("Cancellation email error:", emailError);
         toast({
-          title: "Cancellation Notifications Sent",
-          description: `${successCount} cancellation emails sent successfully.${failureCount > 0 ? ` ${failureCount} failed to send.` : ''}`,
-        });
-      } else if (failureCount > 0) {
-        toast({
-          title: "Email Sending Failed",
-          description: "Failed to send cancellation notifications.",
+          title: "Partial Success",
+          description: `Event cancelled, but failed to send some cancellation notifications.`,
           variant: "destructive",
         });
+      } else {
+        console.log(`Cancellation emails sent successfully:`, data);
       }
     }
   } catch (error) {

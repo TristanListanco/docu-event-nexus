@@ -15,7 +15,8 @@ export default function NotificationsPanel() {
     unreadCount, 
     loading, 
     markAsRead, 
-    clearNotification
+    clearNotification,
+    clearAllNotifications
   } = useNotifications();
 
   if (loading) {
@@ -53,7 +54,19 @@ export default function NotificationsPanel() {
           />
           <Card className="absolute right-0 top-12 z-50 w-96 max-h-[500px] shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Notifications</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">Notifications</CardTitle>
+                {notifications.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllNotifications}
+                    className="text-xs"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {notifications.length === 0 ? (

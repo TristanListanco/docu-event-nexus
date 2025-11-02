@@ -82,6 +82,7 @@ export default function StaffPage() {
       <StaffHeader 
         onAddStaff={() => setIsAddDialogOpen(true)}
         onGenerateReport={handleGenerateReport}
+        totalStaff={staff.length}
       />
       
       <div className="flex-1 flex flex-col p-4 md:p-6 min-h-0">

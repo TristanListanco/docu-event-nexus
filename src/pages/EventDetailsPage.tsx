@@ -349,10 +349,11 @@ export default function EventDetailsPage() {
     );
   }
 
-  const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed";
+  const isCancelled = event.status === "Cancelled";
+  const isElapsed = new Date(`${event.date} ${event.endTime}`) < new Date() && event.status !== "Completed" && !isCancelled;
   const isOngoing = event.status === "Ongoing";
   const isCompleted = event.status === "Completed";
-  const currentStatus = isElapsed && event.status !== "Completed" ? "Elapsed" : event.status;
+  const currentStatus = isCancelled ? "Cancelled" : (isElapsed && event.status !== "Completed" ? "Elapsed" : event.status);
 
   return (
     <div className="min-h-screen bg-background">
@@ -375,7 +376,7 @@ export default function EventDetailsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {isElapsed && event.status !== "Completed" && (
+            {isElapsed && event.status !== "Completed" && !isCancelled && (
               <Button 
                 onClick={() => setMarkDoneDialogOpen(true)} 
                 className="bg-green-600 hover:bg-green-700 text-sm md:text-base"

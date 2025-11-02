@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { sendEmailWithNodemailer } from './email-service.ts';
 import { generateUpdateEmailTemplate, generateConfirmationEmailTemplate } from './email-templates.ts';
+import { generateCancellationEmailTemplate } from './cancellation-email-template.ts';
 import { generateICSContent } from './calendar.ts';
 
 const corsHeaders = {
@@ -32,6 +33,7 @@ interface EventNotificationRequest {
   isUpdate?: boolean;
   changes?: any;
   downloadOnly?: boolean;
+  isCancellation?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -44,6 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log("Processing event notification for:", requestData.eventName);
     console.log("Is update:", requestData.isUpdate);
+    console.log("Is cancellation:", requestData.isCancellation);
     console.log("Download only:", requestData.downloadOnly);
 
     // If this is a download-only request, return ICS file
@@ -68,6 +71,62 @@ const handler = async (req: Request): Promise<Response> => {
           ...corsHeaders,
         },
       });
+    }
+
+    // If this is a cancellation, skip token generation and directly send emails
+    if (requestData.isCancellation) {
+      console.log("Processing cancellation notifications...");
+      
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const staff of requestData.assignedStaff) {
+        if (!staff.email) {
+          console.log(`Skipping ${staff.name} - no email provided`);
+          failureCount++;
+          continue;
+        }
+
+        try {
+          const emailTemplate = generateCancellationEmailTemplate({
+            staffName: staff.name,
+            eventName: requestData.eventName
+          });
+          const emailSubject = `Event Cancelled: ${requestData.eventName}`;
+
+          const emailResult = await sendEmailWithNodemailer(
+            staff.email,
+            emailSubject,
+            emailTemplate
+          );
+
+          if (emailResult.success) {
+            console.log(`Cancellation email sent to ${staff.email}: ${emailResult.messageId}`);
+            successCount++;
+          } else {
+            console.error(`Failed to send cancellation email to ${staff.name}:`, emailResult.error);
+            failureCount++;
+          }
+        } catch (error) {
+          console.error(`Error processing cancellation email for ${staff.name}:`, error);
+          failureCount++;
+        }
+      }
+
+      console.log(`Cancellation emails sent: ${successCount} successful, ${failureCount} failed`);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          emailsSent: successCount,
+          emailsFailed: failureCount,
+          isCancellation: true
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     let tokensGenerated = 0;

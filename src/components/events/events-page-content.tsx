@@ -68,12 +68,12 @@ export default function EventsPageContent({
   // Separate active and archived events
   const activeEvents = events.filter(event => {
     const status = getEventStatus(event).toLowerCase();
-    return status !== "elapsed" && status !== "completed";
+    return status !== "elapsed" && status !== "completed" && status !== "cancelled";
   });
 
   const archivedEvents = events.filter(event => {
     const status = getEventStatus(event).toLowerCase();
-    return status === "elapsed" || status === "completed";
+    return status === "elapsed" || status === "completed" || status === "cancelled";
   });
 
   // Filter events based on current filters and active tab
