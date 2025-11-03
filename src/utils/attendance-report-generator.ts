@@ -4,13 +4,18 @@ import { StaffMember } from "@/types/models";
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 
+interface EventAttendance {
+  eventName: string;
+  status: string;
+}
+
 interface AttendanceData {
   staffId: string;
   staffName: string;
   completed: number;
   absent: number;
   excused: number;
-  events: string[];
+  events: EventAttendance[];
 }
 
 export async function fetchStaffAttendanceData(
@@ -46,12 +51,13 @@ export async function fetchStaffAttendanceData(
       const absent = data?.filter((a) => a.attendance_status === "Absent").length || 0;
       const excused = data?.filter((a) => a.attendance_status === "Excused").length || 0;
       
-      // Extract unique event names
-      const eventNames = [...new Set(
-        data
-          ?.map((a: any) => a.events?.name)
-          .filter((name): name is string => !!name) || []
-      )];
+      // Extract event names with their attendance status
+      const eventAttendances: EventAttendance[] = data
+        ?.map((a: any) => ({
+          eventName: a.events?.name || "Unknown Event",
+          status: a.attendance_status || "Pending"
+        }))
+        .filter((e): e is EventAttendance => !!e.eventName) || [];
 
       attendanceData.push({
         staffId: member.id,
@@ -59,7 +65,7 @@ export async function fetchStaffAttendanceData(
         completed,
         absent,
         excused,
-        events: eventNames,
+        events: eventAttendances,
       });
     }
   }
@@ -122,10 +128,10 @@ export function generateAttendanceReportPDF(
   
   yPos += 8;
 
-  // Create detailed table data with events
+  // Create detailed table data with events and their status
   const tableData = attendanceData.map((data) => {
     const eventsText = data.events.length > 0 
-      ? data.events.join(", ") 
+      ? data.events.map(e => `${e.eventName} (${e.status})`).join("\n") 
       : "No events assigned";
     
     return [
