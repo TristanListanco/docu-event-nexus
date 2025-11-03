@@ -45,7 +45,7 @@ export default function AddEventOptions({
             <RadioGroupItem value="ccs" id="ccs" />
             <Label htmlFor="ccs" className="flex items-center font-normal">
               <GraduationCap className="h-4 w-4 mr-2" />
-              CCS-only Event (BCA, CCC, CSC, ISY, ITE, ITN, ITD classes suspended)
+              CCS-only Event (Classes in CCS is suspended)
             </Label>
           </div>
         </RadioGroup>

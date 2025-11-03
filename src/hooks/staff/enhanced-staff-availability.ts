@@ -69,7 +69,7 @@ export const getEnhancedStaffAvailability = (
   leaveDates: LeaveDate[] = []
 ): StaffAvailability[] => {
   const eventDay = new Date(eventDate).getDay();
-  const ccsSubjectCodes = ['BCA', 'CCC', 'CSC', 'ISY', 'ITE', 'ITN', 'ITD'];
+  const ccsSubjectCodes = ['CCC', 'BCA', 'ISY', 'ITE', 'ITD', 'ITN', 'CSC'];
 
   return staff.map(member => {
     // Always check for leave dates regardless of ignore conflicts setting
@@ -123,8 +123,11 @@ export const getEnhancedStaffAvailability = (
       }
 
       // If it's a CCS-only event and this schedule is for a CCS subject, treat as available
-      if (ccsOnlyEvent && schedule.subject && ccsSubjectCodes.includes(schedule.subject)) {
-        return false; // No conflict because CCS classes are suspended
+      if (ccsOnlyEvent && schedule.subject) {
+        const subjectPrefix = schedule.subject.substring(0, 3).toUpperCase();
+        if (ccsSubjectCodes.includes(subjectPrefix)) {
+          return false; // No conflict because CCS classes are suspended
+        }
       }
 
       // Check time overlap
