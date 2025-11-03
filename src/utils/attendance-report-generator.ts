@@ -24,14 +24,17 @@ export async function fetchStaffAttendanceData(
   const attendanceData: AttendanceData[] = [];
 
   for (const member of staff) {
-    // Fetch attendance status and event details
+    // Fetch attendance status and event details with date and status
     const { data, error } = await supabase
       .from("staff_assignments")
       .select(`
         attendance_status,
         event_id,
         events (
-          name
+          name,
+          date,
+          end_time,
+          status
         )
       `)
       .eq("staff_id", member.id);
@@ -47,16 +50,35 @@ export async function fetchStaffAttendanceData(
         events: [],
       });
     } else {
-      const completed = data?.filter((a) => a.attendance_status === "Completed").length || 0;
-      const absent = data?.filter((a) => a.attendance_status === "Absent").length || 0;
-      const excused = data?.filter((a) => a.attendance_status === "Excused").length || 0;
+      // Filter for completed/past events only
+      const now = new Date();
+      const filteredData = data?.filter((a: any) => {
+        if (!a.events) return false;
+        
+        const eventDate = new Date(a.events.date.replace(/-/g, '/'));
+        const eventEnd = new Date(`${a.events.date.replace(/-/g, '/')} ${a.events.end_time}`);
+        
+        // Only include if event has ended or is cancelled
+        if (a.events.status === "Cancelled") return true;
+        return eventEnd < now;
+      }) || [];
+
+      const completed = filteredData?.filter((a) => a.attendance_status === "Completed").length || 0;
+      const absent = filteredData?.filter((a) => a.attendance_status === "Absent").length || 0;
+      const excused = filteredData?.filter((a) => a.attendance_status === "Excused").length || 0;
       
       // Extract event names with their attendance status
-      const eventAttendances: EventAttendance[] = data
-        ?.map((a: any) => ({
-          eventName: a.events?.name || "Unknown Event",
-          status: a.attendance_status || "Pending"
-        }))
+      const eventAttendances: EventAttendance[] = filteredData
+        ?.map((a: any) => {
+          const status = a.events?.status === "Cancelled" 
+            ? "Cancelled" 
+            : a.attendance_status || "Pending";
+          
+          return {
+            eventName: a.events?.name || "Unknown Event",
+            status
+          };
+        })
         .filter((e): e is EventAttendance => !!e.eventName) || [];
 
       attendanceData.push({
@@ -143,7 +165,7 @@ export function generateAttendanceReportPDF(
     ];
   });
 
-  // Add table
+  // Add table with color-coded attendance
   autoTable(doc, {
     startY: yPos,
     head: [["Staff Name", "Present", "Excused", "Absent", "Events / Assignments"]],
@@ -168,6 +190,23 @@ export function generateAttendanceReportPDF(
       2: { cellWidth: 20, halign: "center" },
       3: { cellWidth: 20, halign: "center" },
       4: { cellWidth: 95 },
+    },
+    didParseCell: (data) => {
+      // Color code the events column based on status
+      if (data.column.index === 4 && data.section === 'body') {
+        const cellText = data.cell.text.join(' ');
+        
+        if (cellText.includes('(Completed)')) {
+          data.cell.styles.textColor = [22, 163, 74]; // Green for completed
+        } else if (cellText.includes('(Absent)')) {
+          data.cell.styles.textColor = [220, 38, 38]; // Red for absent
+        } else if (cellText.includes('(Excused)')) {
+          data.cell.styles.textColor = [234, 179, 8]; // Yellow for excused
+        } else if (cellText.includes('(Cancelled)')) {
+          data.cell.styles.textColor = [107, 114, 128]; // Gray for cancelled
+          data.cell.styles.fontStyle = 'italic';
+        }
+      }
     },
   });
 
