@@ -16,6 +16,7 @@ import CancelledEventOverlay from "@/components/events/cancelled-event-overlay";
 import EventEditDialog from "@/components/events/event-edit-dialog";
 import SendInvitationButton from "@/components/events/send-invitation-button";
 import EventDetailsSkeleton from "@/components/loading/event-details-skeleton";
+import ExcuseReasonDialog from "@/components/events/excuse-reason-dialog";
 
 interface ExtendedStaffAssignment extends StaffAssignment {
   staffName?: string;
@@ -23,6 +24,7 @@ interface ExtendedStaffAssignment extends StaffAssignment {
   role?: string;
   manualInvitationSentAt?: string | null;
   lastInvitationSentAt?: string | null;
+  excuseReason?: string | null;
 }
 
 export default function EventDetailsPage() {
@@ -37,6 +39,8 @@ export default function EventDetailsPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [excuseDialogOpen, setExcuseDialogOpen] = useState(false);
+  const [currentStaffForExcuse, setCurrentStaffForExcuse] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (eventId) {
@@ -90,6 +94,7 @@ export default function EventDetailsPage() {
         declinedAt: assignment.declined_at,
         manualInvitationSentAt: (assignment as any).manual_invitation_sent_at,
         lastInvitationSentAt: (assignment as any).last_invitation_sent_at,
+        excuseReason: (assignment as any).excuse_reason,
       })) || [];
 
       console.log("Loaded assignment statuses:", assignments);
@@ -202,36 +207,60 @@ export default function EventDetailsPage() {
     console.log("Data refresh completed");
   };
 
-  const updateAttendanceStatus = async (staffId: string, newStatus: AttendanceStatus) => {
-    if (!user || !eventId) return;
+  const updateAttendanceStatus = async (staffId: string, status: AttendanceStatus) => {
+    if (!event || !user) return;
+    
+    // If selecting "Excused", open dialog to get reason
+    if (status === "Excused") {
+      const staff = assignmentStatuses.find(a => a.staffId === staffId);
+      if (staff) {
+        setCurrentStaffForExcuse({ id: staffId, name: staff.staffName || '' });
+        setExcuseDialogOpen(true);
+      }
+      return;
+    }
+    
+    await performAttendanceUpdate(staffId, status, null);
+  };
+
+  const handleExcuseWithReason = async (reason: string) => {
+    if (!currentStaffForExcuse) return;
+    await performAttendanceUpdate(currentStaffForExcuse.id, "Excused", reason);
+    setCurrentStaffForExcuse(null);
+  };
+
+  const performAttendanceUpdate = async (staffId: string, status: AttendanceStatus, excuseReason: string | null) => {
+    if (!event || !user) return;
 
     try {
+      const updateData: any = {
+        attendance_status: status,
+      };
+      
+      if (status === "Excused" && excuseReason) {
+        updateData.excuse_reason = excuseReason;
+      }
+
       const { error } = await supabase
         .from('staff_assignments')
-        .update({ attendance_status: newStatus })
-        .eq('event_id', eventId)
+        .update(updateData)
+        .eq('event_id', event.id)
         .eq('staff_id', staffId)
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      setAssignmentStatuses(prev => 
-        prev.map(assignment => 
-          assignment.staffId === staffId 
-            ? { ...assignment, attendanceStatus: newStatus }
-            : assignment
-        )
-      );
-
       toast({
-        title: "Attendance Recorded",
-        description: "Attendance status has been saved successfully.",
+        title: "Attendance Updated",
+        description: `Attendance status has been updated to ${status}.`,
       });
+
+      await loadAssignmentStatuses();
     } catch (error) {
-      console.error("Error updating attendance status:", error);
+      console.error('Error updating attendance status:', error);
       toast({
         title: "Error",
-        description: "Failed to save attendance status",
+        description: "Failed to update attendance status",
         variant: "destructive",
       });
     }
@@ -527,9 +556,10 @@ export default function EventDetailsPage() {
                     <Button 
                       onClick={() => setDeleteDialogOpen(true)} 
                       variant="outline" 
-                      className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 dark:text-red-400 text-sm"
+                      className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 dark:text-red-400 text-sm z-20 relative"
                       size="sm"
                     >
+                      <Trash2 className="h-4 w-4" />
                       Delete Event
                     </Button>
                   )}
@@ -587,11 +617,16 @@ export default function EventDetailsPage() {
                                         ? "bg-green-100 text-green-800" 
                                         : assignment.attendanceStatus === "Absent"
                                         ? "bg-red-100 text-red-800"
-                                        : "bg-gray-100 text-gray-800"
+                                        : "bg-yellow-100 text-yellow-800"
                                     }
                                   >
                                     {assignment.attendanceStatus === "Completed" ? "Present" : assignment.attendanceStatus}
                                   </Badge>
+                                  {assignment.attendanceStatus === "Excused" && assignment.excuseReason && (
+                                    <span className="text-xs text-muted-foreground italic">
+                                      ({assignment.excuseReason})
+                                    </span>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -690,6 +725,15 @@ export default function EventDetailsPage() {
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
             onEventUpdated={handleEventUpdated}
+          />
+        )}
+
+        {excuseDialogOpen && currentStaffForExcuse && (
+          <ExcuseReasonDialog
+            open={excuseDialogOpen}
+            onOpenChange={setExcuseDialogOpen}
+            staffName={currentStaffForExcuse.name}
+            onConfirm={handleExcuseWithReason}
           />
         )}
       </div>

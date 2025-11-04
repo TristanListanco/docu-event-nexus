@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 interface EventAttendance {
   eventName: string;
   status: string;
+  excuseReason?: string;
 }
 
 interface AttendanceData {
@@ -74,12 +75,20 @@ export async function fetchStaffAttendanceData(
             ? "Cancelled" 
             : a.attendance_status || "Pending";
           
-          return {
+          const excuseReason = status === "Excused" && a.excuse_reason ? a.excuse_reason : undefined;
+          
+          const event: EventAttendance = {
             eventName: a.events?.name || "Unknown Event",
             status
           };
+          
+          if (excuseReason) {
+            event.excuseReason = excuseReason;
+          }
+          
+          return event;
         })
-        .filter((e): e is EventAttendance => !!e.eventName) || [];
+        .filter((e) => !!e.eventName) || [];
 
       attendanceData.push({
         staffId: member.id,
@@ -151,17 +160,29 @@ export function generateAttendanceReportPDF(
   yPos += 8;
 
   // Create detailed table data with events and their status
-  const tableData = attendanceData.map((data) => {
-    const eventsText = data.events.length > 0 
-      ? data.events.map(e => `${e.eventName} (${e.status})`).join("\n") 
-      : "No events assigned";
-    
+  const tableData = attendanceData.map((member) => {
+    const eventsText = member.events
+      .map((e) => {
+        let statusLabel = e.status === "Completed" ? "(Completed)" :
+                         e.status === "Absent" ? "(Absent)" :
+                         e.status === "Excused" ? "(Excused)" :
+                         e.status === "Cancelled" ? "(Cancelled)" : "";
+        
+        // Add excuse reason if available
+        if (e.status === "Excused" && e.excuseReason) {
+          statusLabel += ` - ${e.excuseReason}`;
+        }
+        
+        return `${e.eventName} ${statusLabel}`;
+      })
+      .join("\n");
+
     return [
-      data.staffName,
-      data.completed.toString(),
-      data.excused.toString(),
-      data.absent.toString(),
-      eventsText,
+      member.staffName,
+      member.completed.toString(),
+      member.excused.toString(),
+      member.absent.toString(),
+      eventsText || "No events assigned",
     ];
   });
 

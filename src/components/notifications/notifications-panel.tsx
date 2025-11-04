@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/hooks/use-notifications";
 import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 export default function NotificationsPanel() {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const { 
     notifications, 
     unreadCount, 
@@ -18,6 +20,14 @@ export default function NotificationsPanel() {
     clearNotification,
     clearAllNotifications
   } = useNotifications();
+
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    setIsOpen(false);
+    navigate(`/events/${notification.event_id}`);
+  };
 
   if (loading) {
     return (
@@ -79,12 +89,12 @@ export default function NotificationsPanel() {
                     {notifications.map((notification) => (
                       <div
                         key={notification.id}
-                        className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                        className={`p-3 rounded-lg border transition-colors cursor-pointer hover:bg-primary/10 ${
                           !notification.read 
                             ? 'bg-primary/5 border-primary/20' 
                             : 'bg-muted/50'
                         }`}
-                        onClick={() => !notification.read && markAsRead(notification.id)}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
