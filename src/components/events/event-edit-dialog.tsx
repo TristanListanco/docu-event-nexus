@@ -62,6 +62,8 @@ export default function EventEditDialog({
 
   const [selectedVideographers, setSelectedVideographers] = useState<string[]>([]);
   const [selectedPhotographers, setSelectedPhotographers] = useState<string[]>([]);
+  const [confirmedVideographers, setConfirmedVideographers] = useState<string[]>([]);
+  const [confirmedPhotographers, setConfirmedPhotographers] = useState<string[]>([]);
   const [staffAvailability, setStaffAvailability] = useState<StaffAvailability[]>([]);
   const [timeValidationError, setTimeValidationError] = useState("");
   const [leaveDates, setLeaveDates] = useState<any[]>([]);
@@ -77,8 +79,18 @@ export default function EventEditDialog({
       const videographerIds = event.videographers?.map(v => v.staffId) || [];
       const photographerIds = event.photographers?.map(p => p.staffId) || [];
       
+      // Extract confirmed staff (those who cannot be removed)
+      const confirmedVids = event.videographers
+        ?.filter(v => v.confirmationStatus === 'confirmed')
+        .map(v => v.staffId) || [];
+      const confirmedPhotos = event.photographers
+        ?.filter(p => p.confirmationStatus === 'confirmed')
+        .map(p => p.staffId) || [];
+      
       setSelectedVideographers(videographerIds);
       setSelectedPhotographers(photographerIds);
+      setConfirmedVideographers(confirmedVids);
+      setConfirmedPhotographers(confirmedPhotos);
       
       // Determine if this might be a university wide event based on staff count
       const totalStaff = videographerIds.length + photographerIds.length;
@@ -388,7 +400,7 @@ export default function EventEditDialog({
                 staffAvailability={staffAvailability}
                 selectedStaffIds={selectedVideographers}
                 onSelectionChange={setSelectedVideographers}
-                excludeStaffIds={selectedPhotographers}
+                excludeStaffIds={[...selectedPhotographers, ...confirmedVideographers]}
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
@@ -399,7 +411,7 @@ export default function EventEditDialog({
                 staffAvailability={staffAvailability}
                 selectedStaffIds={selectedPhotographers}
                 onSelectionChange={setSelectedPhotographers}
-                excludeStaffIds={selectedVideographers}
+                excludeStaffIds={[...selectedVideographers, ...confirmedPhotographers]}
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}

@@ -301,6 +301,7 @@ export type Database = {
           confirmed_at: string | null
           declined_at: string | null
           event_id: string
+          excuse_reason: string | null
           id: string
           last_invitation_sent_at: string | null
           manual_invitation_sent_at: string | null
@@ -315,6 +316,7 @@ export type Database = {
           confirmed_at?: string | null
           declined_at?: string | null
           event_id: string
+          excuse_reason?: string | null
           id?: string
           last_invitation_sent_at?: string | null
           manual_invitation_sent_at?: string | null
@@ -329,6 +331,7 @@ export type Database = {
           confirmed_at?: string | null
           declined_at?: string | null
           event_id?: string
+          excuse_reason?: string | null
           id?: string
           last_invitation_sent_at?: string | null
           manual_invitation_sent_at?: string | null
