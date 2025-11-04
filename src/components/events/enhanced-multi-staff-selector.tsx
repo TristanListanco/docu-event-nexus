@@ -19,6 +19,7 @@ export default function EnhancedMultiStaffSelector({
   maxSelection = 3,
   disabled = false,
   excludeStaffIds = [],
+  confirmedStaffIds = [],
   eventStartTime,
   eventEndTime
 }: EnhancedMultiStaffSelectorProps) {
@@ -99,6 +100,7 @@ export default function EnhancedMultiStaffSelector({
         roleStaff={roleStaff}
         role={role}
         disabled={disabled}
+        confirmedStaffIds={confirmedStaffIds}
         onRemoveStaff={handleRemoveStaff}
         getStaffName={getStaffName}
       />

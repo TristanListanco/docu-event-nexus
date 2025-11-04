@@ -9,6 +9,7 @@ export interface EnhancedMultiStaffSelectorProps {
   maxSelection?: number;
   disabled?: boolean;
   excludeStaffIds?: string[];
+  confirmedStaffIds?: string[];
   eventStartTime?: string;
   eventEndTime?: string;
 }

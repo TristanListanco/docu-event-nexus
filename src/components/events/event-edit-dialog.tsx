@@ -400,7 +400,8 @@ export default function EventEditDialog({
                 staffAvailability={staffAvailability}
                 selectedStaffIds={selectedVideographers}
                 onSelectionChange={setSelectedVideographers}
-                excludeStaffIds={[...selectedPhotographers, ...confirmedVideographers]}
+                excludeStaffIds={selectedPhotographers}
+                confirmedStaffIds={confirmedVideographers}
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
@@ -411,7 +412,8 @@ export default function EventEditDialog({
                 staffAvailability={staffAvailability}
                 selectedStaffIds={selectedPhotographers}
                 onSelectionChange={setSelectedPhotographers}
-                excludeStaffIds={[...selectedVideographers, ...confirmedPhotographers]}
+                excludeStaffIds={selectedVideographers}
+                confirmedStaffIds={confirmedPhotographers}
                 disabled={!canSelectStaff || isReadOnly}
                 eventStartTime={formData.startTime}
                 eventEndTime={formData.endTime}
