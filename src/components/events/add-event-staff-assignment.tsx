@@ -4,6 +4,8 @@ import { Users, Clock } from "lucide-react";
 import EnhancedMultiStaffSelector from "./enhanced-multi-staff-selector";
 import { useStaff } from "@/hooks/use-staff";
 import { getEnhancedStaffAvailability } from "@/hooks/staff/enhanced-staff-availability";
+import SmartAllocationSummary from "./staff-selector/smart-allocation-summary";
+import { getEnhancedSmartAllocation } from "./staff-selector/utils";
 
 interface AddEventStaffAssignmentProps {
   selectedVideographers: string[];
@@ -42,6 +44,21 @@ export default function AddEventStaffAssignment({
       )
     : [];
 
+  // Get smart allocation data for videographers and photographers
+  const videographerAllocation = getEnhancedSmartAllocation(
+    selectedVideographers,
+    staffAvailability.filter(s => s.staff.roles.includes("Videographer")),
+    startTime,
+    endTime
+  );
+
+  const photographerAllocation = getEnhancedSmartAllocation(
+    selectedPhotographers,
+    staffAvailability.filter(s => s.staff.roles.includes("Photographer")),
+    startTime,
+    endTime
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -63,25 +80,35 @@ export default function AddEventStaffAssignment({
           </div>
         ) : (
           <div className="space-y-6">
-            <EnhancedMultiStaffSelector
-              role="Videographer"
-              staffAvailability={staffAvailability}
-              selectedStaffIds={selectedVideographers}
-              onSelectionChange={onVideographersChange}
-              excludeStaffIds={selectedPhotographers}
-              eventStartTime={startTime}
-              eventEndTime={endTime}
-            />
+            <div className="space-y-4">
+              <EnhancedMultiStaffSelector
+                role="Videographer"
+                staffAvailability={staffAvailability}
+                selectedStaffIds={selectedVideographers}
+                onSelectionChange={onVideographersChange}
+                excludeStaffIds={selectedPhotographers}
+                eventStartTime={startTime}
+                eventEndTime={endTime}
+              />
+              {videographerAllocation && selectedVideographers.length > 0 && (
+                <SmartAllocationSummary smartAllocation={videographerAllocation} />
+              )}
+            </div>
             
-            <EnhancedMultiStaffSelector
-              role="Photographer"
-              staffAvailability={staffAvailability}
-              selectedStaffIds={selectedPhotographers}
-              onSelectionChange={onPhotographersChange}
-              excludeStaffIds={selectedVideographers}
-              eventStartTime={startTime}
-              eventEndTime={endTime}
-            />
+            <div className="space-y-4">
+              <EnhancedMultiStaffSelector
+                role="Photographer"
+                staffAvailability={staffAvailability}
+                selectedStaffIds={selectedPhotographers}
+                onSelectionChange={onPhotographersChange}
+                excludeStaffIds={selectedVideographers}
+                eventStartTime={startTime}
+                eventEndTime={endTime}
+              />
+              {photographerAllocation && selectedPhotographers.length > 0 && (
+                <SmartAllocationSummary smartAllocation={photographerAllocation} />
+              )}
+            </div>
           </div>
         )}
       </CardContent>
