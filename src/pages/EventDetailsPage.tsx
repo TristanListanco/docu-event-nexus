@@ -433,27 +433,10 @@ export default function EventDetailsPage() {
         </div>
 
         <div className="relative">
-          {event.status === "Cancelled" && (
-            <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center rounded-lg">
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
-                <h3 className="text-2xl font-bold text-red-600 mb-2">Event Cancelled</h3>
-                <p className="text-gray-600 dark:text-gray-400">This event has been cancelled</p>
-              </div>
-            </div>
-          )}
-          
           <div className={event.status === "Cancelled" ? "opacity-50" : ""}>
             {/* Event Details Card - Mobile Optimized */}
             <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                  <div className="p-2 bg-muted rounded-lg">
-                    <Calendar className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                  </div>
-                  Event Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div className="space-y-4">
                     <div className="flex items-start gap-3">
@@ -527,7 +510,19 @@ export default function EventDetailsPage() {
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t relative z-20">
+                  {isCancelled && (
+                    <Button 
+                      onClick={() => setDeleteDialogOpen(true)} 
+                      variant="outline" 
+                      className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 dark:text-red-400 text-sm"
+                      size="sm"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Event
+                    </Button>
+                  )}
+                  
                   {!isCancelled && (
                     <Button 
                       onClick={() => setEditDialogOpen(true)} 
@@ -551,31 +546,29 @@ export default function EventDetailsPage() {
                       Cancel Event
                     </Button>
                   )}
-                  
-                  {isCancelled && (
-                    <Button 
-                      onClick={() => setDeleteDialogOpen(true)} 
-                      variant="outline" 
-                      className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950 dark:text-red-400 text-sm z-20 relative"
-                      size="sm"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete Event
-                    </Button>
-                  )}
                 </div>
               </CardContent>
             </Card>
+          </div>
+          
+          {event.status === "Cancelled" && (
+            <div className="absolute inset-0 bg-black/50 z-10 flex items-center justify-center rounded-lg pointer-events-none">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg text-center">
+                <h3 className="text-2xl font-bold text-red-600 mb-2">Event Cancelled</h3>
+                <p className="text-gray-600 dark:text-gray-400">This event has been cancelled</p>
+              </div>
+            </div>
+          )}
 
-            {/* Staff Assignments - Mobile Optimized */}
-            <Card className="w-full">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                  <Users className="h-4 w-4 md:h-5 md:w-5" />
-                  Staff Assignments
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+          {/* Staff Assignments - Mobile Optimized */}
+          <Card className="w-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Users className="h-4 w-4 md:h-5 md:w-5" />
+                Staff Assignments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
                 {assignmentStatuses.length > 0 ? (
                   <div className="space-y-4">
                     {assignmentStatuses.map((assignment) => (
@@ -665,9 +658,8 @@ export default function EventDetailsPage() {
                     No staff members assigned to this event.
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         <AlertDialog open={markDoneDialogOpen} onOpenChange={setMarkDoneDialogOpen}>
