@@ -215,17 +215,20 @@ export function generateAttendanceReportPDF(
     didParseCell: (data) => {
       // Color code the events column based on status
       if (data.column.index === 4 && data.section === 'body') {
-        const cellText = data.cell.text.join(' ');
+        const cellText = Array.isArray(data.cell.text) 
+          ? data.cell.text.join(' ') 
+          : String(data.cell.text);
         
-        if (cellText.includes('(Completed)')) {
-          data.cell.styles.textColor = [22, 163, 74]; // Green for completed
-        } else if (cellText.includes('(Absent)')) {
+        // Check in priority order: Absent first (most important), then others
+        if (cellText.includes('(Absent)')) {
           data.cell.styles.textColor = [220, 38, 38]; // Red for absent
         } else if (cellText.includes('(Excused)')) {
           data.cell.styles.textColor = [234, 179, 8]; // Yellow for excused
         } else if (cellText.includes('(Cancelled)')) {
           data.cell.styles.textColor = [107, 114, 128]; // Gray for cancelled
           data.cell.styles.fontStyle = 'italic';
+        } else if (cellText.includes('(Completed)')) {
+          data.cell.styles.textColor = [22, 163, 74]; // Green for completed
         }
       }
     },
