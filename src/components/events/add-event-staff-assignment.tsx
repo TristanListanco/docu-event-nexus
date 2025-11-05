@@ -64,7 +64,7 @@ export default function AddEventStaffAssignment({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Staff Assignments
+          Staff Assignment
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -79,7 +79,7 @@ export default function AddEventStaffAssignment({
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-4">
               <EnhancedMultiStaffSelector
                 role="Videographer"
