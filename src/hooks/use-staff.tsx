@@ -13,7 +13,7 @@ import {
 } from "./staff/staff-crud";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useStaff() {
+export function useStaff(termId?: string) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -23,37 +23,40 @@ export function useStaff() {
     refetch: loadStaff,
     isFetching
   } = useQuery({
-    queryKey: ['staff', user?.id],
+    queryKey: ['staff', user?.id, termId],
     queryFn: async () => {
       if (!user) {
         throw new Error("User not authenticated");
       }
-      return await loadStaffFromDatabase(user.id);
+      return await loadStaffFromDatabase(user.id, termId);
     },
     enabled: !!user,
-    staleTime: 15 * 60 * 1000, // 15 minutes - staff data doesn't change frequently
-    gcTime: 60 * 60 * 1000, // 1 hour cache time
+    staleTime: 15 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
-    // Use background refetch for better UX
     refetchInterval: false,
-    // Optimize for mobile devices
     networkMode: 'online',
-    // Keep previous data while fetching new data
     placeholderData: (previousData) => previousData,
   });
 
   // Fetch leave dates separately
   const { data: leaveDates = [] } = useQuery({
-    queryKey: ['leaveDates', user?.id],
+    queryKey: ['leaveDates', user?.id, termId],
     queryFn: async () => {
       if (!user) {
         throw new Error("User not authenticated");
       }
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('leave_dates')
         .select('*')
         .eq('user_id', user.id);
+
+      if (termId) {
+        query = query.eq('term_id', termId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         throw error;
@@ -72,10 +75,9 @@ export function useStaff() {
         throw new Error("User not authenticated");
       }
 
-      const data = await addStaffToDatabase(user.id, staffData);
+      const data = await addStaffToDatabase(user.id, staffData, termId);
       
-      // Invalidate and refetch staff data
-      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id, termId] });
 
       return data;
     } catch (error: any) {
@@ -100,8 +102,7 @@ export function useStaff() {
 
       const data = await updateStaffInDatabase(user.id, staffId, staffData);
       
-      // Invalidate and refetch staff data
-      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id, termId] });
 
       return data;
     } catch (error: any) {
@@ -123,8 +124,7 @@ export function useStaff() {
 
       await deleteStaffFromDatabase(user.id, staffId);
 
-      // Invalidate and refetch staff data
-      queryClient.invalidateQueries({ queryKey: ['staff', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['staff', user.id, termId] });
 
       return true;
     } catch (error: any) {
