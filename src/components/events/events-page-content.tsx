@@ -10,8 +10,8 @@ import { Archive, Calendar } from "lucide-react";
 interface EventsPageContentProps {
   events: Event[];
   onEventClick: (event: Event) => void;
-  onEditEvent: (e: React.MouseEvent, event: Event) => void;
-  onDeleteEvent: (e: React.MouseEvent, event: Event) => void;
+  onEditEvent?: (e: React.MouseEvent, event: Event) => void;
+  onDeleteEvent?: (e: React.MouseEvent, event: Event) => void;
   getEventStatus: (event: Event) => string;
 }
 

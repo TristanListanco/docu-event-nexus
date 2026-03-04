@@ -3,12 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { StaffMember, StaffRole, LeaveDate, SubjectSchedule, Schedule } from "@/types/models";
 import { toast } from "@/hooks/use-toast";
 
-export const loadStaffFromDatabase = async (userId: string): Promise<StaffMember[]> => {
+export const loadStaffFromDatabase = async (userId: string, termId?: string): Promise<StaffMember[]> => {
   // Load staff members with all related data
-  const { data: staffData, error: staffError } = await supabase
+  let staffQuery = supabase
     .from("staff_members")
     .select("*")
     .eq("user_id", userId);
+  
+  if (termId) {
+    staffQuery = staffQuery.eq("term_id", termId);
+  }
+  
+  const { data: staffData, error: staffError } = await staffQuery;
 
   if (staffError) {
     throw staffError;
@@ -124,7 +130,8 @@ export const loadStaffFromDatabase = async (userId: string): Promise<StaffMember
 
 export const addStaffToDatabase = async (
   userId: string,
-  staffData: Omit<StaffMember, "id">
+  staffData: Omit<StaffMember, "id">,
+  termId?: string
 ) => {
   // Insert staff member
   const { data: staff, error: staffError } = await supabase
@@ -132,9 +139,10 @@ export const addStaffToDatabase = async (
     .insert({
       name: staffData.name,
       email: staffData.email,
-      role: staffData.roles[0], // Use first role as primary role
+      role: staffData.roles[0],
       position: staffData.position,
       user_id: userId,
+      ...(termId ? { term_id: termId } : {}),
     })
     .select()
     .single();

@@ -8,7 +8,7 @@ import { fetchStaffAssignmentsWithRoles } from "./staff-assignment-mapper";
 import { sendEventNotifications, sendCancellationNotifications } from "./event-notifications";
 import { insertStaffAssignments, updateStaffAssignments } from "./event-staff-operations";
 
-export function useEvents() {
+export function useEvents(termId?: string) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -20,10 +20,16 @@ export function useEvents() {
         throw new Error("User not authenticated");
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("events")
         .select("*")
         .eq("user_id", user.id);
+      
+      if (termId) {
+        query = query.eq("term_id", termId);
+      }
+      
+      const { data, error } = await query;
 
       if (error) {
         throw error;
@@ -101,7 +107,8 @@ export function useEvents() {
           ccs_only_event: eventData.ccsOnlyEvent || false,
           is_big_event: eventData.isBigEvent || false,
           big_event_id: eventData.bigEventId || null,
-          user_id: user.id
+          user_id: user.id,
+          ...(termId ? { term_id: termId } : {})
         })
         .select()
         .single();

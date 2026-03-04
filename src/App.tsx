@@ -4,7 +4,6 @@ import {
   Routes,
   Route,
   Navigate,
-  Outlet,
 } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
@@ -12,11 +11,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth } from "./hooks/use-auth";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-import Index from "./pages/Index";
-import EventsPage from "./pages/EventsPage";
+import DashboardPage from "./pages/DashboardPage";
+import TermDetailPage from "./pages/TermDetailPage";
 import AddEventPage from "./pages/AddEventPage";
 import EventDetailsPage from "./pages/EventDetailsPage";
-import StaffPage from "./pages/StaffPage";
+import ArchivePage from "./pages/ArchivePage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import ConfirmAssignmentPage from "./pages/ConfirmAssignmentPage";
@@ -25,10 +24,9 @@ import MainLayout from "./components/layout/main-layout";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes
-      gcTime: 30 * 60 * 1000, // 30 minutes cache time
+      staleTime: 10 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       retry: (failureCount, error) => {
-        // Don't retry on auth errors or client errors (4xx)
         if (error && typeof error === 'object' && 'status' in error) {
           const status = error.status as number;
           if (status >= 400 && status < 500) return false;
@@ -50,8 +48,6 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
-  console.log('App ProtectedRoute: user:', user?.email, 'loading:', loading);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background animate-fade-in">
@@ -64,7 +60,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    console.log('App ProtectedRoute: No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
@@ -72,8 +67,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  console.log('App: Rendering');
-  
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="ui-theme">
@@ -86,13 +79,17 @@ function App() {
               <MainLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Index />} />
-            <Route path="events" element={<EventsPage />} />
-            <Route path="events/add" element={<AddEventPage />} />
-            <Route path="events/new" element={<AddEventPage />} />
-            <Route path="events/:eventId" element={<EventDetailsPage />} />
-            <Route path="staff" element={<StaffPage />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="terms/:termId" element={<TermDetailPage />} />
+            <Route path="terms/:termId/events/add" element={<AddEventPage />} />
+            <Route path="terms/:termId/events/:eventId" element={<EventDetailsPage />} />
+            <Route path="archive" element={<ArchivePage />} />
+            <Route path="archive/:termId" element={<TermDetailPage />} />
+            <Route path="archive/:termId/events/:eventId" element={<EventDetailsPage />} />
             <Route path="about" element={<AboutPage />} />
+            {/* Legacy routes redirect */}
+            <Route path="events" element={<Navigate to="/" replace />} />
+            <Route path="staff" element={<Navigate to="/" replace />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
