@@ -140,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           // Generate email content
-          const baseUrl = Deno.env.get('SITE_URL') || "https://docu-event-scheduling.vercel.app";
+          const baseUrl = Deno.env.get('SITE_URL') || "https://id-preview--3ea1c629-97aa-4f1b-9724-18d116f6d14b.lovable.app";
           const confirmUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=confirm`;
           const declineUrl = `${baseUrl}/confirm-assignment?token=${assignment.confirmation_token}&action=decline`;
 

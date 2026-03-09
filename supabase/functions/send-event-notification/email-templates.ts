@@ -187,7 +187,7 @@ export function generateEmailTemplate(
     : '';
 
   // Always use the production URL for confirmation links
-  const productionUrl = "https://docu-event-scheduling.vercel.app";
+  const productionUrl = Deno.env.get('SITE_URL') || "https://id-preview--3ea1c629-97aa-4f1b-9724-18d116f6d14b.lovable.app";
   
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
