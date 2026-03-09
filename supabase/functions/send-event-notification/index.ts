@@ -210,22 +210,13 @@ const handler = async (req: Request): Promise<Response> => {
             .eq('staff_id', staff.id)
             .single();
 
-          // Skip sending emails to confirmed staff for updates
-          if (requestData.isUpdate && assignment?.confirmation_status === 'confirmed') {
-            console.log(`Skipping email for ${staff.name} - already confirmed`);
-            return { success: true, skipped: true };
-          }
-
-          // Skip sending emails to declined staff
-          if (assignment?.confirmation_status === 'declined') {
-            console.log(`Skipping email for ${staff.name} - declined assignment`);
-            return { success: false, skipped: true };
-          }
-
           let emailTemplate: string;
           let emailSubject: string;
 
           if (requestData.isUpdate) {
+            // For updates, build confirmation URL since status was reset
+            const confirmationUrl = `${supabaseUrl.replace('/supabase', '')}/confirm-assignment?token=${assignment?.confirmation_token}`;
+            
             emailTemplate = generateUpdateEmailTemplate({
               staffName: staff.name,
               eventName: requestData.eventName,
@@ -235,9 +226,10 @@ const handler = async (req: Request): Promise<Response> => {
               location: requestData.location,
               organizer: requestData.organizer || 'N/A',
               type: requestData.type,
-              changes: requestData.changes || {}
+              changes: requestData.changes || {},
+              confirmationUrl: confirmationUrl
             });
-            emailSubject = `Event Updated: ${requestData.eventName}`;
+            emailSubject = `Event Updated - Re-confirmation Required: ${requestData.eventName}`;
           } else {
             const confirmationUrl = `${supabaseUrl.replace('/supabase', '')}/confirm-assignment?token=${assignment?.confirmation_token}`;
             
