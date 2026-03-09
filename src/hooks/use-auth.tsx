@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      navigate("/login");
+      window.location.href = "/login";
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
