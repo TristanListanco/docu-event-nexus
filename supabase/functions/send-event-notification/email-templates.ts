@@ -43,6 +43,7 @@ export function generateUpdateEmailTemplate(data: {
   organizer: string;
   type: string;
   changes: any;
+  confirmationUrl?: string;
 }): string {
   const eventDate = new Date(data.eventDate).toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -56,9 +57,28 @@ export function generateUpdateEmailTemplate(data: {
     ? `<p><strong>Organizer:</strong> ${data.organizer}</p>`
     : '';
 
+  const confirmationSection = data.confirmationUrl ? `
+      <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <h3 style="color: #2563eb; margin-top: 0;">📋 Please Re-confirm Your Assignment</h3>
+        <p style="margin: 10px 0;">Due to the event update, your previous confirmation has been reset. Please confirm or decline your assignment again:</p>
+        <a href="${data.confirmationUrl}" 
+           style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 10px;">
+          Confirm Assignment
+        </a>
+        <p style="font-size: 12px; color: #666; margin: 10px 0 0 0;">
+          Once confirmed, you'll be able to download the updated calendar file.
+        </p>
+        <div style="background: #fff3cd; padding: 10px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ffc107;">
+          <p style="font-size: 12px; color: #856404; margin: 0;">
+            ⏰ <strong>Important:</strong> This confirmation link will expire in 7 days. Please respond as soon as possible.
+          </p>
+        </div>
+      </div>
+  ` : '';
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #333;">Event Updated!</h2>
+      <h2 style="color: #333;">Event Updated - Re-confirmation Required</h2>
       
       ${changesHtml}
       
@@ -73,12 +93,9 @@ export function generateUpdateEmailTemplate(data: {
       </div>
       
       <p>Hi ${data.staffName},</p>
-      <p>The event <strong>${data.eventName}</strong> has been updated. Please review the changes above and update your calendar accordingly.</p>
+      <p>The event <strong>${data.eventName}</strong> has been updated. Your previous confirmation status has been reset. Please review the changes and re-confirm your assignment.</p>
       
-      <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <p style="margin: 0;"><strong>📅 Updated Calendar File Attached</strong></p>
-        <p style="margin: 5px 0 0 0; font-size: 14px;">Open the attached .ics file to update this event in your calendar. The calendar entry includes automatic reminders 6 hours and 1 hour before the event (Philippine Standard Time).</p>
-      </div>
+      ${confirmationSection}
       
       <p>If you have any questions or conflicts, please contact the event organizer as soon as possible.</p>
       
