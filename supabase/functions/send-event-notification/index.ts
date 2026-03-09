@@ -137,63 +137,34 @@ const handler = async (req: Request): Promise<Response> => {
     for (const staff of requestData.assignedStaff) {
       console.log(`Processing staff ${staff.id} for event ${requestData.eventId}`);
       
-      // For updates, check existing assignment first
+      // For updates, reset confirmation status for ALL staff and regenerate tokens
       if (requestData.isUpdate) {
-        const { data: existingAssignment, error: fetchError } = await supabase
+        const confirmationToken = crypto.randomUUID();
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+
+        console.log(`Resetting confirmation and generating new token for staff ${staff.id} due to event update`);
+
+        const { error: updateError } = await supabase
           .from('staff_assignments')
-          .select('confirmation_status, confirmation_token, confirmation_token_expires_at')
+          .update({
+            confirmation_token: confirmationToken,
+            confirmation_token_expires_at: expiryDate.toISOString(),
+            confirmation_status: 'pending',
+            confirmed_at: null,
+            declined_at: null,
+            last_invitation_sent_at: new Date().toISOString()
+          })
           .eq('event_id', requestData.eventId)
-          .eq('staff_id', staff.id)
-          .single();
+          .eq('staff_id', staff.id);
 
-        if (fetchError) {
-          console.log(`No existing assignment found for staff ${staff.id}, this might be an issue`);
+        if (updateError) {
+          console.error(`Error updating token for staff ${staff.id}:`, updateError);
           continue;
         }
 
-        if (existingAssignment.confirmation_status === 'confirmed') {
-          console.log(`Staff ${staff.id} already confirmed, skipping token generation`);
-          continue;
-        }
-
-        if (existingAssignment.confirmation_status === 'declined') {
-          console.log(`Staff ${staff.id} declined assignment, skipping notification`);
-          continue;
-        }
-
-        const tokenExpiry = existingAssignment.confirmation_token_expires_at;
-        const now = new Date();
-        
-        console.log(`Existing assignment found. Token expires at: ${tokenExpiry}, Current time: ${now.toISOString()}`);
-        
-        if (!existingAssignment.confirmation_token || (tokenExpiry && new Date(tokenExpiry) <= now)) {
-          const confirmationToken = crypto.randomUUID();
-          const expiryDate = new Date();
-          expiryDate.setDate(expiryDate.getDate() + 7);
-
-          console.log(`Generating new token for staff ${staff.id}, expires: ${expiryDate.toISOString()}`);
-
-          const { error: updateError } = await supabase
-            .from('staff_assignments')
-            .update({
-              confirmation_token: confirmationToken,
-              confirmation_token_expires_at: expiryDate.toISOString(),
-              confirmation_status: 'pending',
-              last_invitation_sent_at: new Date().toISOString()
-            })
-            .eq('event_id', requestData.eventId)
-            .eq('staff_id', staff.id);
-
-          if (updateError) {
-            console.error(`Error updating token for staff ${staff.id}:`, updateError);
-            continue;
-          }
-
-          console.log(`Successfully updated token for staff ${staff.id}`);
-          tokensGenerated++;
-        } else {
-          console.log(`Token for staff ${staff.id} is still valid, not regenerating`);
-        }
+        console.log(`Successfully reset confirmation and updated token for staff ${staff.id}`);
+        tokensGenerated++;
       } else {
         // For new events, always generate tokens
         const confirmationToken = crypto.randomUUID();
