@@ -110,9 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      // Don't navigate immediately, let the auth state change handle it
+      // Navigate after auth state settles
       setTimeout(() => {
-        navigate("/events");
+        window.location.href = "/events";
         toast({
           title: "Signed in successfully",
           description: "Welcome back!",
