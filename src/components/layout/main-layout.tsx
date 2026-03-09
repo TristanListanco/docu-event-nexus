@@ -1,8 +1,9 @@
 
+import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Archive, Info, LogOut } from "lucide-react";
+import { Calendar, Users, Info, LogOut, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sidebar,
@@ -23,9 +24,6 @@ export default function MainLayout() {
   const { signOut } = useAuth();
   
   const isActive = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/" || location.pathname.startsWith("/terms");
-    }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
@@ -35,16 +33,16 @@ export default function MainLayout() {
 
   const menuItems = [
     {
-      title: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/",
-      isActive: isActive("/"),
+      title: "Events",
+      icon: Calendar,
+      path: "/events",
+      isActive: isActive("/events"),
     },
     {
-      title: "Archive",
-      icon: Archive,
-      path: "/archive",
-      isActive: isActive("/archive"),
+      title: "Staff",
+      icon: Users,
+      path: "/staff",
+      isActive: isActive("/staff"),
     },
     {
       title: "About",
@@ -59,7 +57,7 @@ export default function MainLayout() {
       <div className="min-h-screen flex w-full animate-fade-in">
         <Sidebar className="border-r border-sidebar-border animate-slide-in-right">
           <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/5 to-accent/5">
-            <div className="flex items-center space-x-3 px-4 py-3 animate-scale-in cursor-pointer" onClick={() => navigate("/")}>
+            <div className="flex items-center space-x-3 px-4 py-3 animate-scale-in">
               <img 
                 src="/lovable-uploads/28fdac2a-08bd-48c7-82a4-242c8a1d1874.png" 
                 alt="CCS DOCU Logo" 

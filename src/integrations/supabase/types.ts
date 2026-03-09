@@ -94,7 +94,6 @@ export type Database = {
           organizer: string | null
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
-          term_id: string | null
           type: Database["public"]["Enums"]["event_type"]
           user_id: string
         }
@@ -114,7 +113,6 @@ export type Database = {
           organizer?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
-          term_id?: string | null
           type: Database["public"]["Enums"]["event_type"]
           user_id: string
         }
@@ -134,7 +132,6 @@ export type Database = {
           organizer?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
-          term_id?: string | null
           type?: Database["public"]["Enums"]["event_type"]
           user_id?: string
         }
@@ -146,13 +143,6 @@ export type Database = {
             referencedRelation: "big_events"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "events_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
-            referencedColumns: ["id"]
-          },
         ]
       }
       leave_dates: {
@@ -162,7 +152,6 @@ export type Database = {
           id: string
           staff_id: string
           start_date: string
-          term_id: string | null
           user_id: string
         }
         Insert: {
@@ -171,7 +160,6 @@ export type Database = {
           id?: string
           staff_id: string
           start_date: string
-          term_id?: string | null
           user_id: string
         }
         Update: {
@@ -180,18 +168,9 @@ export type Database = {
           id?: string
           staff_id?: string
           start_date?: string
-          term_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "leave_dates_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -203,7 +182,6 @@ export type Database = {
           read: boolean
           staff_id: string
           staff_name: string
-          term_id: string | null
           type: string
           user_id: string
         }
@@ -216,7 +194,6 @@ export type Database = {
           read?: boolean
           staff_id: string
           staff_name: string
-          term_id?: string | null
           type: string
           user_id: string
         }
@@ -229,7 +206,6 @@ export type Database = {
           read?: boolean
           staff_id?: string
           staff_name?: string
-          term_id?: string | null
           type?: string
           user_id?: string
         }
@@ -246,13 +222,6 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff_members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
             referencedColumns: ["id"]
           },
         ]
@@ -286,7 +255,6 @@ export type Database = {
           staff_id: string
           start_time: string
           subject_schedule_id: string | null
-          term_id: string | null
           user_id: string
         }
         Insert: {
@@ -296,7 +264,6 @@ export type Database = {
           staff_id: string
           start_time: string
           subject_schedule_id?: string | null
-          term_id?: string | null
           user_id: string
         }
         Update: {
@@ -306,7 +273,6 @@ export type Database = {
           staff_id?: string
           start_time?: string
           subject_schedule_id?: string | null
-          term_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -322,13 +288,6 @@ export type Database = {
             columns: ["subject_schedule_id"]
             isOneToOne: false
             referencedRelation: "subject_schedules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "schedules_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
             referencedColumns: ["id"]
           },
         ]
@@ -405,7 +364,6 @@ export type Database = {
           photo_url: string | null
           position: Database["public"]["Enums"]["staff_position"] | null
           role: Database["public"]["Enums"]["staff_role"]
-          term_id: string | null
           user_id: string
         }
         Insert: {
@@ -416,7 +374,6 @@ export type Database = {
           photo_url?: string | null
           position?: Database["public"]["Enums"]["staff_position"] | null
           role: Database["public"]["Enums"]["staff_role"]
-          term_id?: string | null
           user_id: string
         }
         Update: {
@@ -427,18 +384,9 @@ export type Database = {
           photo_url?: string | null
           position?: Database["public"]["Enums"]["staff_position"] | null
           role?: Database["public"]["Enums"]["staff_role"]
-          term_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "staff_members_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       staff_roles: {
         Row: {
@@ -446,7 +394,6 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["staff_role"]
           staff_id: string
-          term_id: string | null
           user_id: string
         }
         Insert: {
@@ -454,7 +401,6 @@ export type Database = {
           id?: string
           role: Database["public"]["Enums"]["staff_role"]
           staff_id: string
-          term_id?: string | null
           user_id: string
         }
         Update: {
@@ -462,18 +408,9 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["staff_role"]
           staff_id?: string
-          term_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "staff_roles_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subject_schedules: {
         Row: {
@@ -481,7 +418,6 @@ export type Database = {
           id: string
           staff_id: string
           subject: string
-          term_id: string | null
           user_id: string
         }
         Insert: {
@@ -489,7 +425,6 @@ export type Database = {
           id?: string
           staff_id: string
           subject: string
-          term_id?: string | null
           user_id: string
         }
         Update: {
@@ -497,48 +432,6 @@ export type Database = {
           id?: string
           staff_id?: string
           subject?: string
-          term_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "subject_schedules_term_id_fkey"
-            columns: ["term_id"]
-            isOneToOne: false
-            referencedRelation: "terms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      terms: {
-        Row: {
-          archived_at: string | null
-          created_at: string
-          id: string
-          is_archived: boolean
-          name: string
-          school_year: string
-          semester: Database["public"]["Enums"]["semester_type"]
-          user_id: string
-        }
-        Insert: {
-          archived_at?: string | null
-          created_at?: string
-          id?: string
-          is_archived?: boolean
-          name: string
-          school_year: string
-          semester: Database["public"]["Enums"]["semester_type"]
-          user_id: string
-        }
-        Update: {
-          archived_at?: string | null
-          created_at?: string
-          id?: string
-          is_archived?: boolean
-          name?: string
-          school_year?: string
-          semester?: Database["public"]["Enums"]["semester_type"]
           user_id?: string
         }
         Relationships: []
@@ -554,7 +447,6 @@ export type Database = {
       attendance_status: "Pending" | "Completed" | "Absent" | "Excused"
       event_status: "Upcoming" | "Ongoing" | "Completed" | "Cancelled"
       event_type: "SPECOM" | "LITCOM" | "CUACOM" | "SPODACOM" | "General"
-      semester_type: "1st Semester" | "2nd Semester" | "Summer"
       staff_position:
         | "Chairperson"
         | "Co-Chairperson"
@@ -693,7 +585,6 @@ export const Constants = {
       attendance_status: ["Pending", "Completed", "Absent", "Excused"],
       event_status: ["Upcoming", "Ongoing", "Completed", "Cancelled"],
       event_type: ["SPECOM", "LITCOM", "CUACOM", "SPODACOM", "General"],
-      semester_type: ["1st Semester", "2nd Semester", "Summer"],
       staff_position: [
         "Chairperson",
         "Co-Chairperson",

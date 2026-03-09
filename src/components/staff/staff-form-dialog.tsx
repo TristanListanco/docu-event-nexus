@@ -23,13 +23,12 @@ interface StaffFormDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onStaffAdded?: () => void;
-  termId?: string;
 }
 
-export default function StaffFormDialog({ open, onOpenChange, onStaffAdded, termId }: StaffFormDialogProps = {}) {
+export default function StaffFormDialog({ open, onOpenChange, onStaffAdded }: StaffFormDialogProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { addStaff } = useStaff(termId);
+  const { addStaff } = useStaff();
   
   // Use external open state if provided, otherwise use internal state
   const isOpen = open !== undefined ? open : internalOpen;

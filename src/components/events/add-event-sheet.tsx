@@ -27,12 +27,11 @@ interface AddEventSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventAdded?: () => void;
-  termId?: string;
 }
 
-export default function AddEventSheet({ open, onOpenChange, onEventAdded, termId }: AddEventSheetProps) {
-  const { addEvent } = useEvents(termId);
-  const { staff } = useStaff(termId);
+export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddEventSheetProps) {
+  const { addEvent } = useEvents();
+  const { staff } = useStaff();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 

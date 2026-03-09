@@ -26,7 +26,6 @@ interface AddEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventAdded: () => void;
-  termId?: string;
 }
 
 // Form state interface for better type safety
@@ -65,9 +64,9 @@ const initialFormState: FormState = {
 // Storage key for form persistence
 const FORM_STORAGE_KEY = 'add-event-form-data';
 
-export default function AddEventDialog({ open, onOpenChange, onEventAdded, termId }: AddEventDialogProps) {
-  const { staff, loading: staffLoading } = useStaff(termId);
-  const { addEvent } = useEvents(termId);
+export default function AddEventDialog({ open, onOpenChange, onEventAdded }: AddEventDialogProps) {
+  const { staff, loading: staffLoading } = useStaff();
+  const { addEvent } = useEvents();
 
   // Form state - initialize from localStorage if available
   const [formState, setFormState] = useState<FormState>(() => {

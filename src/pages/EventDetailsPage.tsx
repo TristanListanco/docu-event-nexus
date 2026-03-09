@@ -28,12 +28,9 @@ interface ExtendedStaffAssignment extends StaffAssignment {
 }
 
 export default function EventDetailsPage() {
-  const { eventId, termId } = useParams();
+  const { eventId } = useParams();
   const navigate = useNavigate();
-  const location = window.location.pathname;
-  const isArchive = location.includes("/archive/");
-  const backPath = isArchive ? `/archive/${termId}` : termId ? `/terms/${termId}` : "/";
-  const { getEvent, deleteEvent, updateEvent, loadEvents, cancelEvent } = useEvents(termId);
+  const { getEvent, deleteEvent, updateEvent, loadEvents, cancelEvent } = useEvents();
   const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [assignmentStatuses, setAssignmentStatuses] = useState<ExtendedStaffAssignment[]>([]);
@@ -191,7 +188,7 @@ export default function EventDetailsPage() {
     const success = await deleteEvent(eventId);
     if (success) {
       setDeleteDialogOpen(false);
-      navigate(backPath);
+      navigate("/events");
       toast({
         title: "Event Deleted",
         description: `${event.name} has been deleted successfully.`,
@@ -386,7 +383,7 @@ export default function EventDetailsPage() {
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Event Not Found</h1>
               <p className="text-gray-600 dark:text-gray-400 mb-4">The requested event could not be found.</p>
-              <Button onClick={() => navigate(backPath)}>
+              <Button onClick={() => navigate("/events")}>
                 Back to Events
               </Button>
             </div>
@@ -411,7 +408,7 @@ export default function EventDetailsPage() {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate(backPath)}
+              onClick={() => navigate("/events")}
               className="h-10 w-10 shrink-0"
               title="Back to Events"
             >

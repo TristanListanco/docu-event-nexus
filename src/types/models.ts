@@ -1,16 +1,5 @@
 export type StaffRole = "Photographer" | "Videographer" | "Working Com";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
-export type SemesterType = "1st Semester" | "2nd Semester" | "Summer";
-
-export interface Term {
-  id: string;
-  name: string;
-  schoolYear: string;
-  semester: SemesterType;
-  isArchived: boolean;
-  createdAt: string;
-  archivedAt?: string;
-}
 export type StaffPosition = "Chairperson" | "Co-Chairperson" | "Secretary" | "Undersecretary" | "Associate" | "Working Com";
 export type StaffViewMode = "list" | "grid";
 
