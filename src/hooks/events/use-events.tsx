@@ -305,7 +305,10 @@ export function useEvents() {
       }
 
       const hasChanges = Object.keys(changes).length > 0;
-      const shouldSendEmails = eventData.sendEmailNotifications === true; // Only send if explicitly true
+      
+      // Check if key fields changed (name, date, time, location) - these trigger automatic re-confirmation
+      const hasKeyFieldChanges = !!(changes.name || changes.date || changes.startTime || changes.endTime || changes.location);
+      const shouldSendEmails = eventData.sendEmailNotifications === true || hasKeyFieldChanges;
 
       // Update the event
       const updateData: any = {};
