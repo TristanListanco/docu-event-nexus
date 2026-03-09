@@ -156,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Account created",
         description: "Check your email to verify your account.",
       });
-      navigate("/login");
+      window.location.href = "/login";
     } catch (error: any) {
       console.error("Error signing up:", error.message);
       toast({
