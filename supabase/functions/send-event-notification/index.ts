@@ -42,12 +42,67 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // --- JWT Authentication ---
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const requestData: EventNotificationRequest = await req.json();
     
     console.log("Processing event notification for:", requestData.eventName);
     console.log("Is update:", requestData.isUpdate);
     console.log("Is cancellation:", requestData.isCancellation);
     console.log("Download only:", requestData.downloadOnly);
+
+    // --- Event Ownership Verification ---
+    if (!requestData.downloadOnly) {
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('user_id')
+        .eq('id', requestData.eventId)
+        .single();
+
+      if (eventError || !eventData || eventData.user_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'Forbidden: you do not own this event' }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    // --- Resolve staff emails from DB instead of trusting request body ---
+    if (requestData.assignedStaff?.length && !requestData.downloadOnly) {
+      const staffIds = requestData.assignedStaff.map(s => s.id);
+      const { data: dbStaff } = await supabase
+        .from('staff_members')
+        .select('id, name, email')
+        .in('id', staffIds)
+        .eq('user_id', user.id);
+
+      if (dbStaff) {
+        const staffMap = new Map(dbStaff.map(s => [s.id, s]));
+        for (const staff of requestData.assignedStaff) {
+          const dbRecord = staffMap.get(staff.id);
+          if (dbRecord) {
+            staff.email = dbRecord.email || '';
+            staff.name = dbRecord.name;
+          }
+        }
+      }
+    }
 
     // If this is a download-only request, return ICS file
     if (requestData.downloadOnly) {
