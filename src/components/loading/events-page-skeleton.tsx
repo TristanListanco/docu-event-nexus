@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function EventsPageSkeleton() {
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-[100vh] min-h-[100dvh] flex-col">
       {/* Header skeleton */}
       <div className="border-b border-border p-4">
         <div className="flex items-center justify-between">

@@ -78,7 +78,7 @@ export default function StaffPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex min-h-[100vh] min-h-[100dvh] flex-col">
       <StaffHeader 
         onAddStaff={() => setIsAddDialogOpen(true)}
         onGenerateReport={handleGenerateReport}
