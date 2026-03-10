@@ -77,43 +77,74 @@ export function useAssignmentConfirmation({ token }: UseAssignmentConfirmationPr
     }
   };
 
+  const generateICSContent = (eventData: AssignmentData): string => {
+    const eventDateStr = eventData.eventDate.includes('T') 
+      ? eventData.eventDate.split('T')[0] 
+      : eventData.eventDate;
+    
+    const formatDateForICS = (dateStr: string, time: string) => {
+      return `${dateStr}T${time}:00`.replace(/[-:]/g, '').replace('T', 'T');
+    };
+    
+    const escapeICSText = (text: string) => {
+      return text.replace(/\\/g, '\\\\')
+                 .replace(/;/g, '\\;')
+                 .replace(/,/g, '\\,')
+                 .replace(/\n/g, '\\n');
+    };
+    
+    const startFormatted = formatDateForICS(eventDateStr, eventData.startTime);
+    const endFormatted = formatDateForICS(eventDateStr, eventData.endTime);
+    const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    const organizerInfo = eventData.organizer ? `\\nOrganizer: ${escapeICSText(eventData.organizer)}` : '';
+    const escapedEventName = escapeICSText(eventData.eventName);
+    const escapedLocation = escapeICSText(eventData.location);
+    
+    return `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Event Management System//Event Notification//EN
+BEGIN:VTIMEZONE
+TZID:Asia/Manila
+BEGIN:STANDARD
+DTSTART:19701101T000000
+TZOFFSETFROM:+0800
+TZOFFSETTO:+0800
+TZNAME:PST
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:${eventData.id}@admin-ccsdocu.com
+DTSTAMP:${now}
+DTSTART;TZID=Asia/Manila:${startFormatted}
+DTEND;TZID=Asia/Manila:${endFormatted}
+SUMMARY:${escapedEventName}
+DESCRIPTION:Event: ${escapedEventName}${organizerInfo}
+LOCATION:${escapedLocation}
+STATUS:CONFIRMED
+BEGIN:VALARM
+TRIGGER:-PT360M
+ACTION:DISPLAY
+DESCRIPTION:Event reminder (6 hours): ${escapedEventName}
+END:VALARM
+BEGIN:VALARM
+TRIGGER:-PT60M
+ACTION:DISPLAY
+DESCRIPTION:Event reminder (1 hour): ${escapedEventName}
+END:VALARM
+END:VEVENT
+END:VCALENDAR`;
+  };
+
   const downloadCalendarEvent = async () => {
     if (!assignment) return;
 
     try {
-      console.log("Downloading calendar for assignment:", assignment);
+      console.log("Generating calendar event client-side for:", assignment);
       
-      const eventDate = assignment.eventDate.includes('T') 
-        ? assignment.eventDate.split('T')[0] 
-        : assignment.eventDate;
-      
-      const { data, error } = await supabase.functions.invoke('send-event-notification', {
-        body: {
-          eventId: assignment.id,
-          eventName: assignment.eventName,
-          eventDate: eventDate,
-          startTime: assignment.startTime,
-          endTime: assignment.endTime,
-          location: assignment.location || '',
-          organizer: assignment.organizer || '',
-          type: assignment.type || 'General',
-          assignedStaff: [],
-          downloadOnly: true
-        }
-      });
+      const icsContent = generateICSContent(assignment);
 
-      if (error) {
-        console.error("Calendar download error:", error);
-        throw new Error(error.message || "Failed to generate calendar file");
-      }
-
-      if (!data || typeof data !== 'string') {
-        throw new Error("Invalid calendar data received");
-      }
-
-      console.log("Calendar data received, creating download...");
-
-      const blob = new Blob([data], { type: 'text/calendar; charset=utf-8' });
+      const blob = new Blob([icsContent], { type: 'text/calendar; charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
