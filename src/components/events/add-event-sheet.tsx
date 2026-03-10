@@ -63,11 +63,12 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
         formData.startTime,
         formData.endTime,
         formData.ignoreScheduleConflicts,
-        formData.ccsOnlyEvent
+        formData.ccsOnlyEvent,
+        leaveDates || []
       );
       setStaffAvailability(availability);
     }
-  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent, staff]);
+  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent, staff, leaveDates]);
   
   // Generate log ID when opening
   useEffect(() => {
