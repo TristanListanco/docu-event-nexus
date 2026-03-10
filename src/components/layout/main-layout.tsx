@@ -54,7 +54,7 @@ export default function MainLayout() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full animate-fade-in">
+      <div className="min-h-[100vh] min-h-[100dvh] flex w-full animate-fade-in">
         <Sidebar className="border-r border-sidebar-border animate-slide-in-right">
           <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-primary/5 to-accent/5">
             <div className="flex items-center space-x-3 px-4 py-3 animate-scale-in">

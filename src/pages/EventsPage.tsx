@@ -79,7 +79,7 @@ export default function EventsPage() {
         />
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <EventsPageContent
           events={events}
           onEventClick={handleEventClick}
