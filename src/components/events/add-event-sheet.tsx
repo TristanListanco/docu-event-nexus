@@ -31,7 +31,7 @@ interface AddEventSheetProps {
 
 export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddEventSheetProps) {
   const { addEvent } = useEvents();
-  const { staff } = useStaff();
+  const { staff, leaveDates } = useStaff();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,11 +63,12 @@ export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddE
         formData.startTime,
         formData.endTime,
         formData.ignoreScheduleConflicts,
-        formData.ccsOnlyEvent
+        formData.ccsOnlyEvent,
+        leaveDates || []
       );
       setStaffAvailability(availability);
     }
-  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent, staff]);
+  }, [formData.date, formData.startTime, formData.endTime, formData.ignoreScheduleConflicts, formData.ccsOnlyEvent, staff, leaveDates]);
   
   // Generate log ID when opening
   useEffect(() => {
