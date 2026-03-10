@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function StaffPageSkeleton() {
   return (
-    <div className="flex h-screen flex-col animate-fade-in">
+    <div className="flex min-h-[100vh] min-h-[100dvh] flex-col animate-fade-in">
       {/* Header skeleton */}
       <div className="border-b border-border p-4 animate-slide-in-right">
         <div className="flex items-center justify-between">

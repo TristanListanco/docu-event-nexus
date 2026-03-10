@@ -70,7 +70,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="h-full min-h-screen flex flex-col bg-background">
+    <div className="h-full min-h-[100vh] min-h-[100dvh] flex flex-col bg-background">
       <div className="flex-shrink-0">
         <EventsHeader 
           onAddEvent={handleAddEvent} 
@@ -79,7 +79,7 @@ export default function EventsPage() {
         />
       </div>
       
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         <EventsPageContent
           events={events}
           onEventClick={handleEventClick}
