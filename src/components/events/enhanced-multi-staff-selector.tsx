@@ -10,6 +10,7 @@ import SmartAllocationSummary from "./staff-selector/smart-allocation-summary";
 import SelectedStaffDisplay from "./staff-selector/selected-staff-display";
 import FullyAvailableStaff from "./staff-selector/fully-available-staff";
 import PartiallyAvailableStaff from "./staff-selector/partially-available-staff";
+import ConflictWarningDialog from "./staff-selector/conflict-warning-dialog";
 
 export default function EnhancedMultiStaffSelector({
   role,
@@ -26,15 +27,41 @@ export default function EnhancedMultiStaffSelector({
   const { staff } = useStaff();
   const [pendingSelection, setPendingSelection] = useState<string>("");
   const [showPartiallyAvailable, setShowPartiallyAvailable] = useState(false);
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [pendingConflictStaff, setPendingConflictStaff] = useState<{
+    id: string;
+    name: string;
+    conflicts: Array<{ startTime: string; endTime: string; reason: string }>;
+  } | null>(null);
+
+  const checkAndAddStaff = (staffId: string) => {
+    if (staffId === "none") {
+      onSelectionChange([]);
+      return;
+    }
+    if (selectedStaffIds.includes(staffId)) return;
+
+    // Check if the staff member has conflicts
+    const staffAvail = staffAvailability.find(s => s.staff.id === staffId);
+    if (staffAvail && !staffAvail.isFullyAvailable && staffAvail.conflictingTimeSlots?.length) {
+      const staffMember = staff?.find(s => s.id === staffId);
+      setPendingConflictStaff({
+        id: staffId,
+        name: staffMember?.name || "Unknown Staff",
+        conflicts: staffAvail.conflictingTimeSlots,
+      });
+      setConflictDialogOpen(true);
+      return;
+    }
+
+    // No conflicts - add directly
+    const newSelection = [...selectedStaffIds, staffId];
+    onSelectionChange(newSelection);
+  };
 
   const handleAddStaff = () => {
     if (pendingSelection) {
-      if (pendingSelection === "none") {
-        onSelectionChange([]);
-      } else if (!selectedStaffIds.includes(pendingSelection)) {
-        const newSelection = [...selectedStaffIds, pendingSelection];
-        onSelectionChange(newSelection);
-      }
+      checkAndAddStaff(pendingSelection);
       setPendingSelection("");
     }
   };
@@ -46,8 +73,15 @@ export default function EnhancedMultiStaffSelector({
 
   const handleSmartPick = (staffId: string) => {
     if (!selectedStaffIds.includes(staffId)) {
-      const newSelection = [...selectedStaffIds, staffId];
+      checkAndAddStaff(staffId);
+    }
+  };
+
+  const handleConflictConfirmed = () => {
+    if (pendingConflictStaff) {
+      const newSelection = [...selectedStaffIds, pendingConflictStaff.id];
       onSelectionChange(newSelection);
+      setPendingConflictStaff(null);
     }
   };
 
@@ -129,6 +163,15 @@ export default function EnhancedMultiStaffSelector({
         canAddMore={canAddMore}
         eventStartTime={eventStartTime}
         eventEndTime={eventEndTime}
+      />
+
+      {/* Conflict Warning Dialog */}
+      <ConflictWarningDialog
+        open={conflictDialogOpen}
+        onOpenChange={setConflictDialogOpen}
+        staffName={pendingConflictStaff?.name || ""}
+        conflicts={pendingConflictStaff?.conflicts || []}
+        onConfirm={handleConflictConfirmed}
       />
 
       {/* Status Messages */}
