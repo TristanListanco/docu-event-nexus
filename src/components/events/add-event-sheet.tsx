@@ -31,7 +31,7 @@ interface AddEventSheetProps {
 
 export default function AddEventSheet({ open, onOpenChange, onEventAdded }: AddEventSheetProps) {
   const { addEvent } = useEvents();
-  const { staff } = useStaff();
+  const { staff, leaveDates } = useStaff();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
 
