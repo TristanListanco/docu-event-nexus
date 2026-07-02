@@ -1,6 +1,4 @@
-
-import { Input } from "@/components/ui/input";
-
+// Search bar removed as part of dashboard rehaul.
 type SortOption = "name" | "date" | "status";
 type FilterOption = "all" | "upcoming" | "ongoing" | "elapsed" | "completed" | "cancelled";
 
@@ -14,19 +12,6 @@ interface EventsFiltersProps {
   isArchived?: boolean;
 }
 
-export default function EventsFilters({
-  searchQuery,
-  onSearchChange,
-  isArchived = false
-}: EventsFiltersProps) {
-  return (
-    <div className="w-full">
-      <Input
-        placeholder={`Search ${isArchived ? 'archived ' : ''}events...`}
-        value={searchQuery}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="w-full"
-      />
-    </div>
-  );
+export default function EventsFilters(_props: EventsFiltersProps) {
+  return null;
 }

@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Navigate after auth state settles
       setTimeout(() => {
-        window.location.href = "/events";
+        window.location.href = "/";
         toast({
           title: "Signed in successfully",
           description: "Welcome back!",

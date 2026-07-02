@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          end_year: number
+          id: string
+          is_archived: boolean
+          start_year: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          end_year: number
+          id?: string
+          is_archived?: boolean
+          start_year: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          end_year?: number
+          id?: string
+          is_archived?: boolean
+          start_year?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       big_events: {
         Row: {
           end_date: string
@@ -512,6 +545,7 @@ export type Database = {
       }
       terms: {
         Row: {
+          academic_year_id: string | null
           archived_at: string | null
           created_at: string
           id: string
@@ -522,6 +556,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          academic_year_id?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -532,6 +567,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          academic_year_id?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -541,7 +577,15 @@ export type Database = {
           semester?: Database["public"]["Enums"]["semester_type"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "terms_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
