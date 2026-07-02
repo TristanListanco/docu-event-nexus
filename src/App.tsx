@@ -8,22 +8,21 @@ import {
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "./hooks/use-auth";
+import { AcademicYearsProvider } from "./hooks/use-academic-years";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import Index from "./pages/Index";
 import EventsPage from "./pages/EventsPage";
 import AddEventPage from "./pages/AddEventPage";
 import EventDetailsPage from "./pages/EventDetailsPage";
-import StaffPage from "./pages/StaffPage";
 import AboutPage from "./pages/AboutPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
 import ConfirmAssignmentPage from "./pages/ConfirmAssignmentPage";
 import MainLayout from "./components/layout/main-layout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  console.log('App ProtectedRoute: user:', user?.email, 'loading:', loading);
 
   if (loading) {
     return (
@@ -36,23 +35,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
-    console.log('App ProtectedRoute: No user, redirecting to login');
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
-  return <>{children}</>;
+  return <AcademicYearsProvider>{children}</AcademicYearsProvider>;
 }
 
 function App() {
-  console.log('App: Rendering');
-  
   return (
     <ThemeProvider defaultTheme="light" storageKey="ui-theme">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/confirm-assignment" element={<ConfirmAssignmentPage />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute>
+            <OnboardingPage />
+          </ProtectedRoute>
+        } />
         <Route path="/" element={
           <ProtectedRoute>
             <MainLayout />
@@ -63,7 +62,6 @@ function App() {
           <Route path="events/add" element={<AddEventPage />} />
           <Route path="events/new" element={<AddEventPage />} />
           <Route path="events/:eventId" element={<EventDetailsPage />} />
-          <Route path="staff" element={<StaffPage />} />
           <Route path="about" element={<AboutPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
